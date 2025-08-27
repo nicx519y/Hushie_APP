@@ -50,11 +50,11 @@ class VideoCard extends StatelessWidget {
                 ),
                 // 播放按钮和统计信息覆盖层
                 Positioned(
-                  bottom: 8,
-                  left: 8,
-                  right: 8,
+                  bottom: 10,
+                  left: 10,
+                  right: 10,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       // 播放次数
                       GestureDetector(
@@ -66,14 +66,14 @@ class VideoCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             children: [
                               SvgPicture.asset(
                                 'assets/icons/play.svg',
-                                width: 15,
-                                height: 15,
+                                width: 10,
+                                height: 11,
                                 colorFilter: const ColorFilter.mode(
                                   Colors.white,
                                   BlendMode.srcIn,
@@ -103,15 +103,19 @@ class VideoCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.thumb_up,
-                                color: Colors.white,
-                                size: 14,
+                              SvgPicture.asset(
+                                'assets/icons/likes.svg',
+                                width: 12,
+                                height: 11,
+                                colorFilter: const ColorFilter.mode(
+                                  Colors.white,
+                                  BlendMode.srcIn,
+                                ),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -171,24 +175,13 @@ class VideoCard extends StatelessWidget {
                   Row(
                     children: [
                       // 头像
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CachedNetworkImage(
-                          imageUrl: item['avatar'],
-                          placeholder: (context, url) => Container(
-                            width: 24,
-                            height: 24,
-                            color: Colors.grey[300],
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            width: 24,
-                            height: 24,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.person, size: 16),
-                          ),
-                          width: 24,
-                          height: 24,
-                          fit: BoxFit.cover,
+                      SvgPicture.asset(
+                        'assets/icons/author.svg',
+                        width: 10,
+                        height: 11,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xff333333),
+                          BlendMode.srcIn,
                         ),
                       ),
                       const SizedBox(width: 8),
