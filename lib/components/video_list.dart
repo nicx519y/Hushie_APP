@@ -1,0 +1,115 @@
+import 'package:flutter/material.dart';
+import '../models/video_item.dart';
+import 'video_stats.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+class VideoList extends StatelessWidget {
+  final List<VideoItem> videos;
+  final EdgeInsetsGeometry? padding;
+  final ScrollPhysics? physics;
+  final bool shrinkWrap;
+  final Widget? emptyWidget;
+
+  const VideoList({
+    super.key,
+    required this.videos,
+    this.padding = const EdgeInsets.all(0),
+    this.physics,
+    this.shrinkWrap = false,
+    this.emptyWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (videos.isEmpty) {
+      return emptyWidget ??
+          const Center(
+            child: Text(
+              '暂无数据',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          );
+    }
+
+    return ListView.builder(
+      padding: padding,
+      physics: physics,
+      shrinkWrap: shrinkWrap,
+      itemCount: videos.length,
+      itemBuilder: (context, index) {
+        return _buildVideoItem(videos[index]);
+      },
+    );
+  }
+
+  Widget _buildVideoItem(VideoItem video) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 视频封面
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 70,
+              height: 78,
+              color: const Color(0xFFF5F5F5),
+              child: video.cover.isNotEmpty
+                  ? Image.network(
+                      video.cover,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.play_arrow, size: 30);
+                      },
+                    )
+                  : const Icon(Icons.play_arrow, size: 30),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 视频信息
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标题
+                Text(
+                  video.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                    color: const Color(0xFF333333),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                // 描述
+                Text(
+                  video.desc,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF666666),
+                    height: 1.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 15),
+                // 视频统计信息
+                VideoStats(
+                  playTimes: video.playTimes,
+                  likesCount: video.likesCount,
+                  author: video.author,
+                  iconSize: 12,
+                  fontSize: 10,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
