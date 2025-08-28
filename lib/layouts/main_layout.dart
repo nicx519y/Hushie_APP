@@ -91,7 +91,7 @@ Path createBottomNavPath(Size size, {double offsetY = 0}) {
   final radius = 50.0;
   final d = 18.0;
   final arcRadius = 30.0;
-  final sideRadius = 15.0;
+  final sideRadius = 20.0;
 
   // 从左下角开始
   path.moveTo(0, height);

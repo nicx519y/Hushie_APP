@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'play_arrow_icon.dart';
 
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
@@ -20,37 +21,40 @@ class CustomBottomNavigationBar extends StatelessWidget {
       height: 101,
       color: Colors.white,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             // Home Tab
-            _buildTab(
-              index: 0,
-              icon: SvgPicture.asset(
-                'assets/icons/home.svg',
-                width: 32,
-                height: 32,
-                color: currentIndex == 0 ? activeColor : inactiveColor,
+            Expanded(
+              child: _buildTab(
+                index: 0,
+                icon: SvgPicture.asset(
+                  'assets/icons/home.svg',
+                  width: 24,
+                  height: 24,
+                  color: currentIndex == 0 ? activeColor : inactiveColor,
+                ),
+                label: 'Home',
+                isSelected: currentIndex == 0,
               ),
-              label: 'Home',
-              isSelected: currentIndex == 0,
             ),
 
             // 中间播放按钮
             _buildPlayButton(),
 
             // Profile Tab
-            _buildTab(
-              index: 1,
-              icon: SvgPicture.asset(
-                'assets/icons/profile.svg',
-                width: 32,
-                height: 32,
-                color: currentIndex == 1 ? activeColor : inactiveColor,
+            Expanded(
+              child: _buildTab(
+                index: 1,
+                icon: SvgPicture.asset(
+                  'assets/icons/profile.svg',
+                  width: 24,
+                  height: 24,
+                  color: currentIndex == 1 ? activeColor : inactiveColor,
+                ),
+                label: 'Profile',
+                isSelected: currentIndex == 1,
               ),
-              label: 'Profile',
-              isSelected: currentIndex == 1,
             ),
           ],
         ),
@@ -87,7 +91,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
   Widget _buildPlayButton() {
     return Transform.translate(
-      offset: const Offset(0, -10), // 向上偏移20像素
+      offset: const Offset(0, -10), // 向上偏移10像素
       child: GestureDetector(
         onTap: () => onTap(2), // 播放按钮的索引
         child: Container(
@@ -111,7 +115,12 @@ class CustomBottomNavigationBar extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
+          child: const PlayArrowIcon(
+            size: 64,
+            triangleSize: 32.0,
+            cornerRadius: 5.0,
+            color: Colors.white,
+          ),
         ),
       ),
     );
