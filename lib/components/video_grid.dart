@@ -30,8 +30,8 @@ class VideoGrid extends StatelessWidget {
       onRefresh: onRefresh ?? () async {},
       child: MasonryGridView.count(
         crossAxisCount: 2,
-        mainAxisSpacing: 11,
-        crossAxisSpacing: 11,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 5,
         padding: const EdgeInsets.symmetric(horizontal: 13),
         itemCount: dataList.length,
         itemBuilder: (context, index) {

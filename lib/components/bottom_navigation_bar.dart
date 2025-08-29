@@ -18,10 +18,10 @@ class CustomBottomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 101,
+      height: 120,
       color: Colors.white,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: EdgeInsets.only(left: 18, right: 18, bottom: 15),
         child: Row(
           children: [
             // Home Tab
@@ -68,32 +68,40 @@ class CustomBottomNavigationBar extends StatelessWidget {
     required String label,
     required bool isSelected,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: () => onTap(index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          icon, // 直接使用传入的 Widget
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              height: 1,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? activeColor : inactiveColor,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            icon, // 直接使用传入的 Widget
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                height: 1,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? activeColor : inactiveColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPlayButton() {
     return Transform.translate(
-      offset: const Offset(0, -10), // 向上偏移10像素
-      child: GestureDetector(
+      offset: const Offset(0, -11), // 向上偏移10像素
+      child: InkWell(
         onTap: () => onTap(2), // 播放按钮的索引
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
         child: Container(
           width: 64,
           height: 64,

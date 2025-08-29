@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../components/custom_app_bar.dart';
 import '../components/video_grid.dart';
+import 'search_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -144,6 +145,14 @@ class _HomePageState extends State<HomePage> {
     print('搜索: $_searchQuery');
   }
 
+  // 搜索框点击事件
+  void _onSearchTap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SearchPage()),
+    );
+  }
+
   // 获取过滤后的数据
   List<Map<String, dynamic>> get _filteredDataList {
     if (_searchQuery.isEmpty) {
@@ -185,9 +194,10 @@ class _HomePageState extends State<HomePage> {
       children: [
         // 自定义头部
         CustomAppBar(
-          hintText: 'Search songs, users',
+          hintText: 'Search audio',
           onSearchChanged: _onSearchChanged,
           onSearchSubmitted: _onSearchSubmitted,
+          onSearchTap: _onSearchTap,
         ),
         // 内容区域
         Expanded(

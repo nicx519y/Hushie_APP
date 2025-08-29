@@ -46,23 +46,29 @@ class _MainLayoutState extends State<MainLayout> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       body: Stack(
         children: [
           // 页面主体内容
-          IndexedStack(index: _currentIndex, children: widget.pages),
+          SafeArea(
+            bottom: false,
+            child: IndexedStack(index: _currentIndex, children: widget.pages),
+          ),
 
           // 底部导航栏（放在Stack最上层，脱离Scaffold默认布局）
           Positioned(
             left: 0,
             right: 0,
-            bottom: 0,
-            // 确保导航栏高度与你的设计一致
+            bottom: -30, // 考虑底部安全区域
             child: Stack(
               children: [
                 // 自定义阴影
                 CustomPaint(
                   painter: BottomNavShadowPainter(),
-                  size: Size(MediaQuery.of(context).size.width, 101),
+                  size: Size(
+                    MediaQuery.of(context).size.width,
+                    120 + MediaQuery.of(context).padding.bottom,
+                  ),
                 ),
                 // 导航栏内容
                 ClipPath(

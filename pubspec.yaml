@@ -46,6 +46,9 @@ dependencies:
   
   # SVG支持
   flutter_svg: ^2.0.9
+  
+  # 本地存储
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
