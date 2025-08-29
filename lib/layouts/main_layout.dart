@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../components/bottom_navigation_bar.dart';
+import '../pages/video_player_page.dart';
 
 class MainLayout extends StatefulWidget {
   final List<Widget> pages;
@@ -42,6 +43,43 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
+  // 处理播放按钮点击
+  void _onPlayButtonTap() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const VideoPlayerPage(
+              videoTitle: 'Sticky Situation',
+              artist: 'Buddah Bless',
+              description:
+                  'Quiet and reserved, she doesn\'t say much but is quite intriguing for something exotic. More',
+              likesCount: 689,
+              videoUrl: 'https://example.com/video.mp4',
+              coverUrl: 'https://picsum.photos/400/600?random=1',
+            ),
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // 从下到上的滑动动画
+          const begin = Offset(0.0, 1.0); // 从底部开始
+          const end = Offset.zero; // 到正常位置
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,6 +114,7 @@ class _MainLayoutState extends State<MainLayout> {
                   child: CustomBottomNavigationBar(
                     currentIndex: _currentIndex,
                     onTap: _onBottomNavTap,
+                    onPlayButtonTap: _onPlayButtonTap,
                   ),
                 ),
               ],

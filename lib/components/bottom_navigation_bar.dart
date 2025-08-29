@@ -5,11 +5,13 @@ import 'play_arrow_icon.dart';
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final VoidCallback? onPlayButtonTap;
 
   const CustomBottomNavigationBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.onPlayButtonTap,
   });
 
   static const Color activeColor = Color(0xFF333333);
@@ -99,7 +101,13 @@ class CustomBottomNavigationBar extends StatelessWidget {
     return Transform.translate(
       offset: const Offset(0, -11), // 向上偏移10像素
       child: InkWell(
-        onTap: () => onTap(2), // 播放按钮的索引
+        onTap: () {
+          if (onPlayButtonTap != null) {
+            onPlayButtonTap!();
+          } else {
+            onTap(2); // 默认行为
+          }
+        },
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
         child: Container(

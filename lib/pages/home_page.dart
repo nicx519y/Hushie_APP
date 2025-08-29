@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../components/custom_app_bar.dart';
 import '../components/video_grid.dart';
 import 'search_page.dart';
+import 'video_player_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -179,7 +180,39 @@ class _HomePageState extends State<HomePage> {
   // 处理播放按钮点击
   void _onPlayTap(Map<String, dynamic> item) {
     print('播放视频: ${item['title']}');
-    // 这里可以实现播放逻辑
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            VideoPlayerPage(
+              videoTitle: item['title'] ?? 'Unknown Title',
+              artist: item['author'] ?? 'Unknown Artist',
+              description: item['desc'] ?? 'No description available',
+              likesCount: item['likes_count'] ?? 0,
+              videoUrl: 'https://example.com/video.mp4',
+              coverUrl:
+                  item['cover'] ?? 'https://picsum.photos/400/600?random=1',
+            ),
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // 从下到上的滑动动画
+          const begin = Offset(0.0, 1.0); // 从底部开始
+          const end = Offset.zero; // 到正常位置
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      ),
+    );
   }
 
   // 处理点赞按钮点击
