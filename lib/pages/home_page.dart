@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../components/custom_app_bar.dart';
+import '../components/custom_tab_bar.dart';
 import '../components/audio_grid.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
@@ -354,33 +355,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           color: Colors.white,
           child: Column(
             children: [
-              Container(
-                child: TabBar(
-                  controller: _tabController,
-                  tabAlignment: TabAlignment.start,
-                  tabs: _tabItems.map((tab) => Tab(text: tab.title)).toList(),
-                  labelColor: const Color(0xFF333333),
-                  unselectedLabelColor: const Color(0xFF787878),
-                  indicator: UnderlineTabIndicator(
-                    insets: const EdgeInsets.only(bottom: 5), // 底部间距
-                    borderRadius: BorderRadius.circular(2),
-                    borderSide: BorderSide(
-                      color: const Color(0xFFF359AA),
-                      width: 4,
-                      style: BorderStyle.solid,
-                    ),
-                  ),
-                  // indicatorColor: const Color(0xFFF359AA),
-                  // indicatorWeight: 3,
-                  indicatorSize: TabBarIndicatorSize.label,
-                  labelStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  // unselectedLabelStyle: const TextStyle(fontSize: 14),
-                  isScrollable: true,
-                  dividerColor: Colors.transparent, // 去掉底部灰线
-                ),
+              CustomTabBar(
+                controller: _tabController,
+                tabItems: _tabItems,
+                onTabChanged: (index) {
+                  // Tab 点击时的处理逻辑
+                },
               ),
               const SizedBox(height: 6),
               // 开发工具按钮区域
