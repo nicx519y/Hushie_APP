@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../components/custom_app_bar.dart';
 import '../components/audio_grid.dart';
 import '../models/audio_item.dart';
+import '../models/audio_model.dart';
 import '../services/api_service.dart';
+import '../services/audio_manager.dart';
 import 'search_page.dart';
 import 'audio_player_page.dart';
 
@@ -88,23 +90,6 @@ class _HomePageState extends State<HomePage> {
     return _audioItems.map((item) => item.toMap()).toList();
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
-
-    // 延迟搜索，避免频繁请求
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (_searchQuery == query) {
-        _loadAudioData(refresh: true);
-      }
-    });
-  }
-
-  void _onSearchSubmitted() {
-    _loadAudioData(refresh: true);
-  }
-
   void _onSearchTap() {
     Navigator.push(
       context,
@@ -113,44 +98,49 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onAudioTap(Map<String, dynamic> item) {
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => AudioPlayerPage(
-          audioTitle: item['title'],
-          artist: item['author'],
-          description: item['desc'],
-          likesCount: item['likes_count'],
-          audioUrl:
-              item['audio_url'] ??
-              'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-          coverUrl: item['cover'],
-        ),
-        transitionDuration: const Duration(milliseconds: 300),
-        reverseTransitionDuration: const Duration(milliseconds: 300),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(0.0, 1.0);
-          const end = Offset.zero;
-          const curve = Curves.easeInOut;
+    // 先开始播放音频，然后跳转到播放页面
+    _startPlayingAudio(item);
 
-          var tween = Tween(
-            begin: begin,
-            end: end,
-          ).chain(CurveTween(curve: curve));
-
-          return SlideTransition(
-            position: animation.drive(tween),
-            child: child,
-          );
-        },
-      ),
-    );
+    // 使用播放器页面的标准打开方式（包含上滑动画）
+    AudioPlayerPage.show(context);
   }
 
   void _onPlayTap(Map<String, dynamic> item) {
     print('播放音频: ${item['title']}');
-    // 这里可以实现播放逻辑
-    _onAudioTap(item); // 暂时跳转到播放页面
+    // 只播放音频，不跳转页面
+    _startPlayingAudio(item);
+  }
+
+  void _startPlayingAudio(Map<String, dynamic> item) {
+    try {
+      // 创建音频模型
+      final audioModel = AudioModel(
+        id: item['id']?.toString() ?? item['title'].hashCode.toString(),
+        title: item['title'] ?? 'Unknown Title',
+        artist: item['author'] ?? 'Unknown Artist',
+        description: item['desc'] ?? '',
+        audioUrl:
+            item['audio_url'] ??
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        coverUrl: item['cover'] ?? '',
+        duration: Duration.zero, // 实际时长会在加载时获取
+        likesCount: item['likes_count'] ?? 0,
+      );
+
+      // 通过音频管理器开始播放
+      AudioManager.instance.playAudio(audioModel);
+
+      print('开始播放音频: ${audioModel.title}');
+    } catch (e) {
+      print('播放音频失败: $e');
+      // 可以显示错误提示给用户
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('播放失败: $e'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _onLikeTap(Map<String, dynamic> item) {
@@ -182,12 +172,7 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         // 自定义头部
-        CustomAppBar(
-          hintText: 'Search audio',
-          onSearchChanged: _onSearchChanged,
-          onSearchSubmitted: _onSearchSubmitted,
-          onSearchTap: _onSearchTap,
-        ),
+        CustomAppBar(hintText: 'Search audio', onSearchTap: _onSearchTap),
 
         // API 模式切换按钮（开发用）
         Container(

@@ -4,23 +4,43 @@ import '../components/audio_progress_bar.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_model.dart';
 
-class AudioPlayerPage extends StatefulWidget {
-  final String audioTitle;
-  final String artist;
-  final String description;
-  final int likesCount;
-  final String audioUrl;
-  final String coverUrl;
+/// 音频播放器页面专用的上滑过渡效果
+class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
+  final Widget page;
 
-  const AudioPlayerPage({
-    super.key,
-    required this.audioTitle,
-    required this.artist,
-    required this.description,
-    required this.likesCount,
-    required this.audioUrl,
-    required this.coverUrl,
-  });
+  SlideUpPageRoute({required this.page})
+    : super(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0); // 从底部开始
+          const end = Offset.zero; // 到正常位置
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      );
+}
+
+class AudioPlayerPage extends StatefulWidget {
+  const AudioPlayerPage({super.key});
+
+  /// 使用标准上滑动画打开播放器页面
+  static Future<T?> show<T extends Object?>(BuildContext context) {
+    return Navigator.push<T>(
+      context,
+      SlideUpPageRoute(page: const AudioPlayerPage()),
+    );
+  }
 
   @override
   State<AudioPlayerPage> createState() => _AudioPlayerPageState();
@@ -29,30 +49,29 @@ class AudioPlayerPage extends StatefulWidget {
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
   Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = const Duration(minutes: 3, seconds: 51);
+  Duration _totalDuration = Duration.zero;
   bool _showControls = true;
   late AudioManager _audioManager;
+  AudioModel? _currentAudio;
 
   @override
   void initState() {
     super.initState();
     _audioManager = AudioManager.instance;
-    // 模拟视频加载
-    _loadAudio();
-    // 监听音频播放状态
+    // 只监听音频播放状态，不主动加载音频
     _listenToAudioState();
   }
 
-  void _loadAudio() {
-    // 这里应该是实际的视频加载逻辑
-    // 现在使用模拟数据
-    setState(() {
-      _totalDuration = const Duration(minutes: 3, seconds: 51);
-      _currentPosition = const Duration(seconds: 2);
-    });
-  }
-
   void _listenToAudioState() {
+    // 监听当前音频
+    _audioManager.currentAudioStream.listen((audio) {
+      if (mounted) {
+        setState(() {
+          _currentAudio = audio;
+        });
+      }
+    });
+
     // 监听音频播放状态
     _audioManager.isPlayingStream.listen((isPlaying) {
       if (mounted) {
@@ -82,20 +101,23 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   void _togglePlay() {
-    // 创建音频模型并播放
     if (!_isPlaying) {
-      final audioModel = AudioModel(
-        id: widget.audioTitle.hashCode.toString(),
-        title: widget.audioTitle,
-        artist: widget.artist,
-        description: widget.description,
-        audioUrl: widget.audioUrl, // 使用视频URL作为音频URL
-        coverUrl: widget.coverUrl,
-        duration: _totalDuration,
-        likesCount: widget.likesCount,
-      );
-      _audioManager.playAudio(audioModel);
+      // 如果当前没有播放，或者播放的不是当前音频，则开始播放当前音频
+      final currentAudio = _audioManager.currentAudio;
+      final currentAudioId = (_currentAudio?.id ?? 'unknown');
+
+      if (currentAudio == null || currentAudio.id != currentAudioId) {
+        // 如果没有当前音频信息，无法播放
+        if (_currentAudio == null) return;
+
+        // 创建音频模型并播放
+        _audioManager.playAudio(_currentAudio!);
+      } else {
+        // 如果是同一首音频，直接恢复播放
+        _audioManager.togglePlayPause();
+      }
     } else {
+      // 暂停播放
       _audioManager.togglePlayPause();
     }
   }
@@ -127,13 +149,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  // 构建视频背景
+  // 构建音频背景
   Widget _buildAudioBackground() {
+    final coverUrl =
+        _currentAudio?.coverUrl ?? 'https://picsum.photos/400/600?random=1';
+
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: NetworkImage(widget.coverUrl),
+            image: NetworkImage(coverUrl),
             fit: BoxFit.cover,
           ),
         ),
@@ -219,7 +244,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  // 构建视频信息
+  // 构建音频信息
   Widget _buildAudioInfo() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -244,8 +269,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建音频标题
   Widget _buildAudioTitle() {
+    final title = _currentAudio?.title ?? 'Unknown Title';
+
     return Text(
-      widget.audioTitle,
+      title,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 20,
@@ -256,12 +283,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建艺术家信息
   Widget _buildArtistInfo() {
+    final artist = _currentAudio?.artist ?? 'Unknown Artist';
+
     return Row(
       children: [
         const Icon(Icons.person, color: Colors.white, size: 16),
         const SizedBox(width: 4),
         Text(
-          widget.artist,
+          artist,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 14,
@@ -272,10 +301,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  // 构建视频描述
+  // 构建音频描述
   Widget _buildAudioDescription() {
+    final description =
+        _currentAudio?.description ?? 'No description available';
+
     return Text(
-      widget.description,
+      description,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 14,
@@ -288,6 +320,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建点赞按钮
   Widget _buildLikeButton() {
+    final likesCount = _currentAudio?.likesCount ?? 0;
+
     return Column(
       children: [
         IconButton(
@@ -300,7 +334,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             ),
             minimumSize: const Size(40, 40),
           ),
-          onPressed: () {},
+          onPressed: () {
+            // TODO: 实现点赞功能
+          },
           icon: SvgPicture.asset(
             'assets/icons/likes.svg',
             color: Colors.white,
@@ -310,7 +346,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         ),
         const SizedBox(height: 4),
         Text(
-          '${widget.likesCount}',
+          '$likesCount',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 12,
@@ -355,7 +391,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       onPressed: () {
-        // 播放列表功能
+        // TODO: 播放列表功能
       },
       icon: SvgPicture.asset(
         'assets/icons/menu.svg',
