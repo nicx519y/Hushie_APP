@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../components/bottom_navigation_bar.dart';
-import '../pages/audio_player_page.dart';
 
 class MainLayout extends StatefulWidget {
   final List<Widget> pages;

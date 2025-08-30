@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../components/custom_app_bar.dart';
 import '../components/audio_grid.dart';
 import '../models/audio_item.dart';
-import '../models/audio_model.dart';
+import '../models/tab_item.dart';
 import '../services/api_service.dart';
 import '../services/audio_manager.dart';
 import '../services/audio_data_pool.dart';
+import '../services/tab_manager.dart';
 import 'search_page.dart';
 import 'audio_player_page.dart';
 
@@ -23,20 +24,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  List<AudioItem> _audioItems = [];
-  bool _isLoading = true;
-  String _searchQuery = '';
-  String? _errorMessage;
-  int _currentPage = 1;
+  final String _searchQuery = '';
   final int _pageSize = 10;
-  bool _hasMoreData = true;
 
   // Tab 相关
   late TabController _tabController;
   int _currentTabIndex = 0;
 
   // 不同 tab 的数据
-  final List<String> _tabTitles = ['For You', 'M/F', 'F/M', 'ASMR', 'NSFW'];
+  List<TabItem> _tabItems = [];
   final Map<int, List<AudioItem>> _tabData = {};
   final Map<int, bool> _tabLoading = {};
   final Map<int, String?> _tabErrors = {};
@@ -47,8 +43,68 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
+    // 先加载 tabs，然后初始化其他内容
+    _initializeTabs();
+  }
+
+  Future<void> _initializeTabs() async {
+    try {
+      // 从 TabManager 获取 tabs
+      final tabs = await TabManager.instance.getAllTabs();
+
+      setState(() {
+        _tabItems = tabs;
+      });
+
+      // 初始化 Tab 控制器
+      _tabController = TabController(length: _tabItems.length, vsync: this);
+      _tabController.addListener(() {
+        if (_tabController.indexIsChanging) {
+          setState(() {
+            _currentTabIndex = _tabController.index;
+          });
+          // 切换到新 tab 时加载数据
+          _loadTabData(_currentTabIndex);
+        }
+      });
+
+      // 初始化各个 tab 的数据状态
+      for (int i = 0; i < _tabItems.length; i++) {
+        _tabData[i] = [];
+        _tabLoading[i] = false;
+        _tabErrors[i] = null;
+        _tabPages[i] = 1;
+        _tabHasMore[i] = true;
+      }
+
+      // 加载第一个 tab 的数据
+      _loadTabData(0);
+    } catch (e) {
+      print('初始化 tabs 失败: $e');
+      // 如果失败，使用默认 tabs
+      _useDefaultTabs();
+    }
+  }
+
+  void _useDefaultTabs() {
+    setState(() {
+      _tabItems = [
+        const TabItem(
+          id: 'for_you',
+          title: 'For You',
+          tag: null,
+          isDefault: true,
+          order: 0,
+        ),
+        const TabItem(id: 'mf', title: 'M/F', tag: 'M/F', order: 1),
+        const TabItem(id: 'fm', title: 'F/M', tag: 'F/M', order: 2),
+        const TabItem(id: 'asmr', title: 'ASMR', tag: 'ASMR', order: 3),
+        const TabItem(id: 'nsfw', title: 'NSFW', tag: 'NSFW', order: 4),
+      ];
+    });
+
     // 初始化 Tab 控制器
-    _tabController = TabController(length: _tabTitles.length, vsync: this);
+    _tabController = TabController(length: _tabItems.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -60,7 +116,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
 
     // 初始化各个 tab 的数据状态
-    for (int i = 0; i < _tabTitles.length; i++) {
+    for (int i = 0; i < _tabItems.length; i++) {
       _tabData[i] = [];
       _tabLoading[i] = false;
       _tabErrors[i] = null;
@@ -122,65 +178,38 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<dynamic> _getApiResponseForTab(int tabIndex, int page) async {
-    // 根据不同的 tab 返回不同的数据
-    switch (tabIndex) {
-      case 0: // 为你推荐
-        return await ApiService.getHomeAudioList(
-          page: page,
-          pageSize: _pageSize,
-          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-        );
-      case 1: // M/F
-        return await ApiService.getHomeAudioList(
-          page: page,
-          pageSize: _pageSize,
-          tags: ['M/F'],
-          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-        );
-      case 2: // F/M
-        return await ApiService.getHomeAudioList(
-          page: page,
-          pageSize: _pageSize,
-          tags: ['F/M'],
-          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-        );
-      case 3: // ASMR
-        return await ApiService.getHomeAudioList(
-          page: page,
-          pageSize: _pageSize,
-          tags: ['ASMR'],
-          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-        );
-      case 4: // NSFW
-        return await ApiService.getHomeAudioList(
-          page: page,
-          pageSize: _pageSize,
-          tags: ['NSFW'],
-          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-        );
-      default:
-        return await ApiService.getHomeAudioList(
-          page: page,
-          pageSize: _pageSize,
-          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-        );
+    // 确保 tabIndex 在有效范围内
+    if (tabIndex < 0 || tabIndex >= _tabItems.length) {
+      return await ApiService.getHomeAudioList(
+        page: page,
+        pageSize: _pageSize,
+        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+    }
+
+    final tabItem = _tabItems[tabIndex];
+
+    // 根据 tab 的 tag 来请求数据
+    if (tabItem.tag != null) {
+      return await ApiService.getHomeAudioList(
+        page: page,
+        pageSize: _pageSize,
+        tags: [tabItem.tag!],
+        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+    } else {
+      // 没有 tag 的 tab（如 "For You"）返回推荐数据
+      return await ApiService.getHomeAudioList(
+        page: page,
+        pageSize: _pageSize,
+        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
     }
   }
 
   Future<void> _loadAudioData({bool refresh = false}) async {
     // 保持原有方法以兼容，现在调用当前 tab 的数据加载
     await _loadTabData(_currentTabIndex, refresh: refresh);
-  }
-
-  Future<void> _loadMoreData() async {
-    final currentTab = _currentTabIndex;
-    if (!_tabHasMore[currentTab]! || _tabLoading[currentTab]!) return;
-
-    setState(() {
-      _tabPages[currentTab] = _tabPages[currentTab]! + 1;
-    });
-
-    await _loadTabData(currentTab);
   }
 
   // 获取用于显示的数据列表（转换为 Map 格式以兼容现有组件）
@@ -263,6 +292,56 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _loadAudioData(refresh: true);
   }
 
+  // 刷新 tabs
+  Future<void> _refreshTabs() async {
+    try {
+      final tabs = await TabManager.instance.refreshTabs();
+
+      setState(() {
+        _tabItems = tabs;
+      });
+
+      // 重新初始化 Tab 控制器
+      _tabController.dispose();
+      _tabController = TabController(length: _tabItems.length, vsync: this);
+      _tabController.addListener(() {
+        if (_tabController.indexIsChanging) {
+          setState(() {
+            _currentTabIndex = _tabController.index;
+          });
+          _loadTabData(_currentTabIndex);
+        }
+      });
+
+      // 重新初始化数据状态
+      for (int i = 0; i < _tabItems.length; i++) {
+        _tabData[i] = [];
+        _tabLoading[i] = false;
+        _tabErrors[i] = null;
+        _tabPages[i] = 1;
+        _tabHasMore[i] = true;
+      }
+
+      // 加载第一个 tab 的数据
+      _loadTabData(0);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tabs 已刷新'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('刷新 tabs 失败: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('刷新 tabs 失败: $e'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -279,7 +358,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: TabBar(
                   controller: _tabController,
                   tabAlignment: TabAlignment.start,
-                  tabs: _tabTitles.map((title) => Tab(text: title)).toList(),
+                  tabs: _tabItems.map((tab) => Tab(text: tab.title)).toList(),
                   labelColor: const Color(0xFF333333),
                   unselectedLabelColor: const Color(0xFF787878),
                   indicator: UnderlineTabIndicator(
@@ -304,26 +383,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(height: 6),
-              // API 模式切换按钮（开发用）
-              // Container(
-              //   padding: const EdgeInsets.symmetric(
-              //     horizontal: 16,
-              //     vertical: 8,
-              //   ),
-              //   child: Row(
-              //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              //     children: [
-              //       Text(
-              //         '当前模式: ${ApiService.currentMode == ApiMode.mock ? 'Mock 数据' : '真实接口'}',
-              //         style: const TextStyle(fontSize: 12, color: Colors.grey),
-              //       ),
-              //       TextButton(
-              //         onPressed: _toggleApiMode,
-              //         child: const Text('切换模式'),
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              // 开发工具按钮区域
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '当前模式: ${ApiService.currentMode == ApiMode.mock ? 'Mock 数据' : '真实接口'}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: _refreshTabs,
+                          child: const Text('刷新 Tabs'),
+                        ),
+                        TextButton(
+                          onPressed: _toggleApiMode,
+                          child: const Text('切换模式'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

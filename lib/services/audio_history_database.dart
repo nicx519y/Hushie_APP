@@ -344,8 +344,6 @@ class AudioHistoryDatabase {
   /// 获取数据库文件大小（调试用）
   Future<int> getDatabaseSize() async {
     try {
-      final databasesPath = await getDatabasesPath();
-      final path = join(databasesPath, _dbName);
       // 这里可以通过 File API 获取文件大小
       // 简化实现，返回估算值
       final stats = await getHistoryStats();

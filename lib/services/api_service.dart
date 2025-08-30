@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import '../models/audio_item.dart';
 import '../models/api_response.dart';
+import '../models/tab_item.dart';
 import '../data/mock_data.dart';
 
 enum ApiMode {
@@ -328,6 +329,70 @@ class ApiService {
       } catch (e) {
         return ApiResponse.error(message: '网络请求失败: $e', code: -1);
       }
+    }
+  }
+
+  /// 获取首页 tabs
+  static Future<ApiResponse<List<TabItem>>> getHomeTabs() async {
+    if (_currentMode == ApiMode.mock) {
+      return _getMockHomeTabs();
+    } else {
+      return _getRealHomeTabs();
+    }
+  }
+
+  /// Mock 模式 - 获取首页 tabs
+  static Future<ApiResponse<List<TabItem>>> _getMockHomeTabs() async {
+    try {
+      await MockData.simulateNetworkDelay(300);
+
+      // Mock 数据：返回一些示例 tabs
+      final tabs = [
+        const TabItem(id: 'mf', title: 'M/F', tag: 'M/F', order: 1),
+        const TabItem(id: 'fm', title: 'F/M', tag: 'F/M', order: 2),
+        const TabItem(id: 'asmr', title: 'ASMR', tag: 'ASMR', order: 3),
+        const TabItem(id: 'nsfw', title: 'NSFW', tag: 'NSFW', order: 4),
+      ];
+
+      return ApiResponse.success(data: tabs, message: '获取 tabs 成功');
+    } catch (e) {
+      return ApiResponse.error(message: 'Mock tabs 数据错误: $e', code: 500);
+    }
+  }
+
+  /// 真实接口 - 获取首页 tabs
+  static Future<ApiResponse<List<TabItem>>> _getRealHomeTabs() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/home/tabs');
+
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(_defaultTimeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final List<dynamic> tabsData = jsonData['data'] ?? [];
+
+        final tabs = tabsData.map((item) => TabItem.fromMap(item)).toList();
+
+        return ApiResponse.success(
+          data: tabs,
+          message: jsonData['message'] ?? '获取 tabs 成功',
+        );
+      } else {
+        return ApiResponse.error(
+          message: '服务器错误: ${response.statusCode}',
+          code: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error(message: '网络请求失败: $e', code: -1);
     }
   }
 }
