@@ -1,0 +1,15 @@
+# 完全禁用flutter_native_splash
+# flutter_native_splash:
+#   # 背景颜色
+#   color: "#ffffff"
+#   
+#   # 移除启动页图片 - 注释掉以禁用
+#   # branding : assets/images/splash.png
+#   fullscreen: true
+
+#   android_12:
+#     color : "#ffffff"
+#     fullscreen: true
+
+  
+  

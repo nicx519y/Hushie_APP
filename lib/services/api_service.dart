@@ -13,7 +13,6 @@ enum ApiMode {
 }
 
 class ApiService {
-  static String get _baseUrl => ApiConfig.baseUrl;
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   // 可以通过环境变量或配置文件设置

@@ -10,21 +10,31 @@ import 'config/api_config.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化 API 配置
+  // 初始化 API 配置（同步操作，快速）
   ApiConfig.initialize(
     debugMode: true, // 在开发环境启用调试模式
   );
 
-  // 先初始化音频历史管理器（确保数据库可用）
-  await AudioHistoryManager.instance.initialize();
-
-  // 再初始化音频数据池（从历史数据库加载数据）
-  await AudioDataPool.instance.initialize();
-
-  // 初始化音频服务
-  await AudioManager.instance.init();
-
+  // 立即启动应用，异步初始化在后台进行
   runApp(const MyApp());
+
+  // 在后台异步初始化其他服务
+  _initializeServicesInBackground();
+}
+
+Future<void> _initializeServicesInBackground() async {
+  try {
+    // 先初始化音频历史管理器（确保数据库可用）
+    await AudioHistoryManager.instance.initialize();
+
+    // 再初始化音频数据池（从历史数据库加载数据）
+    await AudioDataPool.instance.initialize();
+
+    // 初始化音频服务
+    await AudioManager.instance.init();
+  } catch (e) {
+    print('服务初始化失败: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -33,9 +43,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '音乐视频浏览',
+      title: 'Hushie.AI',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFF359AA)),
+        primarySwatch: Colors.pink,
       ),
       home: const MainApp(),
     );
