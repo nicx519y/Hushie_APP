@@ -3,6 +3,7 @@ import 'package:rxdart/rxdart.dart';
 import 'audio_service.dart';
 import '../models/audio_model.dart';
 import 'audio_data_pool.dart';
+import 'audio_history_manager.dart';
 
 class AudioManager {
   static AudioManager? _instance;
@@ -102,6 +103,8 @@ class AudioManager {
   Future<void> playAudio(AudioModel audio) async {
     await _ensureInitialized();
     if (_audioService != null) {
+      // 记录播放开始
+      await AudioHistoryManager.instance.recordPlayStart(audio);
       await _audioService!.playAudio(audio);
     } else {
       print('音频服务未初始化，无法播放音频');
@@ -134,7 +137,7 @@ class AudioManager {
     await _ensureInitialized();
     if (_audioService != null) {
       if (_audioService!.isPlaying) {
-        await _audioService!.pause();
+        await pause(); // pause() 会自动处理进度记录
       } else {
         await _audioService!.play();
       }
@@ -145,6 +148,18 @@ class AudioManager {
   Future<void> pause() async {
     await _ensureInitialized();
     if (_audioService != null) {
+      // 暂停时记录播放停止（包含当前进度和停止追踪）
+      final currentAudio = _currentAudioSubject.value;
+      if (currentAudio != null) {
+        final currentPosition = _positionSubject.value;
+        final totalDuration = _durationSubject.value;
+        await AudioHistoryManager.instance.recordPlayStop(
+          currentAudio.id,
+          currentPosition,
+          totalDuration,
+        );
+      }
+
       await _audioService!.pause();
     }
   }
@@ -153,6 +168,18 @@ class AudioManager {
   Future<void> stop() async {
     await _ensureInitialized();
     if (_audioService != null) {
+      // 记录播放停止（包含完成状态判断和停止进度追踪）
+      final currentAudio = _currentAudioSubject.value;
+      if (currentAudio != null) {
+        final currentPosition = _positionSubject.value;
+        final totalDuration = _durationSubject.value;
+        await AudioHistoryManager.instance.recordPlayStop(
+          currentAudio.id,
+          currentPosition,
+          totalDuration,
+        );
+      }
+
       await _audioService!.stop();
     }
   }

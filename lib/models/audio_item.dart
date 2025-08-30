@@ -12,6 +12,10 @@ class AudioItem {
   final DateTime? createdAt;
   final List<String>? tags;
 
+  // 播放进度相关字段
+  final Duration? playbackPosition; // 上次播放的进度位置
+  final DateTime? lastPlayedAt; // 最后播放时间
+
   AudioItem({
     required this.id,
     required this.cover,
@@ -25,6 +29,8 @@ class AudioItem {
     this.duration,
     this.createdAt,
     this.tags,
+    this.playbackPosition,
+    this.lastPlayedAt,
   });
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
@@ -43,6 +49,12 @@ class AudioItem {
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
       tags: map['tags'] != null ? List<String>.from(map['tags']) : null,
+      playbackPosition: map['playback_position_ms'] != null
+          ? Duration(milliseconds: map['playback_position_ms'])
+          : null,
+      lastPlayedAt: map['last_played_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['last_played_at'])
+          : null,
     );
   }
 
@@ -60,6 +72,8 @@ class AudioItem {
       'duration': duration,
       'created_at': createdAt?.toIso8601String(),
       'tags': tags,
+      'playback_position_ms': playbackPosition?.inMilliseconds,
+      'last_played_at': lastPlayedAt?.millisecondsSinceEpoch,
     };
   }
 
@@ -76,6 +90,8 @@ class AudioItem {
     String? duration,
     DateTime? createdAt,
     List<String>? tags,
+    Duration? playbackPosition,
+    DateTime? lastPlayedAt,
   }) {
     return AudioItem(
       id: id ?? this.id,
@@ -90,6 +106,8 @@ class AudioItem {
       duration: duration ?? this.duration,
       createdAt: createdAt ?? this.createdAt,
       tags: tags ?? this.tags,
+      playbackPosition: playbackPosition ?? this.playbackPosition,
+      lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
     );
   }
 

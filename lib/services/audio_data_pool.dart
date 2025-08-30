@@ -1,5 +1,6 @@
 import '../models/audio_item.dart';
 import '../models/audio_model.dart';
+import 'audio_history_database.dart';
 
 /// 音频数据池管理器
 /// 负责缓存音频数据，提供通过 ID 查找音频的功能
@@ -11,6 +12,65 @@ class AudioDataPool {
   final Map<String, AudioItem> _audioCache = {};
 
   AudioDataPool._internal();
+
+  /// 初始化数据池
+  /// 加载历史数据作为原始数据源
+  Future<void> initialize() async {
+    try {
+      print('正在初始化音频数据池...');
+
+      // 加载历史数据到数据池
+      await _loadHistoryToDataPool();
+
+      print('音频数据池初始化完成，当前缓存: $_audioCache.length 个音频');
+    } catch (e) {
+      print('音频数据池初始化失败: $e');
+    }
+  }
+
+  /// 从历史数据库加载数据到数据池
+  Future<void> _loadHistoryToDataPool() async {
+    try {
+      final database = AudioHistoryDatabase.instance;
+
+      final historyList = await database.getAllHistory();
+      print('从历史数据库加载了 ${historyList.length} 条记录');
+
+      // 将历史记录转换为 AudioItem 并添加到数据池
+      for (final history in historyList) {
+        final audioItem = AudioItem(
+          id: history.id,
+          cover: history.coverUrl,
+          title: history.title,
+          desc: history.description,
+          author: history.artist,
+          avatar: '', // 历史记录中没有头像信息
+          playTimes: 0, // 历史记录中没有播放次数
+          likesCount: history.likesCount,
+          audioUrl: history.audioUrl,
+          duration: _formatDuration(history.duration),
+          createdAt: history.createdAt,
+          tags: [], // 历史记录中没有标签信息
+          playbackPosition: history.playbackPosition, // 保存播放进度
+          lastPlayedAt: history.lastPlayedAt, // 保存最后播放时间
+        );
+
+        _audioCache[audioItem.id] = audioItem;
+      }
+
+      print('已将 ${historyList.length} 条历史数据加载到数据池');
+    } catch (e) {
+      print('加载历史数据到数据池失败: $e');
+      // 不抛出异常，允许数据池在没有历史数据的情况下正常工作
+    }
+  }
+
+  /// 格式化时长为字符串
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds.remainder(60);
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
 
   /// 添加音频数据到缓存池
   void addAudio(AudioItem audio) {
@@ -48,6 +108,35 @@ class AudioDataPool {
           : Duration.zero,
       likesCount: audioItem.likesCount,
     );
+  }
+
+  /// 通过 ID 获取播放进度
+  Duration? getPlaybackProgress(String id) {
+    final audioItem = _audioCache[id];
+    return audioItem?.playbackPosition;
+  }
+
+  /// 更新播放进度
+  void updatePlaybackProgress(String id, Duration progress) {
+    final audioItem = _audioCache[id];
+    if (audioItem != null) {
+      final updatedItem = audioItem.copyWith(
+        playbackPosition: progress,
+        lastPlayedAt: DateTime.now(),
+      );
+      _audioCache[id] = updatedItem;
+    }
+  }
+
+  /// 获取所有播放进度信息
+  Map<String, Duration> getAllPlaybackProgress() {
+    final progressMap = <String, Duration>{};
+    for (final entry in _audioCache.entries) {
+      if (entry.value.playbackPosition != null) {
+        progressMap[entry.key] = entry.value.playbackPosition!;
+      }
+    }
+    return progressMap;
   }
 
   /// 检查音频是否存在于缓存中

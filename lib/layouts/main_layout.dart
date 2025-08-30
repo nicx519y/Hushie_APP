@@ -38,7 +38,7 @@ class _MainLayoutState extends State<MainLayout> {
         print('切换到Home页面');
         break;
       case 1:
-        print('切换到Profile页面');
+        print('切换到Me页面');
         break;
     }
   }

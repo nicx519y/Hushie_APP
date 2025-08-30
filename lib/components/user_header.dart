@@ -20,13 +20,14 @@ class UserHeader extends StatelessWidget {
       children: [
         const SizedBox(width: 10),
         SvgPicture.asset(
-          'assets/icons/user.svg',
-          width: 20,
-          height: 22,
-          colorFilter: const ColorFilter.mode(
-            Color(0xFF28303F),
-            BlendMode.srcIn,
-          ),
+          isLoggedIn
+              ? 'assets/icons/me_selected.svg'
+              : 'assets/icons/me_default.svg',
+          width: 23,
+          height: 27,
+          colorFilter: isLoggedIn
+              ? const ColorFilter.mode(Color(0xFF333333), BlendMode.srcIn)
+              : const ColorFilter.mode(Color(0xFF999999), BlendMode.srcIn),
         ),
         const SizedBox(width: 15),
         Expanded(
@@ -38,7 +39,7 @@ class UserHeader extends StatelessWidget {
                 fontSize: 20,
                 fontWeight: FontWeight.w500,
                 height: 1,
-                color: isLoggedIn ? Colors.black : Colors.grey[600],
+                color: Color(0xFF333333),
               ),
             ),
           ),

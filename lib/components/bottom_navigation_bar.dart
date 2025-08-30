@@ -15,7 +15,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
   });
 
   static const Color activeColor = Color(0xFF333333);
-  static const Color inactiveColor = Color(0xFFD0D3DE);
+  static const Color inactiveColor = Color(0xFF999999);
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,9 @@ class CustomBottomNavigationBar extends StatelessWidget {
               child: _buildTab(
                 index: 0,
                 icon: SvgPicture.asset(
-                  'assets/icons/home.svg',
+                  currentIndex == 0
+                      ? 'assets/icons/home_selected.svg'
+                      : 'assets/icons/home_default.svg',
                   width: 24,
                   height: 24,
                   color: currentIndex == 0 ? activeColor : inactiveColor,
@@ -49,12 +51,14 @@ class CustomBottomNavigationBar extends StatelessWidget {
               child: _buildTab(
                 index: 1,
                 icon: SvgPicture.asset(
-                  'assets/icons/profile.svg',
+                  currentIndex == 1
+                      ? 'assets/icons/me_selected.svg'
+                      : 'assets/icons/me_default.svg',
                   width: 24,
                   height: 24,
                   color: currentIndex == 1 ? activeColor : inactiveColor,
                 ),
-                label: 'Profile',
+                label: 'Me',
                 isSelected: currentIndex == 1,
               ),
             ),
@@ -85,8 +89,8 @@ class CustomBottomNavigationBar extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
-                height: 1,
+                fontSize: 14,
+                height: 1.5,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected ? activeColor : inactiveColor,
               ),
