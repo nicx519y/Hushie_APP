@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../components/custom_app_bar.dart';
 import '../components/audio_grid.dart';
+import '../models/audio_item.dart';
+import '../services/api_service.dart';
 import 'search_page.dart';
 import 'audio_player_page.dart';
 
@@ -12,141 +14,97 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Map<String, dynamic>> _dataList = [];
+  List<AudioItem> _audioItems = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  String? _errorMessage;
+  int _currentPage = 1;
+  final int _pageSize = 10;
+  bool _hasMoreData = true;
 
   @override
   void initState() {
     super.initState();
-    _loadImages();
+    _loadAudioData();
   }
 
-  Future<void> _loadImages() async {
-    loadDataList();
+  Future<void> _loadAudioData({bool refresh = false}) async {
+    if (refresh) {
+      setState(() {
+        _isLoading = true;
+        _currentPage = 1;
+        _audioItems.clear();
+        _errorMessage = null;
+        _hasMoreData = true;
+      });
+    }
+
+    try {
+      final response = await ApiService.getHomeAudioList(
+        page: _currentPage,
+        pageSize: _pageSize,
+        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+
+          if (response.success && response.data != null) {
+            if (refresh || _currentPage == 1) {
+              _audioItems = response.data!.items;
+            } else {
+              _audioItems.addAll(response.data!.items);
+            }
+            _hasMoreData = response.data!.hasNextPage;
+            _errorMessage = null;
+          } else {
+            _errorMessage = response.message;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = '加载失败: $e';
+        });
+      }
+    }
   }
 
-  void loadDataList() {
+  Future<void> _loadMoreData() async {
+    if (!_hasMoreData || _isLoading) return;
+
     setState(() {
-      _dataList = [
-        {
-          'id': '1',
-          'cover': 'https://picsum.photos/300/400?random=1',
-          'title': 'Music in the Wires - From A to Z (Extended)',
-          'desc': 'The dark pop-rock track +22',
-          'author': 'Buddah Bless',
-          'avatar': 'https://picsum.photos/40/40?random=101',
-          'play_times': 13000,
-          'likes_count': 168,
-        },
-        {
-          'id': '2',
-          'cover': 'https://picsum.photos/300/400?random=2',
-          'title': 'Sticky Situation',
-          'desc': 'A female vocalist sings a +133',
-          'author': 'Misha Whisky',
-          'avatar': 'https://picsum.photos/40/40?random=102',
-          'play_times': 639,
-          'likes_count': 18,
-        },
-        {
-          'id': '3',
-          'cover': 'https://picsum.photos/300/400?random=3',
-          'title': 'Dark side (Remix and Extended)',
-          'desc': 'Female vocals, grunge +249',
-          'author': 'Jaccuse Angle',
-          'avatar': 'https://picsum.photos/40/40?random=103',
-          'play_times': 18000,
-          'likes_count': 996,
-        },
-        {
-          'id': '4',
-          'cover': 'https://picsum.photos/300/400?random=4',
-          'title': 'Matched Yours (rock) from Scratch',
-          'desc': 'Genre Tags Slowcore, Trip +30',
-          'author': 'Foggy Queen',
-          'avatar': 'https://picsum.photos/40/40?random=104',
-          'play_times': 2500,
-          'likes_count': 45,
-        },
-        {
-          'id': '5',
-          'cover': 'https://picsum.photos/300/400?random=5',
-          'title': 'Electric Dreams - Synthwave Mix',
-          'desc': 'Retro synthwave vibes +156',
-          'author': 'Neon Pulse',
-          'avatar': 'https://picsum.photos/40/40?random=105',
-          'play_times': 8900,
-          'likes_count': 234,
-        },
-        {
-          'id': '6',
-          'cover': 'https://picsum.photos/300/400?random=6',
-          'title': 'Midnight Jazz Session',
-          'desc': 'Smooth jazz improvisation +89',
-          'author': 'Jazz Master',
-          'avatar': 'https://picsum.photos/40/40?random=106',
-          'play_times': 4200,
-          'likes_count': 127,
-        },
-        {
-          'id': '7',
-          'cover': 'https://picsum.photos/300/400?random=7',
-          'title': 'Urban Beats Collection',
-          'desc': 'Hip-hop instrumentals +312',
-          'author': 'Beat Maker',
-          'avatar': 'https://picsum.photos/40/40?random=107',
-          'play_times': 15600,
-          'likes_count': 445,
-        },
-        {
-          'id': '8',
-          'cover': 'https://picsum.photos/300/400?random=8',
-          'title': 'Acoustic Serenity',
-          'desc': 'Peaceful acoustic melodies +67',
-          'author': 'String Theory',
-          'avatar': 'https://picsum.photos/40/40?random=108',
-          'play_times': 7800,
-          'likes_count': 189,
-        },
-        {
-          'id': '9',
-          'cover': 'https://picsum.photos/300/400?random=9',
-          'title': 'Electronic Fusion',
-          'desc': 'Experimental electronic +203',
-          'author': 'Digital Mind',
-          'avatar': 'https://picsum.photos/40/40?random=109',
-          'play_times': 11200,
-          'likes_count': 298,
-        },
-        {
-          'id': '10',
-          'cover': 'https://picsum.photos/300/400?random=10',
-          'title': 'Classical Reimagined',
-          'desc': 'Modern classical arrangements +134',
-          'author': 'Symphony Now',
-          'avatar': 'https://picsum.photos/40/40?random=110',
-          'play_times': 6300,
-          'likes_count': 167,
-        },
-      ];
-      _isLoading = false;
+      _currentPage++;
     });
+
+    await _loadAudioData();
   }
 
-  // 搜索功能
+  // 获取用于显示的数据列表（转换为 Map 格式以兼容现有组件）
+  List<Map<String, dynamic>> get _filteredDataList {
+    return _audioItems.map((item) => item.toMap()).toList();
+  }
+
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
     });
+
+    // 延迟搜索，避免频繁请求
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_searchQuery == query) {
+        _loadAudioData(refresh: true);
+      }
+    });
   }
 
   void _onSearchSubmitted() {
-    // 实现搜索逻辑
-    print('搜索: $_searchQuery');
+    _loadAudioData(refresh: true);
   }
 
-  // 搜索框点击事件
   void _onSearchTap() {
     Navigator.push(
       context,
@@ -154,51 +112,25 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 获取过滤后的数据
-  List<Map<String, dynamic>> get _filteredDataList {
-    if (_searchQuery.isEmpty) {
-      return _dataList;
-    }
-    return _dataList.where((item) {
-      final title = item['title'].toString().toLowerCase();
-      final author = item['author'].toString().toLowerCase();
-      final desc = item['desc'].toString().toLowerCase();
-      final query = _searchQuery.toLowerCase();
-
-      return title.contains(query) ||
-          author.contains(query) ||
-          desc.contains(query);
-    }).toList();
-  }
-
-  // 处理视频项点击
   void _onAudioTap(Map<String, dynamic> item) {
-    print('点击视频: ${item['title']}');
-    // 这里可以导航到视频详情页
-  }
-
-  // 处理播放按钮点击
-  void _onPlayTap(Map<String, dynamic> item) {
-    print('播放视频: ${item['title']}');
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            AudioPlayerPage(
-              audioTitle: item['title'] ?? 'Unknown Title',
-              artist: item['author'] ?? 'Unknown Artist',
-              description: item['desc'] ?? 'No description available',
-              likesCount: item['likes_count'] ?? 0,
-              audioUrl: 'https://example.com/audio.mp4',
-              coverUrl:
-                  item['cover'] ?? 'https://picsum.photos/400/600?random=1',
-            ),
+        pageBuilder: (context, animation, secondaryAnimation) => AudioPlayerPage(
+          audioTitle: item['title'],
+          artist: item['author'],
+          description: item['desc'],
+          likesCount: item['likes_count'],
+          audioUrl:
+              item['audio_url'] ??
+              'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+          coverUrl: item['cover'],
+        ),
         transitionDuration: const Duration(milliseconds: 300),
         reverseTransitionDuration: const Duration(milliseconds: 300),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // 从下到上的滑动动画
-          const begin = Offset(0.0, 1.0); // 从底部开始
-          const end = Offset.zero; // 到正常位置
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
           const curve = Curves.easeInOut;
 
           var tween = Tween(
@@ -215,10 +147,34 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 处理点赞按钮点击
+  void _onPlayTap(Map<String, dynamic> item) {
+    print('播放音频: ${item['title']}');
+    // 这里可以实现播放逻辑
+    _onAudioTap(item); // 暂时跳转到播放页面
+  }
+
   void _onLikeTap(Map<String, dynamic> item) {
-    print('点赞视频: ${item['title']}');
+    print('点赞音频: ${item['title']}');
     // 这里可以实现点赞逻辑
+  }
+
+  void _toggleApiMode() {
+    final currentMode = ApiService.currentMode;
+    final newMode = currentMode == ApiMode.mock ? ApiMode.real : ApiMode.mock;
+
+    ApiService.setApiMode(newMode);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '已切换到 ${newMode == ApiMode.mock ? 'Mock 数据' : '真实接口'} 模式',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    // 重新加载数据
+    _loadAudioData(refresh: true);
   }
 
   @override
@@ -232,18 +188,58 @@ class _HomePageState extends State<HomePage> {
           onSearchSubmitted: _onSearchSubmitted,
           onSearchTap: _onSearchTap,
         ),
-        // 内容区域
-        Expanded(
-          child: AudioGrid(
-            dataList: _filteredDataList,
-            isLoading: _isLoading,
-            onRefresh: _loadImages,
-            onItemTap: _onAudioTap,
-            onPlayTap: _onPlayTap,
-            onLikeTap: _onLikeTap,
+
+        // API 模式切换按钮（开发用）
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '当前模式: ${ApiService.currentMode == ApiMode.mock ? 'Mock 数据' : '真实接口'}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              TextButton(onPressed: _toggleApiMode, child: const Text('切换模式')),
+            ],
           ),
         ),
+
+        // 内容区域
+        Expanded(
+          child: _errorMessage != null
+              ? _buildErrorWidget()
+              : AudioGrid(
+                  dataList: _filteredDataList,
+                  isLoading: _isLoading,
+                  onRefresh: () => _loadAudioData(refresh: true),
+                  onItemTap: _onAudioTap,
+                  onPlayTap: _onPlayTap,
+                  onLikeTap: _onLikeTap,
+                ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage!,
+            style: const TextStyle(color: Colors.grey, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => _loadAudioData(refresh: true),
+            child: const Text('重试'),
+          ),
+        ],
+      ),
     );
   }
 }

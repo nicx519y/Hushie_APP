@@ -3,9 +3,15 @@ import 'layouts/main_layout.dart';
 import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
 import 'services/audio_manager.dart';
+import 'config/api_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化 API 配置
+  ApiConfig.initialize(
+    debugMode: true, // 在开发环境启用调试模式
+  );
 
   // 初始化音频服务
   await AudioManager.instance.init();
