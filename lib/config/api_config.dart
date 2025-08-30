@@ -77,6 +77,9 @@ class ApiEndpoints {
   static const String userLikes = '/user/likes';
   static const String userPlaylists = '/user/playlists';
 
+  // 首页相关接口
+  static const String homeTabs = '/home/tabs';
+
   // 播放相关接口
   static const String playHistory = '/play/history';
   static const String playTrack = '/play/track';

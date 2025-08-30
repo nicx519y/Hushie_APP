@@ -5,6 +5,7 @@ import '../models/audio_item.dart';
 import '../models/api_response.dart';
 import '../models/tab_item.dart';
 import '../data/mock_data.dart';
+import '../config/api_config.dart';
 
 enum ApiMode {
   mock, // 使用本地 mock 数据
@@ -12,11 +13,14 @@ enum ApiMode {
 }
 
 class ApiService {
-  static const String _baseUrl = 'https://your-api-domain.com/api/v1';
-  static const Duration _defaultTimeout = Duration(seconds: 10);
+  static String get _baseUrl => ApiConfig.baseUrl;
+  static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   // 可以通过环境变量或配置文件设置
   static ApiMode _currentMode = ApiMode.mock;
+
+  // 获取请求头
+  static Map<String, String> get _headers => ApiConfig.getDefaultHeaders();
 
   // 设置 API 模式
   static void setApiMode(ApiMode mode) {
@@ -121,7 +125,7 @@ class ApiService {
       }
 
       final uri = Uri.parse(
-        '$_baseUrl/audio/list',
+        ApiConfig.getFullUrl(ApiEndpoints.audioList),
       ).replace(queryParameters: queryParams);
 
       final response = await http
@@ -189,17 +193,11 @@ class ApiService {
   }) async {
     try {
       final uri = Uri.parse(
-        '$_baseUrl/audio/popular',
+        ApiConfig.getFullUrl(ApiEndpoints.audioPopular),
       ).replace(queryParameters: {'limit': limit.toString()});
 
       final response = await http
-          .get(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          )
+          .get(uri, headers: _headers)
           .timeout(_defaultTimeout);
 
       if (response.statusCode == 200) {
@@ -254,16 +252,12 @@ class ApiService {
   /// 真实接口 - 根据 ID 获取音频详情
   static Future<ApiResponse<AudioItem>> _getRealAudioById(String id) async {
     try {
-      final uri = Uri.parse('$_baseUrl/audio/$id');
+      final uri = Uri.parse(
+        ApiConfig.getFullUrl(ApiEndpoints.audioDetailById(id)),
+      );
 
       final response = await http
-          .get(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          )
+          .get(uri, headers: _headers)
           .timeout(_defaultTimeout);
 
       if (response.statusCode == 200) {
@@ -300,16 +294,10 @@ class ApiService {
       }
     } else {
       try {
-        final uri = Uri.parse('$_baseUrl/tags');
+        final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.tags));
 
         final response = await http
-            .get(
-              uri,
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-            )
+            .get(uri, headers: _headers)
             .timeout(_defaultTimeout);
 
         if (response.statusCode == 200) {
@@ -363,7 +351,7 @@ class ApiService {
   /// 真实接口 - 获取首页 tabs
   static Future<ApiResponse<List<TabItem>>> _getRealHomeTabs() async {
     try {
-      final uri = Uri.parse('$_baseUrl/home/tabs');
+      final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.homeTabs));
 
       final response = await http
           .get(
@@ -384,6 +372,138 @@ class ApiService {
         return ApiResponse.success(
           data: tabs,
           message: jsonData['message'] ?? '获取 tabs 成功',
+        );
+      } else {
+        return ApiResponse.error(
+          message: '服务器错误: ${response.statusCode}',
+          code: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error(message: '网络请求失败: $e', code: -1);
+    }
+  }
+
+  /// 获取用户喜欢的音频列表
+  static Future<ApiResponse<PaginatedResponse<AudioItem>>> getUserLikedAudios({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    if (_currentMode == ApiMode.mock) {
+      return _getMockUserLikedAudios(page: page, pageSize: pageSize);
+    } else {
+      return _getRealUserLikedAudios(page: page, pageSize: pageSize);
+    }
+  }
+
+  /// Mock 模式 - 获取用户喜欢的音频列表
+  static Future<ApiResponse<PaginatedResponse<AudioItem>>>
+  _getMockUserLikedAudios({int page = 1, int pageSize = 20}) async {
+    try {
+      await MockData.simulateNetworkDelay(300);
+
+      // Mock 数据：返回一些示例喜欢的音频
+      final likedAudios = [
+        AudioItem(
+          id: '1',
+          cover: '',
+          title: 'Music in the Wires - From A to Z ...',
+          desc: 'The dark pop-rock track opens extended +22',
+          author: 'Buddha',
+          avatar: '',
+          playTimes: 1300,
+          likesCount: 2293,
+        ),
+        AudioItem(
+          id: '2',
+          cover: '',
+          title: 'Sticky Situation',
+          desc: 'A female vocalist sings a monster related +19',
+          author: 'Misha G',
+          avatar: '',
+          playTimes: 1300,
+          likesCount: 2293,
+        ),
+        AudioItem(
+          id: '3',
+          cover: '',
+          title: 'Matched Yours (rock) from Scratch',
+          desc: 'Lo-fi, electronics, nostalgic, and reggaeton',
+          author: 'ElJay',
+          avatar: '',
+          playTimes: 1300,
+          likesCount: 2293,
+        ),
+        AudioItem(
+          id: '4',
+          cover: '',
+          title: 'Matched Yours (rock) from Scratch',
+          desc: 'Lo-fi, electronics, nostalgic, and reggaeton',
+          author: 'ElJay',
+          avatar: '',
+          playTimes: 1300,
+          likesCount: 2293,
+        ),
+      ];
+
+      // 模拟分页
+      final startIndex = (page - 1) * pageSize;
+      final endIndex = startIndex + pageSize;
+      final paginatedAudios = likedAudios.sublist(
+        startIndex.clamp(0, likedAudios.length),
+        endIndex.clamp(0, likedAudios.length),
+      );
+
+      final paginatedResponse = PaginatedResponse<AudioItem>(
+        items: paginatedAudios,
+        currentPage: page,
+        totalPages: (likedAudios.length / pageSize).ceil(),
+        totalItems: likedAudios.length,
+        pageSize: pageSize,
+        hasNextPage: endIndex < likedAudios.length,
+        hasPreviousPage: page > 1,
+      );
+
+      return ApiResponse.success(data: paginatedResponse, message: '获取喜欢音频成功');
+    } catch (e) {
+      return ApiResponse.error(message: 'Mock 喜欢音频数据错误: $e', code: 500);
+    }
+  }
+
+  /// 真实接口 - 获取用户喜欢的音频列表
+  static Future<ApiResponse<PaginatedResponse<AudioItem>>>
+  _getRealUserLikedAudios({int page = 1, int pageSize = 20}) async {
+    try {
+      final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.userLikes))
+          .replace(
+            queryParameters: {
+              'page': page.toString(),
+              'page_size': pageSize.toString(),
+            },
+          );
+
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              // 这里可以添加用户认证头
+              // 'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(_defaultTimeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final paginatedResponse = PaginatedResponse.fromMap(
+          jsonData['data'],
+          (item) => AudioItem.fromMap(item),
+        );
+
+        return ApiResponse.success(
+          data: paginatedResponse,
+          message: jsonData['message'] ?? '获取喜欢音频成功',
         );
       } else {
         return ApiResponse.error(

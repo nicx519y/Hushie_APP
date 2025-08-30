@@ -7,6 +7,7 @@ import '../components/audio_list.dart';
 import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
+import '../services/api_service.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -33,6 +34,9 @@ class _ProfilePageState extends State<ProfilePage>
   List<AudioHistory> historyAudios = [];
   List<AudioItem> likedAudios = [];
   bool _isLoadingHistory = false;
+  bool _isLoadingLiked = false;
+  int _likedPage = 1;
+  bool _hasMoreLiked = true;
 
   @override
   void initState() {
@@ -67,49 +71,8 @@ class _ProfilePageState extends State<ProfilePage>
     // 从 AudioHistoryManager 获取历史数据
     await _loadHistoryData();
 
-    // 模拟喜欢的音频数据（暂时保留，后续可以改为从其他接口获取）
-    likedAudios = [
-      AudioItem(
-        id: '1',
-        cover: '',
-        title: 'Music in the Wires - From A to Z ...',
-        desc: 'The dark pop-rock track opens extended +22',
-        author: 'Buddha',
-        avatar: '',
-        playTimes: 1300,
-        likesCount: 2293,
-      ),
-      AudioItem(
-        id: '2',
-        cover: '',
-        title: 'Sticky Situation',
-        desc: 'A female vocalist sings a monster related +19',
-        author: 'Misha G',
-        avatar: '',
-        playTimes: 1300,
-        likesCount: 2293,
-      ),
-      AudioItem(
-        id: '3',
-        cover: '',
-        title: 'Matched Yours (rock) from Scratch',
-        desc: 'Lo-fi, electronics, nostalgic, and reggaeton',
-        author: 'ElJay',
-        avatar: '',
-        playTimes: 1300,
-        likesCount: 2293,
-      ),
-      AudioItem(
-        id: '4',
-        cover: '',
-        title: 'Matched Yours (rock) from Scratch',
-        desc: 'Lo-fi, electronics, nostalgic, and reggaeton',
-        author: 'ElJay',
-        avatar: '',
-        playTimes: 1300,
-        likesCount: 2293,
-      ),
-    ];
+    // 从服务器获取喜欢的音频数据
+    await _loadLikedAudios();
   }
 
   // 加载历史数据
@@ -133,6 +96,55 @@ class _ProfilePageState extends State<ProfilePage>
       setState(() {
         _isLoadingHistory = false;
       });
+    }
+  }
+
+  // 加载喜欢的音频数据
+  Future<void> _loadLikedAudios({bool refresh = false}) async {
+    if (refresh) {
+      setState(() {
+        _likedPage = 1;
+        likedAudios.clear();
+        _hasMoreLiked = true;
+      });
+    }
+
+    if (!_hasMoreLiked || _isLoadingLiked) return;
+
+    setState(() {
+      _isLoadingLiked = true;
+    });
+
+    try {
+      final response = await ApiService.getUserLikedAudios(
+        page: _likedPage,
+        pageSize: 20,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoadingLiked = false;
+
+          if (response.success && response.data != null) {
+            if (refresh || _likedPage == 1) {
+              likedAudios = response.data!.items;
+            } else {
+              likedAudios.addAll(response.data!.items);
+            }
+            _hasMoreLiked = response.data!.hasNextPage;
+            _likedPage++;
+          } else {
+            print('获取喜欢音频失败: ${response.message}');
+          }
+        });
+      }
+    } catch (e) {
+      print('加载喜欢音频失败: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingLiked = false;
+        });
+      }
     }
   }
 
@@ -228,11 +240,17 @@ class _ProfilePageState extends State<ProfilePage>
                 ),
               ),
               // 刷新按钮
-              if (currentTabIndex == 0) // 只在 History tab 显示刷新按钮
+              if (currentTabIndex == 0) // History tab 刷新按钮
                 IconButton(
                   onPressed: _loadHistoryData,
                   icon: const Icon(Icons.refresh, size: 20),
                   tooltip: '刷新历史',
+                ),
+              if (currentTabIndex == 1) // Like tab 刷新按钮
+                IconButton(
+                  onPressed: () => _loadLikedAudios(refresh: true),
+                  icon: const Icon(Icons.refresh, size: 20),
+                  tooltip: '刷新喜欢',
                 ),
             ],
           ),
@@ -268,11 +286,15 @@ class _ProfilePageState extends State<ProfilePage>
                         emptyWidget: _buildEmptyWidget('No history'),
                       ),
                 // Like 标签页
-                AudioList(
-                  audios: likedAudios,
-                  padding: const EdgeInsets.only(bottom: 120),
-                  emptyWidget: _buildEmptyWidget('No liked content'),
-                ),
+                _isLoadingLiked && likedAudios.isEmpty
+                    ? _buildLoadingWidget()
+                    : likedAudios.isEmpty
+                    ? _buildEmptyWidget('No liked content')
+                    : AudioList(
+                        audios: likedAudios,
+                        padding: const EdgeInsets.only(bottom: 120),
+                        emptyWidget: _buildEmptyWidget('No liked content'),
+                      ),
               ],
             ),
           ),
