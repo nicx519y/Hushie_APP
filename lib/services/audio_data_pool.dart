@@ -98,6 +98,7 @@ class AudioDataPool {
       id: audioItem.id,
       title: audioItem.title,
       artist: audioItem.author,
+      artistAvatar: audioItem.avatar,
       description: audioItem.desc,
       audioUrl:
           audioItem.audioUrl ??

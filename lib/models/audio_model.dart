@@ -2,6 +2,7 @@ class AudioModel {
   final String id;
   final String title;
   final String artist;
+  final String artistAvatar;
   final String description;
   final String audioUrl;
   final String coverUrl;
@@ -12,6 +13,7 @@ class AudioModel {
     required this.id,
     required this.title,
     required this.artist,
+    required this.artistAvatar,
     required this.description,
     required this.audioUrl,
     required this.coverUrl,
@@ -25,6 +27,7 @@ class AudioModel {
       'id': id,
       'title': title,
       'artist': artist,
+      'artistAvatar': artistAvatar,
       'description': description,
       'audioUrl': audioUrl,
       'coverUrl': coverUrl,
@@ -38,6 +41,7 @@ class AudioModel {
       id: json['id'],
       title: json['title'],
       artist: json['artist'],
+      artistAvatar: json['artistAvatar'],
       description: json['description'],
       audioUrl: json['audioUrl'],
       coverUrl: json['coverUrl'],
@@ -50,6 +54,7 @@ class AudioModel {
     String? id,
     String? title,
     String? artist,
+    String? artistAvatar,
     String? description,
     String? audioUrl,
     String? coverUrl,
@@ -60,6 +65,7 @@ class AudioModel {
       id: id ?? this.id,
       title: title ?? this.title,
       artist: artist ?? this.artist,
+      artistAvatar: artistAvatar ?? this.artistAvatar,
       description: description ?? this.description,
       audioUrl: audioUrl ?? this.audioUrl,
       coverUrl: coverUrl ?? this.coverUrl,

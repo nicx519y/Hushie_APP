@@ -4,6 +4,7 @@ class AudioHistory {
   final String id;
   final String title;
   final String artist;
+  final String artistAvatar;
   final String description;
   final String audioUrl;
   final String coverUrl;
@@ -19,6 +20,7 @@ class AudioHistory {
     required this.id,
     required this.title,
     required this.artist,
+    required this.artistAvatar,
     required this.description,
     required this.audioUrl,
     required this.coverUrl,
@@ -35,6 +37,7 @@ class AudioHistory {
       id: map['id'] ?? '',
       title: map['title'] ?? '',
       artist: map['artist'] ?? '',
+      artistAvatar: map['artist_avatar'] ?? '',
       description: map['description'] ?? '',
       audioUrl: map['audio_url'] ?? '',
       coverUrl: map['cover_url'] ?? '',
@@ -58,6 +61,7 @@ class AudioHistory {
       'id': id,
       'title': title,
       'artist': artist,
+      'artist_avatar': artistAvatar,
       'description': description,
       'audio_url': audioUrl,
       'cover_url': coverUrl,
@@ -81,6 +85,7 @@ class AudioHistory {
       id: audioModel['id'] ?? '',
       title: audioModel['title'] ?? '',
       artist: audioModel['artist'] ?? '',
+      artistAvatar: audioModel['artistAvatar'] ?? '',
       description: audioModel['description'] ?? '',
       audioUrl: audioModel['audioUrl'] ?? '',
       coverUrl: audioModel['coverUrl'] ?? '',
@@ -115,6 +120,7 @@ class AudioHistory {
       id: id,
       title: title,
       artist: artist,
+      artistAvatar: artistAvatar,
       description: description,
       audioUrl: audioUrl,
       coverUrl: coverUrl,

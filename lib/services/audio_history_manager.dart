@@ -38,6 +38,7 @@ class AudioHistoryManager {
         id: audioModel.id,
         title: audioModel.title,
         artist: audioModel.artist,
+        artistAvatar: audioModel.artistAvatar,
         description: audioModel.description,
         audioUrl: audioModel.audioUrl,
         coverUrl: audioModel.coverUrl,

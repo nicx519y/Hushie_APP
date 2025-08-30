@@ -259,9 +259,9 @@ class _ProfilePageState extends State<ProfilePage>
                                 title: history.title,
                                 desc: history.description ?? '',
                                 author: history.artist,
-                                avatar: '',
-                                playTimes: history.likesCount ?? 0,
-                                likesCount: history.likesCount ?? 0,
+                                avatar: history.artistAvatar ?? '',
+                                playTimes: history.likesCount,
+                                likesCount: history.likesCount,
                               ),
                             )
                             .toList(),
