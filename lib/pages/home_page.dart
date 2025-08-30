@@ -5,6 +5,7 @@ import '../models/audio_item.dart';
 import '../models/audio_model.dart';
 import '../services/api_service.dart';
 import '../services/audio_manager.dart';
+import '../services/audio_data_pool.dart';
 import 'search_page.dart';
 import 'audio_player_page.dart';
 
@@ -60,6 +61,10 @@ class _HomePageState extends State<HomePage> {
             }
             _hasMoreData = response.data!.hasNextPage;
             _errorMessage = null;
+
+            // 将新加载的音频数据缓存到数据池
+            AudioDataPool.instance.addAudioList(response.data!.items);
+            print('已缓存 ${response.data!.items.length} 个音频到数据池');
           } else {
             _errorMessage = response.message;
           }
@@ -99,7 +104,7 @@ class _HomePageState extends State<HomePage> {
 
   void _onAudioTap(Map<String, dynamic> item) {
     // 先开始播放音频，然后跳转到播放页面
-    _startPlayingAudio(item);
+    _playAudioById(item['id']);
 
     // 使用播放器页面的标准打开方式（包含上滑动画）
     AudioPlayerPage.show(context);
@@ -108,38 +113,35 @@ class _HomePageState extends State<HomePage> {
   void _onPlayTap(Map<String, dynamic> item) {
     print('播放音频: ${item['title']}');
     // 只播放音频，不跳转页面
-    _startPlayingAudio(item);
+    _playAudioById(item['id']);
   }
 
-  void _startPlayingAudio(Map<String, dynamic> item) {
+  Future<void> _playAudioById(String audioId) async {
     try {
-      // 创建音频模型
-      final audioModel = AudioModel(
-        id: item['id']?.toString() ?? item['title'].hashCode.toString(),
-        title: item['title'] ?? 'Unknown Title',
-        artist: item['author'] ?? 'Unknown Artist',
-        description: item['desc'] ?? '',
-        audioUrl:
-            item['audio_url'] ??
-            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-        coverUrl: item['cover'] ?? '',
-        duration: Duration.zero, // 实际时长会在加载时获取
-        likesCount: item['likes_count'] ?? 0,
-      );
+      // 通过音频管理器播放指定 ID 的音频
+      final success = await AudioManager.instance.playAudioById(audioId);
 
-      // 通过音频管理器开始播放
-      AudioManager.instance.playAudio(audioModel);
-
-      print('开始播放音频: ${audioModel.title}');
+      if (!success) {
+        // 播放失败，显示错误提示
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('播放失败：音频不存在或加载错误'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
     } catch (e) {
       print('播放音频失败: $e');
-      // 可以显示错误提示给用户
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('播放失败: $e'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('播放失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:rxdart/rxdart.dart';
 import 'audio_service.dart';
 import '../models/audio_model.dart';
+import 'audio_data_pool.dart';
 
 class AudioManager {
   static AudioManager? _instance;
@@ -104,6 +105,27 @@ class AudioManager {
       await _audioService!.playAudio(audio);
     } else {
       print('音频服务未初始化，无法播放音频');
+    }
+  }
+
+  // 通过 ID 播放音频（从数据池获取）
+  Future<bool> playAudioById(String audioId) async {
+    try {
+      // 从数据池获取音频模型
+      final audioModel = AudioDataPool.instance.getAudioModelById(audioId);
+
+      if (audioModel == null) {
+        print('音频数据池中未找到 ID: $audioId 的音频');
+        return false;
+      }
+
+      // 播放音频
+      await playAudio(audioModel);
+      print('开始播放音频: ${audioModel.title} (ID: $audioId)');
+      return true;
+    } catch (e) {
+      print('通过 ID 播放音频失败: $e');
+      return false;
     }
   }
 
