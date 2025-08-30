@@ -150,7 +150,7 @@ class AudioCard extends StatelessWidget {
                   Text(
                     item['title'],
                     style: const TextStyle(
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w500,
                       fontSize: 14,
                       height: 1.5,
                       color: Color(0xff333333),
@@ -163,7 +163,7 @@ class AudioCard extends StatelessWidget {
                   Text(
                     item['desc'],
                     style: const TextStyle(
-                      color: Color(0xff999999),
+                      color: Color(0xff666666),
                       fontSize: 12,
                       height: 1.4,
                     ),
@@ -192,8 +192,8 @@ class AudioCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 12,
                             height: 1.4,
-                            color: Color(0xff666666),
-                            fontWeight: FontWeight.w400,
+                            color: Color(0xff333333),
+                            fontWeight: FontWeight.w500,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

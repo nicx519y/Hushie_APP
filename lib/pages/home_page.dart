@@ -16,7 +16,13 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   List<AudioItem> _audioItems = [];
   bool _isLoading = true;
   String _searchQuery = '';
@@ -25,74 +31,162 @@ class _HomePageState extends State<HomePage> {
   final int _pageSize = 10;
   bool _hasMoreData = true;
 
+  // Tab 相关
+  late TabController _tabController;
+  int _currentTabIndex = 0;
+
+  // 不同 tab 的数据
+  final List<String> _tabTitles = ['For You', 'M/F', 'F/M', 'ASMR', 'NSFW'];
+  final Map<int, List<AudioItem>> _tabData = {};
+  final Map<int, bool> _tabLoading = {};
+  final Map<int, String?> _tabErrors = {};
+  final Map<int, int> _tabPages = {};
+  final Map<int, bool> _tabHasMore = {};
+
   @override
   void initState() {
     super.initState();
-    _loadAudioData();
+
+    // 初始化 Tab 控制器
+    _tabController = TabController(length: _tabTitles.length, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {
+          _currentTabIndex = _tabController.index;
+        });
+        // 切换到新 tab 时加载数据
+        _loadTabData(_currentTabIndex);
+      }
+    });
+
+    // 初始化各个 tab 的数据状态
+    for (int i = 0; i < _tabTitles.length; i++) {
+      _tabData[i] = [];
+      _tabLoading[i] = false;
+      _tabErrors[i] = null;
+      _tabPages[i] = 1;
+      _tabHasMore[i] = true;
+    }
+
+    // 加载第一个 tab 的数据
+    _loadTabData(0);
   }
 
-  Future<void> _loadAudioData({bool refresh = false}) async {
+  Future<void> _loadTabData(int tabIndex, {bool refresh = false}) async {
     if (refresh) {
       setState(() {
-        _isLoading = true;
-        _currentPage = 1;
-        _audioItems.clear();
-        _errorMessage = null;
-        _hasMoreData = true;
+        _tabLoading[tabIndex] = true;
+        _tabPages[tabIndex] = 1;
+        _tabData[tabIndex]!.clear();
+        _tabErrors[tabIndex] = null;
+        _tabHasMore[tabIndex] = true;
       });
     }
 
     try {
-      final response = await ApiService.getHomeAudioList(
-        page: _currentPage,
-        pageSize: _pageSize,
-        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+      // 根据不同的 tab 调用不同的 API 方法
+      final response = await _getApiResponseForTab(
+        tabIndex,
+        _tabPages[tabIndex]!,
       );
 
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _tabLoading[tabIndex] = false;
 
           if (response.success && response.data != null) {
-            if (refresh || _currentPage == 1) {
-              _audioItems = response.data!.items;
+            if (refresh || _tabPages[tabIndex] == 1) {
+              _tabData[tabIndex] = response.data!.items;
             } else {
-              _audioItems.addAll(response.data!.items);
+              _tabData[tabIndex]!.addAll(response.data!.items);
             }
-            _hasMoreData = response.data!.hasNextPage;
-            _errorMessage = null;
+            _tabHasMore[tabIndex] = response.data!.hasNextPage;
+            _tabErrors[tabIndex] = null;
 
             // 将新加载的音频数据缓存到数据池
             AudioDataPool.instance.addAudioList(response.data!.items);
-            print('已缓存 ${response.data!.items.length} 个音频到数据池');
+            print('Tab $tabIndex 已缓存 ${response.data!.items.length} 个音频到数据池');
           } else {
-            _errorMessage = response.message;
+            _tabErrors[tabIndex] = response.message;
           }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isLoading = false;
-          _errorMessage = '加载失败: $e';
+          _tabLoading[tabIndex] = false;
+          _tabErrors[tabIndex] = '加载失败: $e';
         });
       }
     }
   }
 
+  Future<dynamic> _getApiResponseForTab(int tabIndex, int page) async {
+    // 根据不同的 tab 返回不同的数据
+    switch (tabIndex) {
+      case 0: // 为你推荐
+        return await ApiService.getHomeAudioList(
+          page: page,
+          pageSize: _pageSize,
+          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        );
+      case 1: // M/F
+        return await ApiService.getHomeAudioList(
+          page: page,
+          pageSize: _pageSize,
+          tags: ['M/F'],
+          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        );
+      case 2: // F/M
+        return await ApiService.getHomeAudioList(
+          page: page,
+          pageSize: _pageSize,
+          tags: ['F/M'],
+          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        );
+      case 3: // ASMR
+        return await ApiService.getHomeAudioList(
+          page: page,
+          pageSize: _pageSize,
+          tags: ['ASMR'],
+          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        );
+      case 4: // NSFW
+        return await ApiService.getHomeAudioList(
+          page: page,
+          pageSize: _pageSize,
+          tags: ['NSFW'],
+          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        );
+      default:
+        return await ApiService.getHomeAudioList(
+          page: page,
+          pageSize: _pageSize,
+          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        );
+    }
+  }
+
+  Future<void> _loadAudioData({bool refresh = false}) async {
+    // 保持原有方法以兼容，现在调用当前 tab 的数据加载
+    await _loadTabData(_currentTabIndex, refresh: refresh);
+  }
+
   Future<void> _loadMoreData() async {
-    if (!_hasMoreData || _isLoading) return;
+    final currentTab = _currentTabIndex;
+    if (!_tabHasMore[currentTab]! || _tabLoading[currentTab]!) return;
 
     setState(() {
-      _currentPage++;
+      _tabPages[currentTab] = _tabPages[currentTab]! + 1;
     });
 
-    await _loadAudioData();
+    await _loadTabData(currentTab);
   }
 
   // 获取用于显示的数据列表（转换为 Map 格式以兼容现有组件）
   List<Map<String, dynamic>> get _filteredDataList {
-    return _audioItems.map((item) => item.toMap()).toList();
+    return _tabData[_currentTabIndex]?.map((item) => item.toMap()).toList() ??
+        [];
   }
 
   void _onSearchTap() {
@@ -176,39 +270,87 @@ class _HomePageState extends State<HomePage> {
         // 自定义头部
         CustomAppBar(hintText: 'Search audio', onSearchTap: _onSearchTap),
 
-        // API 模式切换按钮（开发用）
+        // Tab 栏
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          color: Colors.white,
+          child: Column(
             children: [
-              Text(
-                '当前模式: ${ApiService.currentMode == ApiMode.mock ? 'Mock 数据' : '真实接口'}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              Container(
+                child: TabBar(
+                  controller: _tabController,
+                  tabAlignment: TabAlignment.start,
+                  tabs: _tabTitles.map((title) => Tab(text: title)).toList(),
+                  labelColor: const Color(0xFF333333),
+                  unselectedLabelColor: const Color(0xFF787878),
+                  indicator: UnderlineTabIndicator(
+                    insets: const EdgeInsets.only(bottom: 5), // 底部间距
+                    borderRadius: BorderRadius.circular(2),
+                    borderSide: BorderSide(
+                      color: const Color(0xFFF359AA),
+                      width: 4,
+                      style: BorderStyle.solid,
+                    ),
+                  ),
+                  // indicatorColor: const Color(0xFFF359AA),
+                  // indicatorWeight: 3,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  labelStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  // unselectedLabelStyle: const TextStyle(fontSize: 14),
+                  isScrollable: true,
+                  dividerColor: Colors.transparent, // 去掉底部灰线
+                ),
               ),
-              TextButton(onPressed: _toggleApiMode, child: const Text('切换模式')),
+              const SizedBox(height: 6),
+              // API 模式切换按钮（开发用）
+              // Container(
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 16,
+              //     vertical: 8,
+              //   ),
+              //   child: Row(
+              //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //     children: [
+              //       Text(
+              //         '当前模式: ${ApiService.currentMode == ApiMode.mock ? 'Mock 数据' : '真实接口'}',
+              //         style: const TextStyle(fontSize: 12, color: Colors.grey),
+              //       ),
+              //       TextButton(
+              //         onPressed: _toggleApiMode,
+              //         child: const Text('切换模式'),
+              //       ),
+              //     ],
+              //   ),
+              // ),
             ],
           ),
         ),
 
         // 内容区域
         Expanded(
-          child: _errorMessage != null
+          child: _tabErrors[_currentTabIndex] != null
               ? _buildErrorWidget()
               : AudioGrid(
                   dataList: _filteredDataList,
-                  isLoading: _isLoading,
-                  onRefresh: () => _loadAudioData(refresh: true),
+                  isLoading: _tabLoading[_currentTabIndex] ?? false,
+                  onRefresh: () =>
+                      _loadTabData(_currentTabIndex, refresh: true),
                   onItemTap: _onAudioTap,
                   onPlayTap: _onPlayTap,
                   onLikeTap: _onLikeTap,
                 ),
         ),
+        const SizedBox(height: 80),
       ],
     );
   }
 
   Widget _buildErrorWidget() {
+    final errorMessage = _tabErrors[_currentTabIndex];
+    if (errorMessage == null) return const SizedBox.shrink();
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -216,13 +358,13 @@ class _HomePageState extends State<HomePage> {
           Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            _errorMessage!,
+            errorMessage,
             style: const TextStyle(color: Colors.grey, fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => _loadAudioData(refresh: true),
+            onPressed: () => _loadTabData(_currentTabIndex, refresh: true),
             child: const Text('重试'),
           ),
         ],

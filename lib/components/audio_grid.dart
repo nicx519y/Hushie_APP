@@ -54,9 +54,9 @@ class AudioGrid extends StatelessWidget {
 
           return MasonryGridView.count(
             crossAxisCount: 2,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 5,
-            padding: const EdgeInsets.symmetric(horizontal: 13),
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 8,
+            padding: const EdgeInsets.only(left: 13, right: 13, bottom: 60),
             itemCount: dataList.length,
             itemBuilder: (context, index) {
               final item = dataList[index];

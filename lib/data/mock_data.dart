@@ -16,7 +16,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
       'duration': '3:24',
       'created_at': '2024-01-15T10:30:00Z',
-      'tags': ['pop', 'trending'],
+      'tags': ['pop', 'trending', 'M/F'],
     },
     {
       'id': '2',
@@ -31,7 +31,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
       'duration': '4:12',
       'created_at': '2024-01-14T15:45:00Z',
-      'tags': ['ambient', 'chill'],
+      'tags': ['ambient', 'chill', 'F/M'],
     },
     {
       'id': '3',
@@ -46,7 +46,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
       'duration': '2:56',
       'created_at': '2024-01-13T09:20:00Z',
-      'tags': ['electronic', 'dance'],
+      'tags': ['electronic', 'dance', 'ASMR'],
     },
     {
       'id': '4',
@@ -61,7 +61,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
       'duration': '5:33',
       'created_at': '2024-01-12T18:15:00Z',
-      'tags': ['nature', 'relaxing'],
+      'tags': ['nature', 'relaxing', 'NSFW'],
     },
     {
       'id': '5',
@@ -76,7 +76,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
       'duration': '3:45',
       'created_at': '2024-01-11T12:00:00Z',
-      'tags': ['hip-hop', 'urban'],
+      'tags': ['hip-hop', 'urban', 'M/F'],
     },
     {
       'id': '6',
@@ -91,7 +91,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
       'duration': '6:18',
       'created_at': '2024-01-10T07:30:00Z',
-      'tags': ['classical', 'morning'],
+      'tags': ['classical', 'morning', 'M/F'],
     },
     {
       'id': '7',
@@ -106,7 +106,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
       'duration': '4:42',
       'created_at': '2024-01-09T20:15:00Z',
-      'tags': ['jazz', 'evening'],
+      'tags': ['jazz', 'evening', 'F/M'],
     },
     {
       'id': '8',
@@ -121,7 +121,7 @@ class MockData {
           'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
       'duration': '4:05',
       'created_at': '2024-01-08T16:45:00Z',
-      'tags': ['rock', 'energetic'],
+      'tags': ['rock', 'energetic', 'ASMR'],
     },
   ];
 
