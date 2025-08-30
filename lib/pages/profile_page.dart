@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
-import '../components/profile_tab_view.dart';
 import '../components/profile_tab_header.dart';
 import '../components/audio_list.dart';
 import '../components/user_header.dart';

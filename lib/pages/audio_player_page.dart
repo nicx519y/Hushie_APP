@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import '../components/audio_progress_bar.dart';
-import '../components/play_arrow_icon.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_model.dart';
 
@@ -229,7 +228,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildaudioTitle(),
+              _buildAudioTitle(),
               const SizedBox(height: 8),
               _buildArtistInfo(),
               const SizedBox(height: 18),
@@ -243,8 +242,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  // 构建视频标题
-  Widget _buildaudioTitle() {
+  // 构建音频标题
+  Widget _buildAudioTitle() {
     return Text(
       widget.audioTitle,
       style: const TextStyle(

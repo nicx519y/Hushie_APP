@@ -32,20 +32,20 @@ class AudioCard extends StatelessWidget {
                 // 图片
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: item['cover'],
-                    placeholder: (context, url) => Container(
-                      height: 200,
-                      color: Colors.grey[300],
-                      child: const Center(child: CircularProgressIndicator()),
+                  child: AspectRatio(
+                    aspectRatio: 3 / 4, // 3:4 的宽高比，确保合适的显示比例
+                    child: CachedNetworkImage(
+                      imageUrl: item['cover'],
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[300],
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.error),
+                      ),
+                      fit: BoxFit.cover,
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      height: 200,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.error),
-                    ),
-                    fit: BoxFit.cover,
-                    width: double.infinity,
                   ),
                 ),
                 // 播放按钮和统计信息覆盖层

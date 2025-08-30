@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_stats.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AudioList extends StatelessWidget {
   final List<AudioItem> audios;
