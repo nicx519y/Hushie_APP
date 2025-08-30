@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../components/search_box.dart';
-import '../components/video_list.dart';
-import '../models/video_item.dart';
+import '../components/audio_list.dart';
+import '../models/audio_item.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -15,7 +15,7 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   List<String> _searchHistory = [];
-  List<VideoItem> _searchResults = [];
+  List<AudioItem> _searchResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
 
@@ -118,10 +118,10 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // 生成模拟搜索结果
-  List<VideoItem> _generateMockSearchResults(String keyword) {
+  List<AudioItem> _generateMockSearchResults(String keyword) {
     // 模拟搜索结果数据
     return [
-      VideoItem(
+      AudioItem(
         id: '1',
         cover: '',
         title: '搜索结果: $keyword - 音乐作品1',
@@ -131,7 +131,7 @@ class _SearchPageState extends State<SearchPage> {
         playTimes: 13000,
         likesCount: 2293,
       ),
-      VideoItem(
+      AudioItem(
         id: '2',
         cover: '',
         title: '$keyword 相关的音乐创作',
@@ -141,7 +141,7 @@ class _SearchPageState extends State<SearchPage> {
         playTimes: 8900,
         likesCount: 1567,
       ),
-      VideoItem(
+      AudioItem(
         id: '3',
         cover: '',
         title: '$keyword 音乐合集',
@@ -336,8 +336,8 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
 
-    return VideoList(
-      videos: _searchResults,
+    return AudioList(
+      audios: _searchResults,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
     );
   }

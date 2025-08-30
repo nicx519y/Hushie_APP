@@ -8,7 +8,7 @@
 - 支持搜索变化和提交回调
 
 ### 2. 搜索结果列表复用
-- 复用了 `VideoList` 组件显示搜索结果
+- 复用了 `audioList` 组件显示搜索结果
 - 保持与主页相同的视频卡片样式
 - 支持播放次数、点赞数、作者信息显示
 
@@ -27,9 +27,9 @@ lib/
 │   └── search_demo_page.dart     # 搜索页面演示
 ├── components/
 │   ├── search_box.dart           # 搜索框组件
-│   └── video_list.dart           # 视频列表组件
+│   └── audio_list.dart           # 视频列表组件
 └── models/
-    └── video_item.dart           # 视频数据模型
+    └── audio_item.dart           # 视频数据模型
 ```
 
 ## 使用方法

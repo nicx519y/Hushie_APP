@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'layouts/main_layout.dart';
 import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
+import 'services/audio_manager.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化音频服务
+  await AudioManager.instance.init();
+
   runApp(const MyApp());
 }
 

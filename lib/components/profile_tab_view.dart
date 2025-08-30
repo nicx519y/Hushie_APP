@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../models/video_item.dart';
-import 'video_list.dart';
+import '../models/audio_item.dart';
+import 'audio_list.dart';
 
 class ProfileTabView extends StatefulWidget {
-  final List<VideoItem> historyVideos;
-  final List<VideoItem> likedVideos;
+  final List<AudioItem> historyaudios;
+  final List<AudioItem> likedaudios;
 
   const ProfileTabView({
     super.key,
-    required this.historyVideos,
-    required this.likedVideos,
+    required this.historyaudios,
+    required this.likedaudios,
   });
 
   @override
@@ -60,8 +60,8 @@ class _ProfileTabViewState extends State<ProfileTabView>
           child: TabBarView(
             controller: _tabController,
             children: [
-              VideoList(
-                videos: widget.historyVideos,
+              AudioList(
+                audios: widget.historyaudios,
                 emptyWidget: const Center(
                   child: Text(
                     '暂无观看历史',
@@ -69,8 +69,8 @@ class _ProfileTabViewState extends State<ProfileTabView>
                   ),
                 ),
               ),
-              VideoList(
-                videos: widget.likedVideos,
+              AudioList(
+                audios: widget.likedaudios,
                 emptyWidget: const Center(
                   child: Text(
                     '暂无喜欢内容',

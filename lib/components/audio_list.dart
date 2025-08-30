@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../models/video_item.dart';
-import 'video_stats.dart';
+import '../models/audio_item.dart';
+import 'audio_stats.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class VideoList extends StatelessWidget {
-  final List<VideoItem> videos;
+class AudioList extends StatelessWidget {
+  final List<AudioItem> audios;
   final EdgeInsetsGeometry? padding;
   final ScrollPhysics? physics;
   final bool shrinkWrap;
   final Widget? emptyWidget;
 
-  const VideoList({
+  const AudioList({
     super.key,
-    required this.videos,
+    required this.audios,
     this.padding = const EdgeInsets.all(0),
     this.physics,
     this.shrinkWrap = false,
@@ -21,7 +21,7 @@ class VideoList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (videos.isEmpty) {
+    if (audios.isEmpty) {
       return emptyWidget ??
           const Center(
             child: Text(
@@ -35,14 +35,14 @@ class VideoList extends StatelessWidget {
       padding: padding,
       physics: physics,
       shrinkWrap: shrinkWrap,
-      itemCount: videos.length,
+      itemCount: audios.length,
       itemBuilder: (context, index) {
-        return _buildVideoItem(videos[index]);
+        return _buildAudioItem(audios[index]);
       },
     );
   }
 
-  Widget _buildVideoItem(VideoItem video) {
+  Widget _buildAudioItem(AudioItem audio) {
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       child: Row(
@@ -55,9 +55,9 @@ class VideoList extends StatelessWidget {
               width: 70,
               height: 78,
               color: const Color(0xFFF5F5F5),
-              child: video.cover.isNotEmpty
+              child: audio.cover.isNotEmpty
                   ? Image.network(
-                      video.cover,
+                      audio.cover,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return const Icon(Icons.play_arrow, size: 30);
@@ -74,7 +74,7 @@ class VideoList extends StatelessWidget {
               children: [
                 // 标题
                 Text(
-                  video.title,
+                  audio.title,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -87,7 +87,7 @@ class VideoList extends StatelessWidget {
                 const SizedBox(height: 6),
                 // 描述
                 Text(
-                  video.desc,
+                  audio.desc,
                   style: TextStyle(
                     fontSize: 12,
                     color: Color(0xFF666666),
@@ -98,10 +98,10 @@ class VideoList extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
                 // 视频统计信息
-                VideoStats(
-                  playTimes: video.playTimes,
-                  likesCount: video.likesCount,
-                  author: video.author,
+                AudioStats(
+                  playTimes: audio.playTimes,
+                  likesCount: audio.likesCount,
+                  author: audio.author,
                   iconSize: 12,
                   fontSize: 10,
                 ),

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class VideoCard extends StatelessWidget {
+class AudioCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback? onTap;
   final VoidCallback? onPlayTap;
   final VoidCallback? onLikeTap;
 
-  const VideoCard({
+  const AudioCard({
     super.key,
     required this.item,
     this.onTap,

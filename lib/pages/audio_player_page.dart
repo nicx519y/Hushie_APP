@@ -1,44 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import '../components/video_progress_bar.dart';
+import '../components/audio_progress_bar.dart';
 import '../components/play_arrow_icon.dart';
+import '../services/audio_manager.dart';
+import '../models/audio_model.dart';
 
-class VideoPlayerPage extends StatefulWidget {
-  final String videoTitle;
+class AudioPlayerPage extends StatefulWidget {
+  final String audioTitle;
   final String artist;
   final String description;
   final int likesCount;
-  final String videoUrl;
+  final String audioUrl;
   final String coverUrl;
 
-  const VideoPlayerPage({
+  const AudioPlayerPage({
     super.key,
-    required this.videoTitle,
+    required this.audioTitle,
     required this.artist,
     required this.description,
     required this.likesCount,
-    required this.videoUrl,
+    required this.audioUrl,
     required this.coverUrl,
   });
 
   @override
-  State<VideoPlayerPage> createState() => _VideoPlayerPageState();
+  State<AudioPlayerPage> createState() => _AudioPlayerPageState();
 }
 
-class _VideoPlayerPageState extends State<VideoPlayerPage> {
+class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = const Duration(minutes: 3, seconds: 51);
   bool _showControls = true;
+  late AudioManager _audioManager;
 
   @override
   void initState() {
     super.initState();
+    _audioManager = AudioManager.instance;
     // 模拟视频加载
-    _loadVideo();
+    _loadAudio();
+    // 监听音频播放状态
+    _listenToAudioState();
   }
 
-  void _loadVideo() {
+  void _loadAudio() {
     // 这里应该是实际的视频加载逻辑
     // 现在使用模拟数据
     setState(() {
@@ -47,18 +53,56 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     });
   }
 
-  void _togglePlay() {
-    setState(() {
-      _isPlaying = !_isPlaying;
+  void _listenToAudioState() {
+    // 监听音频播放状态
+    _audioManager.isPlayingStream.listen((isPlaying) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = isPlaying;
+        });
+      }
     });
-    // 这里应该控制实际的视频播放/暂停
+
+    // 监听播放位置
+    _audioManager.positionStream.listen((position) {
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+        });
+      }
+    });
+
+    // 监听播放时长
+    _audioManager.durationStream.listen((duration) {
+      if (mounted) {
+        setState(() {
+          _totalDuration = duration;
+        });
+      }
+    });
+  }
+
+  void _togglePlay() {
+    // 创建音频模型并播放
+    if (!_isPlaying) {
+      final audioModel = AudioModel(
+        id: widget.audioTitle.hashCode.toString(),
+        title: widget.audioTitle,
+        artist: widget.artist,
+        description: widget.description,
+        audioUrl: widget.audioUrl, // 使用视频URL作为音频URL
+        coverUrl: widget.coverUrl,
+        duration: _totalDuration,
+        likesCount: widget.likesCount,
+      );
+      _audioManager.playAudio(audioModel);
+    } else {
+      _audioManager.togglePlayPause();
+    }
   }
 
   void _onSeek(Duration position) {
-    setState(() {
-      _currentPosition = position;
-    });
-    // 这里应该控制实际的视频跳转
+    _audioManager.seek(position);
   }
 
   void _toggleControls() {
@@ -75,7 +119,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         onTap: _toggleControls,
         child: Stack(
           children: [
-            _buildVideoBackground(),
+            _buildAudioBackground(),
             _buildStatusBar(),
             if (_showControls) _buildControlBar(),
           ],
@@ -85,7 +129,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   }
 
   // 构建视频背景
-  Widget _buildVideoBackground() {
+  Widget _buildAudioBackground() {
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
@@ -144,7 +188,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildVideoInfo(),
+            _buildAudioInfo(),
             const SizedBox(height: 30),
             _buildProgressBar(),
             const SizedBox(height: 20),
@@ -177,7 +221,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   }
 
   // 构建视频信息
-  Widget _buildVideoInfo() {
+  Widget _buildAudioInfo() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -185,11 +229,11 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildVideoTitle(),
+              _buildaudioTitle(),
               const SizedBox(height: 8),
               _buildArtistInfo(),
               const SizedBox(height: 18),
-              _buildVideoDescription(),
+              _buildAudioDescription(),
             ],
           ),
         ),
@@ -200,9 +244,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   }
 
   // 构建视频标题
-  Widget _buildVideoTitle() {
+  Widget _buildaudioTitle() {
     return Text(
-      widget.videoTitle,
+      widget.audioTitle,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 20,
@@ -230,7 +274,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   }
 
   // 构建视频描述
-  Widget _buildVideoDescription() {
+  Widget _buildAudioDescription() {
     return Text(
       widget.description,
       style: const TextStyle(
@@ -280,7 +324,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   // 构建进度条
   Widget _buildProgressBar() {
-    return VideoProgressBar(
+    return AudioProgressBar(
       currentPosition: _currentPosition,
       totalDuration: _totalDuration,
       onSeek: _onSeek,

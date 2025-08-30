@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/video_item.dart';
+import '../models/audio_item.dart';
 import '../components/profile_tab_view.dart';
 import '../components/profile_tab_header.dart';
-import '../components/video_list.dart';
+import '../components/audio_list.dart';
 import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -23,8 +23,8 @@ class _ProfilePageState extends State<ProfilePage> {
   int currentTabIndex = 0;
 
   // 模拟视频数据
-  List<VideoItem> historyVideos = [];
-  List<VideoItem> likedVideos = [];
+  List<AudioItem> historyaudios = [];
+  List<AudioItem> likedaudios = [];
 
   @override
   void initState() {
@@ -34,8 +34,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _initMockData() {
     // 模拟历史视频数据
-    historyVideos = [
-      VideoItem(
+    historyaudios = [
+      AudioItem(
         id: '1',
         cover: '',
         title: 'Music in the Wires - From A to Z ...',
@@ -45,7 +45,7 @@ class _ProfilePageState extends State<ProfilePage> {
         playTimes: 1300,
         likesCount: 2293,
       ),
-      VideoItem(
+      AudioItem(
         id: '2',
         cover: '',
         title: 'Sticky Situation',
@@ -55,7 +55,7 @@ class _ProfilePageState extends State<ProfilePage> {
         playTimes: 1300,
         likesCount: 2293,
       ),
-      VideoItem(
+      AudioItem(
         id: '3',
         cover: '',
         title: 'Matched Yours (rock) from Scratch',
@@ -68,8 +68,8 @@ class _ProfilePageState extends State<ProfilePage> {
     ];
 
     // 模拟喜欢的视频数据
-    likedVideos = [
-      VideoItem(
+    likedaudios = [
+      AudioItem(
         id: '1',
         cover: '',
         title: 'Music in the Wires - From A to Z ...',
@@ -79,7 +79,7 @@ class _ProfilePageState extends State<ProfilePage> {
         playTimes: 1300,
         likesCount: 2293,
       ),
-      VideoItem(
+      AudioItem(
         id: '2',
         cover: '',
         title: 'Sticky Situation',
@@ -89,7 +89,7 @@ class _ProfilePageState extends State<ProfilePage> {
         playTimes: 1300,
         likesCount: 2293,
       ),
-      VideoItem(
+      AudioItem(
         id: '3',
         cover: '',
         title: 'Matched Yours (rock) from Scratch',
@@ -99,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
         playTimes: 1300,
         likesCount: 2293,
       ),
-      VideoItem(
+      AudioItem(
         id: '4',
         cover: '',
         title: 'Matched Yours (rock) from Scratch',
@@ -208,8 +208,8 @@ class _ProfilePageState extends State<ProfilePage> {
               index: currentTabIndex,
               children: [
                 // History 标签页
-                VideoList(
-                  videos: historyVideos,
+                AudioList(
+                  audios: historyaudios,
                   emptyWidget: const Center(
                     child: Text(
                       '暂无观看历史',
@@ -218,8 +218,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 // Like 标签页
-                VideoList(
-                  videos: likedVideos,
+                AudioList(
+                  audios: likedaudios,
                   emptyWidget: const Center(
                     child: Text(
                       '暂无喜欢内容',

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../components/bottom_navigation_bar.dart';
-import '../pages/video_player_page.dart';
+import '../pages/audio_player_page.dart';
 
 class MainLayout extends StatefulWidget {
   final List<Widget> pages;
@@ -49,13 +49,13 @@ class _MainLayoutState extends State<MainLayout> {
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const VideoPlayerPage(
-              videoTitle: 'Sticky Situation',
+            const AudioPlayerPage(
+              audioTitle: 'Sticky Situation',
               artist: 'Buddah Bless',
               description:
                   'Quiet and reserved, she doesn\'t say much but is quite intriguing for something exotic. More',
               likesCount: 689,
-              videoUrl: 'https://example.com/video.mp4',
+              audioUrl: 'https://example.com/audio.mp4',
               coverUrl: 'https://picsum.photos/400/600?random=1',
             ),
         transitionDuration: const Duration(milliseconds: 300),

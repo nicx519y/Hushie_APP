@@ -49,6 +49,15 @@ dependencies:
   
   # 本地存储
   shared_preferences: ^2.2.2
+  
+  # 音频播放
+  just_audio: ^0.9.36
+  
+  # 后台音频服务
+  audio_service: ^0.18.12
+  
+  # 响应式编程
+  rxdart: ^0.27.7
 
 dev_dependencies:
   flutter_test:

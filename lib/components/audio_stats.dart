@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class VideoStats extends StatelessWidget {
+class AudioStats extends StatelessWidget {
   final int playTimes;
   final int likesCount;
   final String author;
@@ -10,7 +10,7 @@ class VideoStats extends StatelessWidget {
   final Color? textColor;
   final double spacing;
 
-  const VideoStats({
+  const AudioStats({
     super.key,
     required this.playTimes,
     required this.likesCount,

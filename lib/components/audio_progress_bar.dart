@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class VideoProgressBar extends StatefulWidget {
+class AudioProgressBar extends StatefulWidget {
   final Duration currentPosition;
   final Duration totalDuration;
   final Function(Duration) onSeek;
   final bool isDragging;
   final double? width; // 添加宽度参数
 
-  const VideoProgressBar({
+  const AudioProgressBar({
     super.key,
     required this.currentPosition,
     required this.totalDuration,
@@ -17,10 +17,10 @@ class VideoProgressBar extends StatefulWidget {
   });
 
   @override
-  State<VideoProgressBar> createState() => _VideoProgressBarState();
+  State<AudioProgressBar> createState() => _AudioProgressBarState();
 }
 
-class _VideoProgressBarState extends State<VideoProgressBar> {
+class _AudioProgressBarState extends State<AudioProgressBar> {
   double _dragValue = 0.0;
   bool _isDragging = false;
 
@@ -31,7 +31,7 @@ class _VideoProgressBarState extends State<VideoProgressBar> {
   }
 
   @override
-  void didUpdateWidget(VideoProgressBar oldWidget) {
+  void didUpdateWidget(AudioProgressBar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_isDragging) {
       _dragValue =

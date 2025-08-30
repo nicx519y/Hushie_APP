@@ -1,4 +1,4 @@
-class VideoItem {
+class AudioItem {
   final String id;
   final String cover;
   final String title;
@@ -8,7 +8,7 @@ class VideoItem {
   final int playTimes;
   final int likesCount;
 
-  VideoItem({
+  AudioItem({
     required this.id,
     required this.cover,
     required this.title,
@@ -19,8 +19,8 @@ class VideoItem {
     required this.likesCount,
   });
 
-  factory VideoItem.fromMap(Map<String, dynamic> map) {
-    return VideoItem(
+  factory AudioItem.fromMap(Map<String, dynamic> map) {
+    return AudioItem(
       id: map['id'] ?? '',
       cover: map['cover'] ?? '',
       title: map['title'] ?? '',

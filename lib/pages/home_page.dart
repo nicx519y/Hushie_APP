@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../components/custom_app_bar.dart';
-import '../components/video_grid.dart';
+import '../components/audio_grid.dart';
 import 'search_page.dart';
-import 'video_player_page.dart';
+import 'audio_player_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -172,7 +172,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // 处理视频项点击
-  void _onVideoTap(Map<String, dynamic> item) {
+  void _onAudioTap(Map<String, dynamic> item) {
     print('点击视频: ${item['title']}');
     // 这里可以导航到视频详情页
   }
@@ -184,12 +184,12 @@ class _HomePageState extends State<HomePage> {
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            VideoPlayerPage(
-              videoTitle: item['title'] ?? 'Unknown Title',
+            AudioPlayerPage(
+              audioTitle: item['title'] ?? 'Unknown Title',
               artist: item['author'] ?? 'Unknown Artist',
               description: item['desc'] ?? 'No description available',
               likesCount: item['likes_count'] ?? 0,
-              videoUrl: 'https://example.com/video.mp4',
+              audioUrl: 'https://example.com/audio.mp4',
               coverUrl:
                   item['cover'] ?? 'https://picsum.photos/400/600?random=1',
             ),
@@ -234,11 +234,11 @@ class _HomePageState extends State<HomePage> {
         ),
         // 内容区域
         Expanded(
-          child: VideoGrid(
+          child: AudioGrid(
             dataList: _filteredDataList,
             isLoading: _isLoading,
             onRefresh: _loadImages,
-            onItemTap: _onVideoTap,
+            onItemTap: _onAudioTap,
             onPlayTap: _onPlayTap,
             onLikeTap: _onLikeTap,
           ),
