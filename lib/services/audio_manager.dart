@@ -42,6 +42,7 @@ class AudioManager {
           androidNotificationChannelName: 'Hushie Audio',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
+          androidNotificationIcon: 'mipmap/logo',
         ),
       );
 
@@ -101,13 +102,21 @@ class AudioManager {
 
   // 播放音频
   Future<void> playAudio(AudioModel audio) async {
-    await _ensureInitialized();
-    if (_audioService != null) {
-      // 记录播放开始
-      await AudioHistoryManager.instance.recordPlayStart(audio);
-      await _audioService!.playAudio(audio);
-    } else {
-      print('音频服务未初始化，无法播放音频');
+    try {
+      await _ensureInitialized();
+      if (_audioService != null) {
+        // 记录播放开始
+        await AudioHistoryManager.instance.recordPlayStart(audio);
+        await _audioService!.playAudio(audio);
+      } else {
+        print('音频服务未初始化，无法播放音频');
+        throw Exception('音频服务未初始化');
+      }
+    } catch (e) {
+      print('播放音频失败: $e');
+      // 确保在出错时清理状态
+      _currentAudioSubject.add(null);
+      rethrow;
     }
   }
 
@@ -128,6 +137,8 @@ class AudioManager {
       return true;
     } catch (e) {
       print('通过 ID 播放音频失败: $e');
+      // 确保在错误时停止当前播放
+      await stop();
       return false;
     }
   }

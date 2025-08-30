@@ -74,6 +74,11 @@ class AudioPlayerService extends BaseAudioHandler {
   // 加载并播放音频
   Future<void> playAudio(AudioModel audio) async {
     try {
+      print('开始播放音频: ${audio.title} (ID: ${audio.id})');
+
+      // 先完全停止并重置播放器状态
+      await _stopAndReset();
+
       _currentAudioSubject.add(audio);
 
       // 设置MediaItem用于通知栏显示
@@ -89,14 +94,30 @@ class AudioPlayerService extends BaseAudioHandler {
         ),
       );
 
+      print('正在加载音频文件: ${audio.audioUrl}');
       // 加载音频文件
       await _audioPlayer.setUrl(audio.audioUrl);
 
+      print('开始播放音频');
       // 开始播放
       await _audioPlayer.play();
+      print('音频播放开始成功');
     } catch (e) {
       print('播放音频时出错: $e');
-      stop();
+      await stop();
+    }
+  }
+
+  // 私有方法：停止并重置播放器
+  Future<void> _stopAndReset() async {
+    try {
+      if (_audioPlayer.playing) {
+        await _audioPlayer.stop();
+      }
+      // 添加小延迟确保资源完全释放
+      await Future.delayed(const Duration(milliseconds: 100));
+    } catch (e) {
+      print('停止播放器时出错: $e');
     }
   }
 
@@ -113,9 +134,14 @@ class AudioPlayerService extends BaseAudioHandler {
 
   @override
   Future<void> stop() async {
-    await _audioPlayer.stop();
-    _currentAudioSubject.add(null);
-    mediaItem.add(null);
+    try {
+      await _audioPlayer.stop();
+    } catch (e) {
+      print('停止播放时出错: $e');
+    } finally {
+      _currentAudioSubject.add(null);
+      mediaItem.add(null);
+    }
   }
 
   // 跳转到指定位置

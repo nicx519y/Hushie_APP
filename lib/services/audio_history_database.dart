@@ -12,7 +12,7 @@ class AudioHistoryDatabase {
   static Database? _database;
   static const String _tableName = 'audio_history';
   static const String _dbName = 'audio_history.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
 
   // 配置项
   static int maxHistoryCount = 50; // 最大存储条数
@@ -47,6 +47,7 @@ class AudioHistoryDatabase {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         artist TEXT NOT NULL,
+        artist_avatar TEXT,
         description TEXT,
         audio_url TEXT NOT NULL,
         cover_url TEXT,
@@ -68,8 +69,13 @@ class AudioHistoryDatabase {
 
   /// 数据库升级
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // 未来版本升级时的处理逻辑
     print('数据库从版本 $oldVersion 升级到 $newVersion');
+
+    if (oldVersion < 2) {
+      // 添加 artist_avatar 字段
+      await db.execute('ALTER TABLE $_tableName ADD COLUMN artist_avatar TEXT');
+      print('已添加 artist_avatar 字段');
+    }
   }
 
   /// 添加或更新播放历史
@@ -234,6 +240,30 @@ class AudioHistoryDatabase {
     } catch (e) {
       print('清空播放历史失败: $e');
       return false;
+    }
+  }
+
+  /// 重建数据库表（用于修复表结构问题）
+  Future<void> rebuildDatabase() async {
+    try {
+      // 关闭当前数据库连接
+      if (_database != null) {
+        await _database!.close();
+        _database = null;
+      }
+
+      // 删除数据库文件
+      final databasesPath = await getDatabasesPath();
+      final path = join(databasesPath, _dbName);
+      await deleteDatabase(path);
+
+      print('已删除旧数据库，将重新创建');
+
+      // 重新初始化数据库
+      _database = await _initDatabase();
+      print('数据库重建完成');
+    } catch (e) {
+      print('重建数据库失败: $e');
     }
   }
 

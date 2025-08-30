@@ -27,6 +27,15 @@ class AudioHistoryManager {
       print('音频历史管理器初始化完成');
     } catch (e) {
       print('音频历史管理器初始化失败: $e');
+
+      // 如果数据库初始化失败，尝试重建数据库
+      try {
+        print('尝试重建数据库...');
+        await _database.rebuildDatabase();
+        print('数据库重建成功');
+      } catch (rebuildError) {
+        print('数据库重建也失败: $rebuildError');
+      }
     }
   }
 
