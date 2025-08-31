@@ -157,19 +157,18 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        gradient: RadialGradient(
+          center: const Alignment(0.6, -0.3),
+          radius: 1.0,
+          stops: [0.0, 0.08, 0.4, 0.9, 1.0],
           colors: [
-            widget.progressColor.withOpacity(0.8),
-            widget.progressColor.withOpacity(0.6),
+            widget.progressColor.withOpacity(0.0),
+            widget.progressColor.withOpacity(0.0),
+            widget.progressColor.withOpacity(0.5),
+            widget.progressColor.withOpacity(1.0),
+            widget.progressColor.withOpacity(1.0),
           ],
         ),
-      ),
-      child: Icon(
-        Icons.music_note,
-        color: Colors.white,
-        size: (widget.size - widget.strokeWidth * 4) * 0.5,
       ),
     );
   }
