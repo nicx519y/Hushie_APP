@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'play_arrow_icon.dart';
 import 'circular_play_button.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_model.dart';

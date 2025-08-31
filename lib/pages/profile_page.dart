@@ -154,7 +154,12 @@ class _ProfilePageState extends State<ProfilePage>
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 0,
+            bottom: 0,
+          ),
           child: Column(
             children: [
               // 设置按钮

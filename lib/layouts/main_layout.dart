@@ -49,11 +49,13 @@ class _MainLayoutState extends State<MainLayout> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      extendBodyBehindAppBar: true, // 让body延伸到状态栏后面
 
       body: Stack(
         children: [
           // 页面主体内容
           SafeArea(
+            top: true, // 确保内容不被状态栏遮挡
             bottom: false,
             child: IndexedStack(index: _currentIndex, children: widget.pages),
           ),

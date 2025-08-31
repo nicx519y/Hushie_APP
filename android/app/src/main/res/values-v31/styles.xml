@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fullscreen Style -->
-    <style name="FullScreenTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowFullscreen">true</item>
+    <!-- Normal Style with Status Bar for Android 12+ -->
+    <style name="NormalThemeStyle" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
     <!-- Theme applied to the Android Window while the process is starting -->
-    <style name="LaunchTheme" parent="FullScreenTheme">
+    <style name="LaunchTheme" parent="NormalThemeStyle">
         <!-- 完全禁用启动页 -->
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:forceDarkAllowed">false</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:windowSplashScreenBackground">@android:color/transparent</item>
     </style>
@@ -21,8 +23,7 @@
          running.
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
-    <style name="NormalTheme" parent="FullScreenTheme">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
+    <style name="NormalTheme" parent="NormalThemeStyle">
+        <item name="android:windowBackground">@android:color/white</item>
     </style>
 </resources>
