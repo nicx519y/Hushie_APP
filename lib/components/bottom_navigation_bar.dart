@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'play_arrow_icon.dart';
+import 'circular_play_button.dart';
+import '../services/audio_manager.dart';
+import '../models/audio_model.dart';
 
-class CustomBottomNavigationBar extends StatelessWidget {
+class CustomBottomNavigationBar extends StatefulWidget {
   final int currentIndex;
   final Function(int) onTap;
   final VoidCallback? onPlayButtonTap;
@@ -13,6 +16,63 @@ class CustomBottomNavigationBar extends StatelessWidget {
     required this.onTap,
     this.onPlayButtonTap,
   });
+
+  @override
+  State<CustomBottomNavigationBar> createState() =>
+      _CustomBottomNavigationBarState();
+}
+
+class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
+  late AudioManager _audioManager;
+  bool _isPlaying = false;
+  AudioModel? _currentAudio;
+  Duration _currentPosition = Duration.zero;
+  Duration _totalDuration = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioManager = AudioManager.instance;
+    _setupAudioListeners();
+  }
+
+  void _setupAudioListeners() {
+    // 监听播放状态
+    _audioManager.isPlayingStream.listen((isPlaying) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = isPlaying;
+        });
+      }
+    });
+
+    // 监听当前音频
+    _audioManager.currentAudioStream.listen((audio) {
+      if (mounted) {
+        setState(() {
+          _currentAudio = audio;
+        });
+      }
+    });
+
+    // 监听播放位置
+    _audioManager.positionStream.listen((position) {
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+        });
+      }
+    });
+
+    // 监听总时长
+    _audioManager.durationStream.listen((duration) {
+      if (mounted) {
+        setState(() {
+          _totalDuration = duration;
+        });
+      }
+    });
+  }
 
   static const Color activeColor = Color(0xFF333333);
   static const Color inactiveColor = Color(0xFF999999);
@@ -31,15 +91,15 @@ class CustomBottomNavigationBar extends StatelessWidget {
               child: _buildTab(
                 index: 0,
                 icon: SvgPicture.asset(
-                  currentIndex == 0
+                  widget.currentIndex == 0
                       ? 'assets/icons/home_selected.svg'
                       : 'assets/icons/home_default.svg',
                   width: 24,
                   height: 24,
-                  color: currentIndex == 0 ? activeColor : inactiveColor,
+                  color: widget.currentIndex == 0 ? activeColor : inactiveColor,
                 ),
                 label: 'Home',
-                isSelected: currentIndex == 0,
+                isSelected: widget.currentIndex == 0,
               ),
             ),
 
@@ -51,15 +111,15 @@ class CustomBottomNavigationBar extends StatelessWidget {
               child: _buildTab(
                 index: 1,
                 icon: SvgPicture.asset(
-                  currentIndex == 1
+                  widget.currentIndex == 1
                       ? 'assets/icons/me_selected.svg'
                       : 'assets/icons/me_default.svg',
                   width: 24,
                   height: 24,
-                  color: currentIndex == 1 ? activeColor : inactiveColor,
+                  color: widget.currentIndex == 1 ? activeColor : inactiveColor,
                 ),
                 label: 'Me',
-                isSelected: currentIndex == 1,
+                isSelected: widget.currentIndex == 1,
               ),
             ),
           ],
@@ -75,7 +135,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
     required bool isSelected,
   }) {
     return InkWell(
-      onTap: () => onTap(index),
+      onTap: () => widget.onTap(index),
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       child: Container(
@@ -102,46 +162,31 @@ class CustomBottomNavigationBar extends StatelessWidget {
   }
 
   Widget _buildPlayButton() {
+    // 计算播放进度
+    double progress = 0.0;
+    if (_totalDuration.inMilliseconds > 0) {
+      progress =
+          _currentPosition.inMilliseconds / _totalDuration.inMilliseconds;
+    }
+
     return Transform.translate(
       offset: const Offset(0, -11), // 向上偏移10像素
-      child: InkWell(
-        onTap: () {
-          if (onPlayButtonTap != null) {
-            onPlayButtonTap!();
+      child: CircularPlayButton(
+        size: 64,
+        coverImageUrl: _currentAudio?.coverUrl,
+        isPlaying: _isPlaying,
+        progress: progress,
+        onTap: () async {
+          if (widget.onPlayButtonTap != null) {
+            widget.onPlayButtonTap!();
           } else {
-            onTap(2); // 默认行为
+            // 默认行为：播放/暂停当前音频
+            await _audioManager.togglePlayPause();
           }
         },
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        child: Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                Color(0xFF4A90E2), // 蓝色
-                Color(0xFF5B37F9), // 紫色
-              ],
-            ),
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF5B37F9).withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const PlayArrowIcon(
-            size: 64,
-            triangleSize: 32.0,
-            cornerRadius: 5.0,
-            color: Colors.white,
-          ),
-        ),
+        progressColor: const Color(0xFF5B37F9),
+        backgroundColor: Colors.grey,
+        strokeWidth: 3.0,
       ),
     );
   }
