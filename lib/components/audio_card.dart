@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../utils/number_formatter.dart';
 
 class AudioCard extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -81,7 +82,9 @@ class AudioCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                _formatPlayCount(item['play_times']),
+                                NumberFormatter.countNumFilter(
+                                  item['play_times'],
+                                ),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -119,7 +122,9 @@ class AudioCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                _formatLikeCount(item['likes_count']),
+                                NumberFormatter.countNumFilter(
+                                  item['likes_count'],
+                                ),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -208,27 +213,5 @@ class AudioCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // 格式化播放次数
-  String _formatPlayCount(int count) {
-    if (count >= 10000) {
-      return '${(count / 10000).toStringAsFixed(1)}W';
-    } else if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}K';
-    } else {
-      return count.toString();
-    }
-  }
-
-  // 格式化点赞数
-  String _formatLikeCount(int count) {
-    if (count >= 10000) {
-      return '${(count / 10000).toStringAsFixed(1)}W';
-    } else if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}K';
-    } else {
-      return count.toString();
-    }
   }
 }

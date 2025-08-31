@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../utils/number_formatter.dart';
 
 class AudioStats extends StatelessWidget {
   final int playTimes;
@@ -34,7 +35,7 @@ class AudioStats extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(
-          _formatPlayTimes(playTimes),
+          NumberFormatter.countNumFilter(playTimes),
           style: TextStyle(
             fontSize: fontSize,
             color: textColor,
@@ -52,7 +53,7 @@ class AudioStats extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(
-          likesCount.toString(),
+          NumberFormatter.countNumFilter(likesCount),
           style: TextStyle(
             fontSize: fontSize,
             color: textColor,
@@ -82,14 +83,5 @@ class AudioStats extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _formatPlayTimes(int playTimes) {
-    if (playTimes >= 10000) {
-      return '${(playTimes / 10000).toStringAsFixed(1)}w';
-    } else if (playTimes >= 1000) {
-      return '${(playTimes / 1000).toStringAsFixed(1)}k';
-    }
-    return playTimes.toString();
   }
 }
