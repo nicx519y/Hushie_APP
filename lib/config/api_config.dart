@@ -64,26 +64,17 @@ class ApiConfig {
 class ApiEndpoints {
   // 音频相关接口
   static const String audioList = '/audio/list';
-  static const String audioDetail = '/audio'; // 后面需要拼接 ID
-  static const String audioPopular = '/audio/popular';
-  static const String audioLatest = '/audio/latest';
   static const String audioSearch = '/audio/search';
-
-  // 标签相关接口
-  static const String tags = '/tags';
 
   // 用户相关接口
   static const String userProfile = '/user/profile';
   static const String userLikes = '/user/likes';
-  static const String userPlaylists = '/user/playlists';
 
-  // 首页相关接口
+  // 认证相关接口
+  static const String googleLogin = '/auth/google/login';
+  static const String googleLogout = '/auth/google/logout';
+  static const String googleDeleteAccount = '/auth/google/delete';
+
   static const String homeTabs = '/home/tabs';
-
-  // 播放相关接口
-  static const String playHistory = '/play/history';
-  static const String playTrack = '/play/track';
-
-  /// 获取音频详情端点
-  static String audioDetailById(String id) => '$audioDetail/$id';
+  // 首页相关接口
 }

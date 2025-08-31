@@ -1,76 +1,50 @@
 class ApiResponse<T> {
-  final bool success;
-  final String message;
   final T? data;
-  final int? code;
-  final Map<String, dynamic>? meta;
+  final int errNo;
 
-  ApiResponse({
-    required this.success,
-    required this.message,
-    this.data,
-    this.code,
-    this.meta,
-  });
+  ApiResponse({required this.data, required this.errNo});
 
-  factory ApiResponse.fromMap(
-    Map<String, dynamic> map,
-    T Function(dynamic)? fromMapT,
+  factory ApiResponse.success({required T data, int errNo = 0}) {
+    return ApiResponse<T>(data: data, errNo: errNo);
+  }
+
+  factory ApiResponse.error({int errNo = -1}) {
+    return ApiResponse<T>(data: null, errNo: errNo);
+  }
+
+  /// 统一的JSON处理函数
+  static ApiResponse<T> fromJson<T>(
+    Map<String, dynamic> json,
+    T Function(Map<String, dynamic>) fromMapT,
   ) {
-    return ApiResponse<T>(
-      success: map['success'] ?? false,
-      message: map['message'] ?? '',
-      data: map['data'] != null && fromMapT != null
-          ? fromMapT(map['data'])
-          : map['data'],
-      code: map['code'],
-      meta: map['meta'],
-    );
-  }
+    final int errNo = json['errNo'] ?? -1;
 
-  factory ApiResponse.success({
-    required T data,
-    String message = 'Success',
-    int? code,
-    Map<String, dynamic>? meta,
-  }) {
-    return ApiResponse<T>(
-      success: true,
-      message: message,
-      data: data,
-      code: code,
-      meta: meta,
-    );
-  }
+    // 检查errNo，只有为0时才处理data
+    if (errNo != 0) {
+      return ApiResponse.error(errNo: errNo);
+    }
 
-  factory ApiResponse.error({
-    required String message,
-    int? code,
-    T? data,
-    Map<String, dynamic>? meta,
-  }) {
-    return ApiResponse<T>(
-      success: false,
-      message: message,
-      data: data,
-      code: code,
-      meta: meta,
-    );
+    // errNo == 0，处理data
+    try {
+      final dynamic dataJson = json['data'];
+      if (dataJson == null) {
+        return ApiResponse.error(errNo: errNo);
+      }
+
+      final T data = fromMapT(dataJson as Map<String, dynamic>);
+      return ApiResponse.success(data: data, errNo: errNo);
+    } catch (e) {
+      return ApiResponse.error(errNo: errNo);
+    }
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'success': success,
-      'message': message,
-      'data': data,
-      'code': code,
-      'meta': meta,
-    };
+    return {'errNo': errNo, 'data': data};
   }
 
   @override
   String toString() {
-    return 'ApiResponse(success: $success, message: $message, data: $data)';
+    return 'ApiResponse(errNo: $errNo, data: $data)';
   }
 }
 
@@ -123,5 +97,27 @@ class PaginatedResponse<T> {
       'has_next_page': hasNextPage,
       'has_previous_page': hasPreviousPage,
     };
+  }
+}
+
+class SimpleResponse<T> {
+  final List<T> items;
+
+  SimpleResponse({required this.items});
+
+  factory SimpleResponse.fromMap(
+    Map<String, dynamic> map,
+    T Function(Map<String, dynamic>) fromMapT,
+  ) {
+    final List<dynamic> itemsData = map['items'] ?? [];
+    final List<T> items = itemsData
+        .map((item) => fromMapT(item as Map<String, dynamic>))
+        .toList();
+
+    return SimpleResponse<T>(items: items);
+  }
+
+  Map<String, dynamic> toMap() {
+    return {'items': items};
   }
 }
