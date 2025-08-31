@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import '../components/audio_progress_bar.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_model.dart';
+import '../utils/custom_icons.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -227,19 +227,17 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 构建关闭按钮
   Widget _buildCloseButton() {
     return IconButton(
+      alignment: Alignment.center,
       style: IconButton.styleFrom(
-        padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         backgroundColor: const Color(0x66000000),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         minimumSize: const Size(40, 40),
       ),
       onPressed: () => Navigator.pop(context),
-      icon: SvgPicture.asset(
-        'assets/icons/arrow_down.svg',
-        color: Colors.white,
-        width: 14.07,
-        height: 8.49,
+      icon: Transform.translate(
+        offset: const Offset(-2, 0),
+        child: Icon(CustomIcons.arrow_down, color: Colors.white, size: 9),
       ),
     );
   }
@@ -287,8 +285,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     return Row(
       children: [
-        const Icon(Icons.person, color: Colors.white, size: 16),
-        const SizedBox(width: 4),
+        const Icon(CustomIcons.user, color: Colors.white, size: 12),
+        const SizedBox(width: 6),
         Text(
           artist,
           style: const TextStyle(
@@ -337,12 +335,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           onPressed: () {
             // TODO: 实现点赞功能
           },
-          icon: SvgPicture.asset(
-            'assets/icons/likes.svg',
-            color: Colors.white,
-            width: 24,
-            height: 14,
-          ),
+          icon: Icon(CustomIcons.likes, color: Colors.white, size: 14),
         ),
         const SizedBox(height: 4),
         Text(
@@ -393,12 +386,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       onPressed: () {
         // TODO: 播放列表功能
       },
-      icon: SvgPicture.asset(
-        'assets/icons/menu.svg',
-        color: Colors.white,
-        width: 19.5,
-        height: 18.27,
-      ),
+      icon: Icon(CustomIcons.menu, color: Colors.white, size: 20),
     );
   }
 
@@ -407,14 +395,24 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     return GestureDetector(
       onTap: _togglePlay,
       child: IconButton(
-        style: ButtonStyle(
-          backgroundColor: WidgetStateProperty.all(Colors.transparent),
+        alignment: Alignment.center,
+        style: IconButton.styleFrom(
+          minimumSize: const Size(64, 64),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
         ),
         onPressed: _togglePlay,
-        icon: SvgPicture.asset(
-          !_isPlaying
-              ? 'assets/icons/play_btn.svg'
-              : 'assets/icons/pause_btn.svg',
+        icon: Transform.translate(
+          offset: !_isPlaying
+              ? const Offset(2, 0)
+              : const Offset(0, 0), // 播放箭头向右偏移2像素
+          child: Icon(
+            !_isPlaying ? CustomIcons.play_arrow : CustomIcons.pause,
+            color: Colors.black,
+            size: !_isPlaying ? 26 : 22,
+          ),
         ),
       ),
     );

@@ -8,7 +8,7 @@ import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
 import '../services/api_service.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../utils/custom_icons.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -163,29 +163,23 @@ class _ProfilePageState extends State<ProfilePage>
           child: Column(
             children: [
               // 设置按钮
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Container(
-                    decoration: const BoxDecoration(color: Colors.white),
-                    child: InkWell(
-                      onTap: () {
-                        // 设置页面逻辑
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: SvgPicture.asset(
-                          'assets/icons/setup.svg',
-                          width: 20,
-                          height: 20,
-                        ),
-                      ),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(40, 40),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                    onPressed: () => {},
+                    icon: Icon(CustomIcons.setup, size: 20),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 5),
+              const SizedBox(height: 10),
 
               // 用户头部组件
               UserHeader(

@@ -171,7 +171,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     return Transform.translate(
       offset: const Offset(0, -11), // 向上偏移10像素
       child: CircularPlayButton(
-        size: 64,
+        size: 70,
         coverImageUrl: _currentAudio?.coverUrl,
         isPlaying: _isPlaying,
         progress: progress,
@@ -183,8 +183,8 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             await _audioManager.togglePlayPause();
           }
         },
-        progressColor: const Color(0xFF5B37F9),
-        backgroundColor: Colors.grey,
+        progressColor: const Color(0xFFFF2D93),
+        backgroundColor: const Color(0xFF666666),
         strokeWidth: 3.0,
       ),
     );

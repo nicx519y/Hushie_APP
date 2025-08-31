@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/number_formatter.dart';
+import '../utils/custom_icons.dart';
 
 class AudioStats extends StatelessWidget {
   final int playTimes;
@@ -27,12 +27,7 @@ class AudioStats extends StatelessWidget {
     return Row(
       children: [
         // 播放次数
-        SvgPicture.asset(
-          'assets/icons/play.svg',
-          width: iconSize,
-          height: iconSize,
-          colorFilter: ColorFilter.mode(textColor!, BlendMode.srcIn),
-        ),
+        Icon(CustomIcons.play_arrow, color: textColor!, size: iconSize),
         const SizedBox(width: 4),
         Text(
           NumberFormatter.countNumFilter(playTimes),
@@ -45,13 +40,8 @@ class AudioStats extends StatelessWidget {
         SizedBox(width: spacing),
 
         // 点赞数
-        SvgPicture.asset(
-          'assets/icons/likes.svg',
-          width: iconSize,
-          height: iconSize,
-          colorFilter: ColorFilter.mode(textColor!, BlendMode.srcIn),
-        ),
-        const SizedBox(width: 4),
+        Icon(CustomIcons.likes, color: textColor!, size: iconSize),
+        const SizedBox(width: 5),
         Text(
           NumberFormatter.countNumFilter(likesCount),
           style: TextStyle(
@@ -63,12 +53,7 @@ class AudioStats extends StatelessWidget {
         SizedBox(width: spacing),
 
         // 作者
-        SvgPicture.asset(
-          'assets/icons/author.svg',
-          width: iconSize,
-          height: iconSize,
-          colorFilter: ColorFilter.mode(textColor!, BlendMode.srcIn),
-        ),
+        Icon(CustomIcons.user, color: textColor!, size: iconSize),
         const SizedBox(width: 4),
         Expanded(
           child: Text(

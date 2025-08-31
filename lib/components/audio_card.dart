@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/number_formatter.dart';
+import '../utils/custom_icons.dart';
 
 class AudioCard extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -71,14 +71,10 @@ class AudioCard extends StatelessWidget {
                           ),
                           child: Row(
                             children: [
-                              SvgPicture.asset(
-                                'assets/icons/play.svg',
-                                width: 10,
-                                height: 11,
-                                colorFilter: const ColorFilter.mode(
-                                  Colors.white,
-                                  BlendMode.srcIn,
-                                ),
+                              Icon(
+                                CustomIcons.play_arrow,
+                                color: Colors.white,
+                                size: 12,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -111,16 +107,12 @@ class AudioCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              SvgPicture.asset(
-                                'assets/icons/likes.svg',
-                                width: 12,
-                                height: 11,
-                                colorFilter: const ColorFilter.mode(
-                                  Colors.white,
-                                  BlendMode.srcIn,
-                                ),
+                              Icon(
+                                CustomIcons.likes,
+                                color: Colors.white,
+                                size: 12,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 6),
                               Text(
                                 NumberFormatter.countNumFilter(
                                   item['likes_count'],
@@ -180,14 +172,10 @@ class AudioCard extends StatelessWidget {
                   Row(
                     children: [
                       // 头像
-                      SvgPicture.asset(
-                        'assets/icons/author.svg',
-                        width: 10,
-                        height: 11,
-                        colorFilter: const ColorFilter.mode(
-                          Color(0xff333333),
-                          BlendMode.srcIn,
-                        ),
+                      Icon(
+                        CustomIcons.user,
+                        color: Color(0xff333333),
+                        size: 12,
                       ),
                       const SizedBox(width: 8),
                       // 作者名

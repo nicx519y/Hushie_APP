@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../utils/custom_icons.dart';
 
 class SearchBox extends StatelessWidget {
   final String hintText;
@@ -33,15 +33,7 @@ class SearchBox extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(width: 16),
-          SvgPicture.asset(
-            'assets/icons/search.svg',
-            width: 16,
-            height: 16,
-            colorFilter: const ColorFilter.mode(
-              Color(0xFF666666),
-              BlendMode.srcIn,
-            ),
-          ),
+          Icon(CustomIcons.search, size: 16, color: Color(0xFF666666)),
           const SizedBox(width: 12),
           Expanded(
             child: Container(

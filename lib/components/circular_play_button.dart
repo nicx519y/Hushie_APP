@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
+import '../utils/custom_icons.dart';
+
 class CircularPlayButton extends StatefulWidget {
   final double size;
   final String? coverImageUrl;
@@ -65,6 +67,11 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
 
   @override
   Widget build(BuildContext context) {
+    final playIconSize = widget.isPlaying
+        ? widget.size *
+              0.3 // 暂停图标大小
+        : widget.size * 0.36; // 播放图标大小
+
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
@@ -96,8 +103,8 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
                       ? _rotationController.value * 2 * math.pi
                       : 0,
                   child: Container(
-                    width: widget.size - widget.strokeWidth * 4,
-                    height: widget.size - widget.strokeWidth * 4,
+                    width: widget.size - widget.strokeWidth * 2,
+                    height: widget.size - widget.strokeWidth * 2,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [
@@ -130,17 +137,14 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
             ),
 
             // 播放/暂停图标覆盖层
-            Container(
-              width: widget.size - widget.strokeWidth * 4,
-              height: widget.size - widget.strokeWidth * 4,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.black.withOpacity(0.3),
-              ),
+            Transform.translate(
+              offset: widget.isPlaying
+                  ? const Offset(0, 0)
+                  : Offset(playIconSize / 10, 0),
               child: Icon(
-                widget.isPlaying ? Icons.pause : Icons.play_arrow,
+                widget.isPlaying ? CustomIcons.pause : CustomIcons.play_arrow,
                 color: Colors.white,
-                size: (widget.size - widget.strokeWidth * 4) * 0.4,
+                size: playIconSize,
               ),
             ),
           ],
