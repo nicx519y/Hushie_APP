@@ -62,6 +62,7 @@ class AudioGrid extends StatelessWidget {
               final item = dataList[index];
               return AudioCard(
                 item: item,
+                imageWidth: availableWidth / 2,
                 onTap: () => onItemTap?.call(item),
                 onPlayTap: () => onPlayTap?.call(item),
                 onLikeTap: () => onLikeTap?.call(item),

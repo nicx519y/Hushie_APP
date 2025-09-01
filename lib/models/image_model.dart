@@ -6,47 +6,6 @@ class ImageModel {
 
   const ImageModel({required this.id, required this.urls});
 
-  /// 根据逻辑像素宽度获取最合适的URL版本
-  String getBestUrl(double logicalWidth) {
-    // 获取设备像素密度
-    final devicePixelRatio =
-        WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
-
-    // 计算实际需要的物理像素宽度
-    double physicalWidth = logicalWidth * devicePixelRatio;
-
-    // 选择与物理宽度差值绝对值最小的版本
-    double minDifference = double.infinity;
-    String bestUrl = urls.x1.url;
-
-    // 检查x1版本
-    double difference = (physicalWidth - urls.x1.width).abs();
-    if (difference < minDifference) {
-      minDifference = difference;
-      bestUrl = urls.x1.url;
-    }
-
-    // 检查x2版本
-    if (urls.x2 != null) {
-      difference = (physicalWidth - urls.x2!.width).abs();
-      if (difference < minDifference) {
-        minDifference = difference;
-        bestUrl = urls.x2!.url;
-      }
-    }
-
-    // 检查x3版本
-    if (urls.x3 != null) {
-      difference = (physicalWidth - urls.x3!.width).abs();
-      if (difference < minDifference) {
-        minDifference = difference;
-        bestUrl = urls.x3!.url;
-      }
-    }
-
-    return bestUrl;
-  }
-
   /// 根据逻辑像素宽度获取最合适的图片尺寸信息
   ImageResolution getBestResolution(double logicalWidth) {
     // 获取设备像素密度

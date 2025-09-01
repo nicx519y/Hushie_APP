@@ -713,13 +713,45 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "items": [
       {
         "id": "audio_001",
-        "cover": "https://example.com/cover1.jpg",
+        "cover": {
+          "urls": {
+            "x1": {
+              "url": "https://example.com/cover1_400x600.jpg",
+              "width": 400,
+              "height": 600
+            },
+            "x2": {
+              "url": "https://example.com/cover1_800x1200.jpg",
+              "width": 800,
+              "height": 1200
+            },
+            "x3": {
+              "url": "https://example.com/cover1_1200x1800.jpg",
+              "width": 1200,
+              "height": 1800
+            }
+          }
+        },
+        "bg_image": {
+          "urls": {
+            "x1": {
+              "url": "https://example.com/bg1_800x600.jpg",
+              "width": 800,
+              "height": 600
+            },
+            "x2": {
+              "url": "https://example.com/bg1_1600x1200.jpg",
+              "width": 1600,
+              "height": 1200
+            }
+          }
+        },
         "title": "Music in the Wires",
         "desc": "The dark pop-rock track opens extended +22",
         "author": "Buddha",
         "avatar": "https://example.com/avatar1.jpg",
-        "playTimes": 1300123,
-        "likesCount": 22933,
+        "play_times": 1300123,
+        "likes_count": 22933,
         "audio_url": "https://example.com/audio1.mp3",
         "duration": "180000",
         "preview_start_ms": 30000,
@@ -768,13 +800,45 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "items": [
       {
         "id": "audio_002",
-        "cover": "https://example.com/cover2.jpg",
+        "cover": {
+          "urls": {
+            "x1": {
+              "url": "https://example.com/cover2_400x500.jpg",
+              "width": 400,
+              "height": 500
+            },
+            "x2": {
+              "url": "https://example.com/cover2_800x1000.jpg",
+              "width": 800,
+              "height": 1000
+            },
+            "x3": {
+              "url": "https://example.com/bg2_1600x1200.jpg",
+              "width": 1600,
+              "height": 1200
+            }
+          }
+        },
+        "bg_image": {
+          "urls": {
+            "x1": {
+              "url": "https://example.com/bg2_800x600.jpg",
+              "width": 800,
+              "height": 600
+            },
+            "x2": {
+              "url": "https://example.com/bg2_1600x1200.jpg",
+              "width": 1600,
+              "height": 1200
+            }
+          }
+        },
         "title": "Rock Anthem",
         "desc": "High energy rock music",
         "author": "Rock Band",
         "avatar": "https://example.com/avatar2.jpg",
-        "playTimes": 850000,
-        "likesCount": 15678,
+        "play_times": 850000,
+        "likes_count": 15678,
         "audio_url": "https://example.com/audio2.mp3",
         "duration": "180000",
         "preview_start_ms": 30000,
@@ -822,13 +886,45 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "items": [
       {
         "id": "audio_003",
-        "cover": "https://example.com/cover3.jpg",
+        "cover": {
+          "urls": {
+            "x1": {
+              "url": "https://example.com/cover3_400x600.jpg",
+              "width": 400,
+              "height": 600
+            },
+            "x2": {
+              "url": "https://example.com/cover3_800x1200.jpg",
+              "width": 800,
+              "height": 1200
+            },
+            "x3": {
+              "url": "https://example.com/cover3_1200x1800.jpg",
+              "width": 1200,
+              "height": 1800
+            }
+          }
+        },
+        "bg_image": {
+          "urls": {
+            "x1": {
+                "url": "https://example.com/cover3_400x600.jpg",
+                "width": 400,
+                "height": 600
+              },
+              "x2": {
+                "url": "https://example.com/cover3_800x1200.jpg",
+                "width": 800,
+                "height": 1200
+            }
+          },
+        },
         "title": "Favorite Song",
         "desc": "User's favorite audio track",
         "author": "Favorite Artist",
         "avatar": "https://example.com/avatar3.jpg",
-        "playTimes": 1200000,
-        "likesCount": 45000,
+        "play_times": 1200000,
+        "likes_count": 45000,
         "audio_url": "https://example.com/audio3.mp3",
         "duration": "180000",
         "preview_start_ms": 30000,
@@ -1126,18 +1222,50 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "string",           // 音频唯一标识
-  "cover": "string",        // 封面图片URL
-  "title": "string",        // 音频标题
-  "desc": "string",         // 音频描述
-  "author": "string",       // 作者名称
-  "avatar": "string",       // 作者头像URL
-  "playTimes": "int",       // 播放次数
-  "likesCount": "int",      // 点赞数量
-  "audio_url": "string",    // 音频文件URL
-  "duration": "string",     // 音频总时长
-  "created_at": "string",   // 创建时间
-  "tags": ["string"],       // 标签数组
+  "id": "string",                 // 音频唯一标识
+  "cover": {                      // 封面图片（多分辨率）
+    "urls": {                     // 多分辨率URL集合
+      "x1": {                     // 1x分辨率（必须）
+        "url": "string",          // 图片URL
+        "width": 400,             // 图片宽度
+        "height": 600             // 图片高度
+      },
+      "x2": {                     // 2x分辨率（可选）
+        "url": "string",          // 图片URL
+        "width": 800,             // 图片宽度
+        "height": 1200            // 图片高度
+      },
+      "x3": {                     // 3x分辨率（可选）
+        "url": "string",          // 图片URL
+        "width": 1200,            // 图片宽度
+        "height": 1800            // 图片高度
+      }
+    }
+  },
+  "bg_image": {                   // 背景图片（多分辨率，可选）
+    "urls": {                     // 多分辨率URL集合
+      "x1": {                     // 1x分辨率（必须）
+        "url": "string",          // 图片URL
+        "width": "int",             // 图片宽度
+        "height": "int"             // 图片高度
+      },
+      "x2": {                     // 2x分辨率（可选）
+        "url": "string",            // 图片URL
+        "width": "int",             // 图片宽度
+        "height": "int"             // 图片高度
+      }
+    }
+  },
+  "title": "string",              // 音频标题
+  "desc": "string",               // 音频描述
+  "author": "string",             // 作者名称
+  "avatar": "string",             // 作者头像URL
+  "play_times": "int",            // 播放次数
+  "likes_count": "int",           // 点赞数量
+  "audio_url": "string",          // 音频文件URL
+  "duration": "string",           // 音频总时长
+  "created_at": "string",         // 创建时间
+  "tags": ["string"],             // 标签数组
   "playback_position_ms": "int",  // 上次播放进度位置(毫秒)
   "last_played_at": "int",        // 最后播放时间戳
   "preview_start_ms": "int",      // 可预览开始时间点(毫秒)
@@ -1145,7 +1273,31 @@ Content-Type: application/json
 }
 ```
 
-### 4.2 AccessTokenResponse (访问令牌响应)
+### 4.2 ImageModel (图片模型)
+
+```json
+{
+  "urls": {                       // 多分辨率URL集合
+    "x1": {                       // 1x分辨率（必须）
+      "url": "string",            // 图片URL
+      "width": "int",             // 图片宽度
+      "height": "int"             // 图片高度
+    },
+    "x2": {                       // 2x分辨率（可选）
+      "url": "string",            // 图片URL
+      "width": "int",             // 图片宽度
+      "height": "int"             // 图片高度
+    },
+    "x3": {                       // 3x分辨率（可选）
+      "url": "string",            // 图片URL
+      "width": "int",             // 图片宽度
+      "height": "int"             // 图片高度
+    }
+  }
+}
+```
+
+### 4.3 AccessTokenResponse (访问令牌响应)
 
 ```json
 {
@@ -1157,7 +1309,7 @@ Content-Type: application/json
 }
 ```
 
-### 4.3 TokenValidationResponse (令牌验证响应)
+### 4.4 TokenValidationResponse (令牌验证响应)
 
 ```json
 {
@@ -1169,7 +1321,7 @@ Content-Type: application/json
 }
 ```
 
-### 4.4 TabItem (标签项)
+### 4.5 TabItem (标签项)
 
 ```json
 {
@@ -1178,11 +1330,10 @@ Content-Type: application/json
 }
 ```
 
----
 
-## 5. 音频预览功能
+## 6. 音频预览功能
 
-### 5.1 预览字段说明
+### 6.1 预览字段说明
 
 音频预览功能允许用户在不完整播放音频的情况下，体验音频的特定片段。
 
@@ -1210,7 +1361,7 @@ Content-Type: application/json
 
 ---
 
-## 6. 错误码说明
+## 7. 错误码说明
 
 | 错误码 | 说明 | 处理建议 |
 |--------|------|----------|
@@ -1225,9 +1376,9 @@ Content-Type: application/json
 
 ---
 
-## 7. 安全配置
+## 8. 安全配置
 
-### 7.1 应用配置
+### 8.1 应用配置
 
 ```dart
 class ApiConfig {
@@ -1240,7 +1391,7 @@ class ApiConfig {
 }
 ```
 
-### 7.2 安全检查
+### 8.2 安全检查
 
 - ✅ **时间戳验证**: 服务器检查时间戳是否在5分钟内
 - ✅ **随机数验证**: 确保每个随机数在短时间内唯一
@@ -1248,7 +1399,7 @@ class ApiConfig {
 - ✅ **Token验证**: 检查访问令牌的有效性
 - ✅ **设备验证**: 验证设备ID的合法性
 
-### 7.3 自定义请求头
+### 8.3 自定义请求头
 
 可以在调用时添加自定义请求头，会与自动添加的请求头合并：
 
@@ -1264,9 +1415,9 @@ final response = await HttpClientService.get(
 
 ---
 
-## 8. 开发指南
+## 9. 开发指南
 
-### 8.1 使用示例
+### 9.1 使用示例
 
 ```dart
 // 获取音频列表
@@ -1284,7 +1435,7 @@ final response = await HttpClientService.postJson(
 );
 ```
 
-### 8.2 错误处理
+### 9.2 错误处理
 
 ```dart
 try {
@@ -1300,7 +1451,7 @@ try {
 }
 ```
 
-### 8.3 签名调试
+### 9.3 签名调试
 
 在开发环境中，可以启用签名调试信息：
 

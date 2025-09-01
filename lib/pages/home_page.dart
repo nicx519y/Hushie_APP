@@ -39,11 +39,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String? _lastAudioId;
   int _currentPage = 1;
 
+  // 每个Tab的数据状态
+  final Map<int, List<AudioItem>> _tabData = {};
+  final Map<int, bool> _tabLoading = {};
+  final Map<int, String?> _tabErrors = {};
+  final Map<int, int> _tabPages = {};
+  final Map<int, bool> _tabHasMore = {};
+
   @override
   void initState() {
     super.initState();
     _initTabs();
-    _loadAudioData();
   }
 
   void _initTabs() async {
@@ -58,6 +64,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           _onTabChanged(_tabController.index);
         }
       });
+
+      // 初始化所有Tab的状态
+      for (int i = 0; i < _tabItems.length; i++) {
+        _tabData[i] = [];
+        _tabLoading[i] = false;
+        _tabErrors[i] = null;
+        _tabPages[i] = 1;
+        _tabHasMore[i] = true;
+      }
+
+      // 加载第一个Tab的数据
+      if (_tabItems.isNotEmpty) {
+        _loadTabData(0);
+      }
     } catch (e) {
       print('初始化tabs失败: $e');
       _initDefaultTabs();
@@ -80,64 +100,99 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _onTabChanged(_tabController.index);
       }
     });
+
+    // 初始化所有Tab的状态
+    for (int i = 0; i < _tabItems.length; i++) {
+      _tabData[i] = [];
+      _tabLoading[i] = false;
+      _tabErrors[i] = null;
+      _tabPages[i] = 1;
+      _tabHasMore[i] = true;
+    }
+
+    // 加载第一个Tab的数据
+    if (_tabItems.isNotEmpty) {
+      _loadTabData(0);
+    }
   }
 
   void _onTabChanged(int tabIndex) {
     setState(() {
       _currentTabIndex = tabIndex;
     });
-    // 切换到新 tab 时加载数据
-    _loadTabData(tabIndex);
+
+    // 同步当前Tab的数据到主列表
+    if (_tabData[tabIndex] != null) {
+      setState(() {
+        _audioItems = _tabData[tabIndex]!;
+      });
+    }
+
+    // 如果当前Tab没有数据，则加载数据
+    if (_tabData[tabIndex] == null || _tabData[tabIndex]!.isEmpty) {
+      _loadTabData(tabIndex);
+    }
   }
 
-  void _loadTabData(int tabIndex) async {
+  Future<void> _loadTabData(int tabIndex, {bool refresh = false}) async {
     if (tabIndex < 0 || tabIndex >= _tabItems.length) {
       return;
     }
 
     final tabItem = _tabItems[tabIndex];
 
-    // 如果指定了标签，使用标签过滤
-    if (tabItem.id != 'for_you') {
-      await _loadAudioDataByTag(tabItem.id);
-    } else {
-      // 否则加载推荐数据
-      await _loadAudioData();
-    }
-  }
+    // 设置loading状态
+    setState(() {
+      _tabLoading[tabIndex] = true;
+      if (refresh) {
+        _tabData[tabIndex] = [];
+        _tabPages[tabIndex] = 1;
+        _tabHasMore[tabIndex] = true;
+        _tabErrors[tabIndex] = null;
+      }
+    });
 
-  Future<void> _loadAudioDataByTag(String tag) async {
     try {
-      setState(() {
-        _isLoading = true;
-      });
-
+      // 如果指定了标签，使用标签过滤
+      String? tag = tabItem.id != 'for_you' ? tabItem.id : null;
       final response = await ApiService.getAudioList(tag: tag, count: 20);
 
       if (response.errNo == 0 && response.data != null) {
         setState(() {
-          _audioItems = response.data!.items;
-          _hasMoreData = response.data!.items.length >= 20;
-          if (_audioItems.isNotEmpty) {
-            _lastAudioId = _audioItems.last.id;
+          if (refresh || _tabData[tabIndex] == null) {
+            _tabData[tabIndex] = response.data!.items;
+          } else {
+            _tabData[tabIndex]!.addAll(response.data!.items);
           }
+          _tabHasMore[tabIndex] = response.data!.items.length >= 20;
+          _tabErrors[tabIndex] = null;
         });
+
+        // 同时更新主列表（为了保持兼容性）
+        if (tabIndex == _currentTabIndex) {
+          setState(() {
+            _audioItems = _tabData[tabIndex]!;
+          });
+        }
       } else {
-        print('加载音频数据失败: 错误码 ${response.errNo}');
+        setState(() {
+          _tabErrors[tabIndex] = '加载数据失败: 错误码 ${response.errNo}';
+        });
       }
     } catch (e) {
-      print('加载音频数据异常: $e');
+      setState(() {
+        _tabErrors[tabIndex] = '加载数据异常: $e';
+      });
     } finally {
       setState(() {
-        _isLoading = false;
+        _tabLoading[tabIndex] = false;
       });
     }
   }
 
   // 获取用于显示的数据列表（转换为 Map 格式以兼容现有组件）
   List<Map<String, dynamic>> get _filteredDataList {
-    return _tabData[_currentTabIndex]?.map((item) => item.toMap()).toList() ??
-        [];
+    return _audioItems.map((item) => item.toMap()).toList();
   }
 
   void _onSearchTap() {
@@ -211,13 +266,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
 
     // 重新加载数据
-    _loadAudioData(refresh: true);
+    _loadTabData(_currentTabIndex, refresh: true);
   }
 
   // 刷新 tabs
   Future<void> _refreshTabs() async {
     try {
-      final tabs = await TabManager.instance.refreshTabs();
+      final tabs = await TabManager().refreshTabs();
 
       setState(() {
         _tabItems = tabs;

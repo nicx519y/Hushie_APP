@@ -172,7 +172,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
       offset: const Offset(0, -11), // 向上偏移10像素
       child: CircularPlayButton(
         size: 70,
-        coverImageUrl: _currentAudio?.coverUrl,
+        coverImageUrl: _currentAudio?.coverUrl.getBestResolution(70.0).url,
         isPlaying: _isPlaying,
         progress: progress,
         onTap: () async {

@@ -54,7 +54,7 @@ class DeviceInfoService {
       } else if (Platform.isWindows) {
         final windowsInfo = await _deviceInfoPlugin.windowsInfo;
         deviceInfo['platform'] = 'Windows';
-        deviceInfo['version'] = windowsInfo.buildNumber;
+        deviceInfo['version'] = windowsInfo.buildNumber.toString();
         deviceInfo['brand'] = 'Microsoft';
         deviceInfo['model'] = 'PC';
         deviceInfo['device_id'] = windowsInfo.deviceId;
@@ -68,7 +68,7 @@ class DeviceInfoService {
       } else if (Platform.isLinux) {
         final linuxInfo = await _deviceInfoPlugin.linuxInfo;
         deviceInfo['platform'] = 'Linux';
-        deviceInfo['version'] = linuxInfo.version;
+        deviceInfo['version'] = linuxInfo.version ?? 'Unknown';
         deviceInfo['brand'] = 'Linux';
         deviceInfo['model'] = 'PC';
         deviceInfo['device_id'] = linuxInfo.machineId ?? 'unknown';

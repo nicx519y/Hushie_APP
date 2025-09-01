@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
+import '../models/image_model.dart';
 import 'audio_stats.dart';
 
 class AudioList extends StatelessWidget {
@@ -54,15 +55,13 @@ class AudioList extends StatelessWidget {
               width: 70,
               height: 78,
               color: const Color(0xFFF5F5F5),
-              child: audio.cover.isNotEmpty
-                  ? Image.network(
-                      audio.cover,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.play_arrow, size: 30);
-                      },
-                    )
-                  : const Icon(Icons.play_arrow, size: 30),
+              child: Image.network(
+                audio.cover.getBestResolution(70).url, // 70px 是容器宽度
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.play_arrow, size: 30);
+                },
+              ),
             ),
           ),
           const SizedBox(width: 12),

@@ -1,3 +1,5 @@
+import 'image_model.dart';
+
 class AudioModel {
   final String id;
   final String title;
@@ -5,9 +7,10 @@ class AudioModel {
   final String artistAvatar;
   final String description;
   final String audioUrl;
-  final String coverUrl;
+  final ImageModel coverUrl;
   final Duration duration;
   final int likesCount;
+  final ImageModel? bgImage; // 背景图片
 
   // 预览相关字段
   final Duration? previewStart; // 可预览开始时间点
@@ -23,6 +26,7 @@ class AudioModel {
     required this.coverUrl, // 封面URL
     required this.duration, // 时长 单位：毫秒
     required this.likesCount, // 点赞数
+    this.bgImage, // 背景图片
     this.previewStart, // 可预览开始时间点 单位：毫秒
     this.previewDuration, // 可预览时长 单位：毫秒
   });
@@ -36,9 +40,10 @@ class AudioModel {
       'artistAvatar': artistAvatar,
       'description': description,
       'audioUrl': audioUrl,
-      'coverUrl': coverUrl,
+      'coverUrl': coverUrl.toJson(),
       'duration': duration.inMilliseconds,
       'likesCount': likesCount,
+      'bgImage': bgImage?.toJson(),
       'previewStart': previewStart?.inMilliseconds,
       'previewDuration': previewDuration?.inMilliseconds,
     };
@@ -52,9 +57,12 @@ class AudioModel {
       artistAvatar: json['artistAvatar'],
       description: json['description'],
       audioUrl: json['audioUrl'],
-      coverUrl: json['coverUrl'],
+      coverUrl: ImageModel.fromJson(json['coverUrl'] ?? {}),
       duration: Duration(milliseconds: json['duration']),
       likesCount: json['likesCount'],
+      bgImage: json['bgImage'] != null
+          ? ImageModel.fromJson(json['bgImage'])
+          : null,
       previewStart: json['previewStart'] != null
           ? Duration(milliseconds: json['previewStart'])
           : null,
@@ -71,9 +79,10 @@ class AudioModel {
     String? artistAvatar,
     String? description,
     String? audioUrl,
-    String? coverUrl,
+    ImageModel? coverUrl,
     Duration? duration,
     int? likesCount,
+    ImageModel? bgImage,
     Duration? previewStart,
     Duration? previewDuration,
   }) {
@@ -87,6 +96,7 @@ class AudioModel {
       coverUrl: coverUrl ?? this.coverUrl,
       duration: duration ?? this.duration,
       likesCount: likesCount ?? this.likesCount,
+      bgImage: bgImage ?? this.bgImage,
       previewStart: previewStart ?? this.previewStart,
       previewDuration: previewDuration ?? this.previewDuration,
     );

@@ -1,3 +1,5 @@
+import 'image_model.dart';
+
 /// 音频播放历史数据模型
 /// 继承 AudioModel 的所有字段，并添加播放进度和时间信息
 class AudioHistory {
@@ -7,7 +9,8 @@ class AudioHistory {
   final String artistAvatar;
   final String description;
   final String audioUrl;
-  final String coverUrl;
+  final ImageModel coverUrl;
+  final ImageModel? bgImageUrl;
   final Duration duration;
   final int likesCount;
 
@@ -24,6 +27,7 @@ class AudioHistory {
     required this.description,
     required this.audioUrl,
     required this.coverUrl,
+    this.bgImageUrl,
     required this.duration,
     required this.likesCount,
     required this.playbackPosition,
@@ -40,7 +44,32 @@ class AudioHistory {
       artistAvatar: map['artist_avatar'] ?? '',
       description: map['description'] ?? '',
       audioUrl: map['audio_url'] ?? '',
-      coverUrl: map['cover_url'] ?? '',
+      coverUrl: map['cover_url'] is String
+          ? ImageModel(
+              id: 'history_${map['id'] ?? ''}',
+              urls: ImageResolutions(
+                x1: ImageResolution(
+                  url: map['cover_url'] ?? '',
+                  width: 400,
+                  height: 600,
+                ),
+              ),
+            )
+          : ImageModel.fromJson(map['cover_url'] ?? {}),
+      bgImageUrl: map['bg_image_url'] != null
+          ? (map['bg_image_url'] is String
+                ? ImageModel(
+                    id: 'history_bg_${map['id'] ?? ''}',
+                    urls: ImageResolutions(
+                      x1: ImageResolution(
+                        url: map['bg_image_url'],
+                        width: 800,
+                        height: 1200,
+                      ),
+                    ),
+                  )
+                : ImageModel.fromJson(map['bg_image_url']))
+          : null,
       duration: Duration(milliseconds: map['duration_ms'] ?? 0),
       likesCount: map['likes_count'] ?? 0,
       playbackPosition: Duration(
@@ -64,7 +93,8 @@ class AudioHistory {
       'artist_avatar': artistAvatar,
       'description': description,
       'audio_url': audioUrl,
-      'cover_url': coverUrl,
+      'cover_url': coverUrl.toJson(),
+      'bg_image_url': bgImageUrl?.toJson(),
       'duration_ms': duration.inMilliseconds,
       'likes_count': likesCount,
       'playback_position_ms': playbackPosition.inMilliseconds,
@@ -88,7 +118,25 @@ class AudioHistory {
       artistAvatar: audioModel['artistAvatar'] ?? '',
       description: audioModel['description'] ?? '',
       audioUrl: audioModel['audioUrl'] ?? '',
-      coverUrl: audioModel['coverUrl'] ?? '',
+      coverUrl: audioModel['coverUrl'] is ImageModel
+          ? audioModel['coverUrl']
+          : (audioModel['coverUrl'] is String
+                ? ImageModel(
+                    id: 'history_${audioModel['id'] ?? ''}',
+                    urls: ImageResolutions(
+                      x1: ImageResolution(
+                        url: audioModel['coverUrl'] ?? '',
+                        width: 400,
+                        height: 600,
+                      ),
+                    ),
+                  )
+                : ImageModel.fromJson(audioModel['coverUrl'] ?? {})),
+      bgImageUrl: audioModel['bgImage'] != null
+          ? (audioModel['bgImage'] is ImageModel
+                ? audioModel['bgImage']
+                : ImageModel.fromJson(audioModel['bgImage']))
+          : null,
       duration: audioModel['duration'] ?? Duration.zero,
       likesCount: audioModel['likesCount'] ?? 0,
       playbackPosition: playbackPosition,
@@ -106,6 +154,7 @@ class AudioHistory {
       'description': description,
       'audioUrl': audioUrl,
       'coverUrl': coverUrl,
+      'bgImage': bgImageUrl,
       'duration': duration,
       'likesCount': likesCount,
     };
@@ -124,6 +173,7 @@ class AudioHistory {
       description: description,
       audioUrl: audioUrl,
       coverUrl: coverUrl,
+      bgImageUrl: bgImageUrl,
       duration: duration,
       likesCount: likesCount,
       playbackPosition: playbackPosition ?? this.playbackPosition,

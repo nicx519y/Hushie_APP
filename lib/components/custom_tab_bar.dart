@@ -33,7 +33,7 @@ class EnhancedBouncingScrollPhysics extends BouncingScrollPhysics {
 
 class CustomTabBar extends StatefulWidget {
   final TabController controller;
-  final List<TabItem> tabItems;
+  final List<TabItemModel> tabItems;
   final Function(int)? onTabChanged;
   final Color? labelColor;
   final Color? unselectedLabelColor;

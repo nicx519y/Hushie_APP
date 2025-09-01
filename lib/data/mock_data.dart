@@ -1,10 +1,50 @@
 import '../models/audio_item.dart';
+import '../models/image_model.dart';
 
 class MockData {
   static final List<Map<String, dynamic>> _audioItems = [
     {
       'id': '1',
-      'cover': 'https://picsum.photos/400/600?random=1',
+      'cover': {
+        'id': 'cover_1',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/600?random=1',
+            'width': 400,
+            'height': 600,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/1200?random=1',
+            'width': 800,
+            'height': 1200,
+          },
+          'x3': {
+            'url': 'https://picsum.photos/1200/1800?random=1',
+            'width': 1200,
+            'height': 1800,
+          },
+        },
+      },
+      'bg_image': {
+        'id': 'bg_1',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/800/600?random=101',
+            'width': 800,
+            'height': 600,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/1600/1200?random=101',
+            'width': 1600,
+            'height': 1200,
+          },
+          'x3': {
+            'url': 'https://picsum.photos/2400/1800?random=101',
+            'width': 2400,
+            'height': 1800,
+          },
+        },
+      },
       'title': 'Sticky Situation',
       'desc':
           'Quiet and reserved, she doesn\'t say much but is quite intriguing...',
@@ -22,7 +62,41 @@ class MockData {
     },
     {
       'id': '2',
-      'cover': 'https://picsum.photos/400/500?random=2',
+      'cover': {
+        'id': 'cover_2',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/500?random=2',
+            'width': 400,
+            'height': 500,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/1000?random=2',
+            'width': 800,
+            'height': 1000,
+          },
+          'x3': {
+            'url': 'https://picsum.photos/1200/1500?random=2',
+            'width': 1200,
+            'height': 1500,
+          },
+        },
+      },
+      'bg_image': {
+        'id': 'bg_2',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/800/600?random=102',
+            'width': 800,
+            'height': 600,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/1600/1200?random=102',
+            'width': 1600,
+            'height': 1200,
+          },
+        },
+      },
       'title': 'Midnight Dreams',
       'desc': 'A soulful journey through the night with ambient sounds...',
       'author': 'Luna Waves',
@@ -39,7 +113,21 @@ class MockData {
     },
     {
       'id': '3',
-      'cover': 'https://picsum.photos/400/700?random=3',
+      'cover': {
+        'id': 'cover_3',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/700?random=3',
+            'width': 400,
+            'height': 700,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/1400?random=3',
+            'width': 800,
+            'height': 1400,
+          },
+        },
+      },
       'title': 'Electric Pulse',
       'desc': 'High energy electronic beats that will get you moving...',
       'author': 'DJ Voltage',
@@ -56,7 +144,41 @@ class MockData {
     },
     {
       'id': '4',
-      'cover': 'https://picsum.photos/400/450?random=4',
+      'cover': {
+        'id': 'cover_4',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/450?random=4',
+            'width': 400,
+            'height': 450,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/900?random=4',
+            'width': 800,
+            'height': 900,
+          },
+          'x3': {
+            'url': 'https://picsum.photos/1200/1350?random=4',
+            'width': 1200,
+            'height': 1350,
+          },
+        },
+      },
+      'bg_image': {
+        'id': 'bg_4',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/800/600?random=104',
+            'width': 800,
+            'height': 600,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/1600/1200?random=104',
+            'width': 1600,
+            'height': 1200,
+          },
+        },
+      },
       'title': 'Ocean Breeze',
       'desc': 'Relaxing waves and gentle melodies for peaceful moments...',
       'author': 'Nature Sounds',
@@ -73,7 +195,26 @@ class MockData {
     },
     {
       'id': '5',
-      'cover': 'https://picsum.photos/400/550?random=5',
+      'cover': {
+        'id': 'cover_5',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/550?random=5',
+            'width': 400,
+            'height': 550,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/1100?random=5',
+            'width': 800,
+            'height': 1100,
+          },
+          'x3': {
+            'url': 'https://picsum.photos/1200/1650?random=5',
+            'width': 1200,
+            'height': 1650,
+          },
+        },
+      },
       'title': 'Urban Rhythms',
       'desc': 'Street beats with a modern twist and urban flavor...',
       'author': 'City Beats',
@@ -90,7 +231,41 @@ class MockData {
     },
     {
       'id': '6',
-      'cover': 'https://picsum.photos/400/620?random=6',
+      'cover': {
+        'id': 'cover_6',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/620?random=6',
+            'width': 400,
+            'height': 620,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/1240?random=6',
+            'width': 800,
+            'height': 1240,
+          },
+        },
+      },
+      'bg_image': {
+        'id': 'bg_6',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/800/600?random=106',
+            'width': 800,
+            'height': 600,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/1600/1200?random=106',
+            'width': 1600,
+            'height': 1200,
+          },
+          'x3': {
+            'url': 'https://picsum.photos/2400/1800?random=106',
+            'width': 2400,
+            'height': 1800,
+          },
+        },
+      },
       'title': 'Classical Sunrise',
       'desc': 'Beautiful classical composition to start your day right...',
       'author': 'Symphony Orchestra',
@@ -107,7 +282,26 @@ class MockData {
     },
     {
       'id': '7',
-      'cover': 'https://picsum.photos/400/480?random=7',
+      'cover': {
+        'id': 'cover_7',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/480?random=7',
+            'width': 400,
+            'height': 480,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/960?random=7',
+            'width': 800,
+            'height': 960,
+          },
+          'x3': {
+            'url': 'https://picsum.photos/1200/1440?random=7',
+            'width': 1200,
+            'height': 1440,
+          },
+        },
+      },
       'title': 'Jazz Cafe',
       'desc': 'Smooth jazz vibes perfect for a cozy evening...',
       'author': 'Smooth Jazz Ensemble',
@@ -124,7 +318,36 @@ class MockData {
     },
     {
       'id': '8',
-      'cover': 'https://picsum.photos/400/580?random=8',
+      'cover': {
+        'id': 'cover_8',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/400/580?random=8',
+            'width': 400,
+            'height': 580,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/800/1160?random=8',
+            'width': 800,
+            'height': 1160,
+          },
+        },
+      },
+      'bg_image': {
+        'id': 'bg_8',
+        'urls': {
+          'x1': {
+            'url': 'https://picsum.photos/800/600?random=108',
+            'width': 800,
+            'height': 600,
+          },
+          'x2': {
+            'url': 'https://picsum.photos/1600/1200?random=108',
+            'width': 1600,
+            'height': 1200,
+          },
+        },
+      },
       'title': 'Rock Anthem',
       'desc': 'Powerful rock anthem with driving guitars and vocals...',
       'author': 'Thunder Strike',

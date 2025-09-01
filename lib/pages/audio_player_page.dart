@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../components/audio_progress_bar.dart';
+import '../models/image_model.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_model.dart';
 import '../utils/custom_icons.dart';
@@ -151,14 +152,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建音频背景
   Widget _buildAudioBackground() {
-    final coverUrl =
-        _currentAudio?.coverUrl ?? 'https://picsum.photos/400/600?random=1';
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bgImage =
+        _currentAudio?.bgImage?.getBestResolution(screenWidth).url ??
+        'https://picsum.photos/800/1200?random=1';
 
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: NetworkImage(coverUrl),
+            image: NetworkImage(bgImage),
             fit: BoxFit.cover,
           ),
         ),

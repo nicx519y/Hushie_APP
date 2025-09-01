@@ -41,6 +41,7 @@ class AudioDataPool {
         final audioItem = AudioItem(
           id: history.id,
           cover: history.coverUrl,
+          bgImage: history.bgImageUrl,
           title: history.title,
           desc: history.description,
           author: history.artist,
@@ -110,6 +111,7 @@ class AudioDataPool {
           ? _parseDuration(audioItem.duration!)
           : Duration.zero,
       likesCount: audioItem.likesCount,
+      bgImage: audioItem.bgImage,
       previewStart: audioItem.previewStart, // 添加预览开始时间
       previewDuration: audioItem.previewDuration, // 添加预览时长
     );

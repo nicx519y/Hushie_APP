@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../components/search_box.dart';
 import '../components/audio_list.dart';
 import '../models/audio_item.dart';
+import '../models/image_model.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -123,7 +124,21 @@ class _SearchPageState extends State<SearchPage> {
     return [
       AudioItem(
         id: '1',
-        cover: '',
+        cover: ImageModel(
+          id: 'search_1',
+          urls: ImageResolutions(
+            x1: ImageResolution(
+              url: 'https://picsum.photos/400/600?random=401',
+              width: 400,
+              height: 600,
+            ),
+            x2: ImageResolution(
+              url: 'https://picsum.photos/800/1200?random=401',
+              width: 800,
+              height: 1200,
+            ),
+          ),
+        ),
         title: '搜索结果: $keyword - 音乐作品1',
         desc: '这是一个关于 $keyword 的音乐作品，包含了丰富的音乐元素',
         author: '艺术家A',
@@ -135,7 +150,21 @@ class _SearchPageState extends State<SearchPage> {
       ),
       AudioItem(
         id: '2',
-        cover: '',
+        cover: ImageModel(
+          id: 'search_2',
+          urls: ImageResolutions(
+            x1: ImageResolution(
+              url: 'https://picsum.photos/400/500?random=402',
+              width: 400,
+              height: 500,
+            ),
+            x2: ImageResolution(
+              url: 'https://picsum.photos/800/1000?random=402',
+              width: 800,
+              height: 1000,
+            ),
+          ),
+        ),
         title: '$keyword 相关的音乐创作',
         desc: '基于 $keyword 主题创作的电子音乐，融合了多种风格',
         author: '艺术家B',
@@ -147,7 +176,21 @@ class _SearchPageState extends State<SearchPage> {
       ),
       AudioItem(
         id: '3',
-        cover: '',
+        cover: ImageModel(
+          id: 'search_3',
+          urls: ImageResolutions(
+            x1: ImageResolution(
+              url: 'https://picsum.photos/400/700?random=403',
+              width: 400,
+              height: 700,
+            ),
+            x2: ImageResolution(
+              url: 'https://picsum.photos/800/1400?random=403',
+              width: 800,
+              height: 1400,
+            ),
+          ),
+        ),
         title: '$keyword 音乐合集',
         desc: '精选的 $keyword 相关音乐作品，涵盖多种流派',
         author: '艺术家C',

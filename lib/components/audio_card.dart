@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/number_formatter.dart';
 import '../utils/custom_icons.dart';
+import '../models/image_model.dart';
 
 class AudioCard extends StatelessWidget {
   final Map<String, dynamic> item;
+  final double imageWidth;
   final VoidCallback? onTap;
   final VoidCallback? onPlayTap;
   final VoidCallback? onLikeTap;
@@ -12,10 +14,30 @@ class AudioCard extends StatelessWidget {
   const AudioCard({
     super.key,
     required this.item,
+    this.imageWidth = 200,
     this.onTap,
     this.onPlayTap,
     this.onLikeTap,
   });
+
+  /// 获取图片URL，支持ImageModel和字符串类型
+  String _getImageUrl(dynamic cover, double width) {
+    if (cover is Map<String, dynamic>) {
+      // 如果是ImageModel格式，获取最佳URL
+      try {
+        final imageModel = ImageModel.fromJson(cover);
+        return imageModel.getBestResolution(width).url; // 假设卡片宽度为200px
+      } catch (e) {
+        // 如果解析失败，尝试获取x1 URL
+        final urls = cover['urls'];
+        if (urls != null && urls['x1'] != null) {
+          return urls['x1']['url'] ?? '';
+        }
+      }
+    }
+    // 如果是字符串，直接返回
+    return cover?.toString() ?? '';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +58,7 @@ class AudioCard extends StatelessWidget {
                   child: AspectRatio(
                     aspectRatio: 0.9, // 0.9 的宽高比，确保合适的显示比例
                     child: CachedNetworkImage(
-                      imageUrl: item['cover'],
+                      imageUrl: _getImageUrl(item['cover'], imageWidth),
                       placeholder: (context, url) => Container(
                         color: Colors.grey[300],
                         child: const Center(child: CircularProgressIndicator()),

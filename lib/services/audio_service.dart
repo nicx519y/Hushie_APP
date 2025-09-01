@@ -89,7 +89,7 @@ class AudioPlayerService extends BaseAudioHandler {
           title: audio.title,
           artist: audio.artist,
           duration: audio.duration,
-          artUri: Uri.parse(audio.coverUrl),
+          artUri: Uri.parse(audio.coverUrl.getBestResolution(80).url),
           extras: audio.toJson(),
         ),
       );

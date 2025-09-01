@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
 import '../models/audio_history.dart';
+import '../models/image_model.dart';
 import '../components/custom_tab_bar.dart';
 import '../components/audio_list.dart';
 import '../components/user_header.dart';
@@ -273,7 +274,8 @@ class _ProfilePageState extends State<ProfilePage>
                             .map(
                               (history) => AudioItem(
                                 id: history.id,
-                                cover: history.coverUrl ?? '',
+                                cover: history.coverUrl,
+                                bgImage: history.bgImageUrl,
                                 title: history.title,
                                 desc: history.description ?? '',
                                 author: history.artist,
