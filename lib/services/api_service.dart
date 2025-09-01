@@ -1,11 +1,6 @@
-import 'dart:convert';
-import 'dart:math';
-import 'package:http/http.dart' as http;
 import '../models/audio_item.dart';
 import '../models/api_response.dart';
 import '../models/tab_item.dart';
-import '../data/mock_data.dart';
-import '../config/api_config.dart';
 import 'api/audio_list_service.dart';
 import 'api/audio_search_service.dart';
 import 'api/home_tabs_service.dart';

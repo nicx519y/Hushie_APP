@@ -6,7 +6,6 @@ import '../models/audio_item.dart';
 import '../models/tab_item.dart';
 import '../services/api_service.dart';
 import '../services/audio_manager.dart';
-import '../services/audio_data_pool.dart';
 import '../services/tab_manager.dart';
 import 'search_page.dart';
 import 'audio_player_page.dart';
@@ -22,6 +21,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _tabController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Tab 相关
   List<TabItemModel> _tabItems = [];
   late TabController _tabController;
+  late PageController _pageController;
   int _currentTabIndex = 0;
   bool _isLoading = false;
   bool _isRefreshing = false;
@@ -59,6 +60,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _tabItems = tabs;
       });
       _tabController = TabController(length: _tabItems.length, vsync: this);
+      _pageController = PageController(initialPage: 0);
+
       _tabController.addListener(() {
         if (_tabController.indexIsChanging) {
           _onTabChanged(_tabController.index);
@@ -95,6 +98,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ];
     });
     _tabController = TabController(length: _tabItems.length, vsync: this);
+    _pageController = PageController(initialPage: 0);
+
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         _onTabChanged(_tabController.index);
@@ -121,6 +126,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _currentTabIndex = tabIndex;
     });
 
+    // 同步PageView到当前tab
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        tabIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+
     // 同步当前Tab的数据到主列表
     if (_tabData[tabIndex] != null) {
       setState(() {
@@ -131,6 +145,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // 如果当前Tab没有数据，则加载数据
     if (_tabData[tabIndex] == null || _tabData[tabIndex]!.isEmpty) {
       _loadTabData(tabIndex);
+    }
+  }
+
+  void _onPageChanged(int pageIndex) {
+    setState(() {
+      _currentTabIndex = pageIndex;
+    });
+
+    // 同步TabController到当前页面
+    if (_tabController.index != pageIndex) {
+      _tabController.animateTo(pageIndex);
+    }
+
+    // 同步当前Tab的数据到主列表
+    if (_tabData[pageIndex] != null) {
+      setState(() {
+        _audioItems = _tabData[pageIndex]!;
+      });
+    }
+
+    // 如果当前Tab没有数据，则加载数据
+    if (_tabData[pageIndex] == null || _tabData[pageIndex]!.isEmpty) {
+      _loadTabData(pageIndex);
     }
   }
 
@@ -290,6 +327,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
       });
 
+      // 重新初始化 Page 控制器
+      _pageController.dispose();
+      _pageController = PageController(initialPage: 0);
+
       // 重新初始化数据状态
       for (int i = 0; i < _tabItems.length; i++) {
         _tabData[i] = [];
@@ -371,19 +412,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
 
-        // 内容区域
+        // 内容区域 - 使用PageView实现滑动切换
         Expanded(
-          child: _tabErrors[_currentTabIndex] != null
-              ? _buildErrorWidget()
-              : AudioGrid(
-                  dataList: _filteredDataList,
-                  isLoading: _tabLoading[_currentTabIndex] ?? false,
-                  onRefresh: () =>
-                      _loadTabData(_currentTabIndex, refresh: true),
-                  onItemTap: _onAudioTap,
-                  onPlayTap: _onPlayTap,
-                  onLikeTap: _onLikeTap,
-                ),
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: _onPageChanged,
+            itemCount: _tabItems.length,
+            itemBuilder: (context, index) {
+              final tabData = _tabData[index] ?? [];
+              final filteredData = tabData.map((item) => item.toMap()).toList();
+
+              return _tabErrors[index] != null
+                  ? _buildErrorWidget()
+                  : AudioGrid(
+                      dataList: filteredData,
+                      isLoading: _tabLoading[index] ?? false,
+                      onRefresh: () => _loadTabData(index, refresh: true),
+                      onItemTap: _onAudioTap,
+                      onPlayTap: _onPlayTap,
+                      onLikeTap: _onLikeTap,
+                    );
+            },
+          ),
         ),
         const SizedBox(height: 80),
       ],

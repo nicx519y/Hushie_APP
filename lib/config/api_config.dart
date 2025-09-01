@@ -115,6 +115,7 @@ class ApiEndpoints {
   // 音频相关接口
   static const String audioList = '/audio/list';
   static const String audioSearch = '/audio/search';
+  static const String audioLike = '/audio/like';
 
   // 用户相关接口
   static const String userProfile = '/user/profile';
@@ -126,6 +127,7 @@ class ApiEndpoints {
   static const String googleDeleteAccount = '/auth/google/delete';
   static const String googleRefreshToken = '/auth/google/refresh';
   static const String googleTokenValidate = '/auth/google/validate';
+  static const String userInfo = '/auth/userinfo';
 
   static const String homeTabs = '/home/tabs';
   // 首页相关接口

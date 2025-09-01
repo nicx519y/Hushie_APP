@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../components/audio_progress_bar.dart';
-import '../models/image_model.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_model.dart';
 import '../utils/custom_icons.dart';

@@ -1,5 +1,4 @@
 import '../models/audio_item.dart';
-import '../models/image_model.dart';
 
 class MockData {
   static final List<Map<String, dynamic>> _audioItems = [

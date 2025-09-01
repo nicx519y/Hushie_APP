@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
 import '../models/audio_history.dart';
-import '../models/image_model.dart';
 import '../components/custom_tab_bar.dart';
 import '../components/audio_list.dart';
 import '../components/user_header.dart';

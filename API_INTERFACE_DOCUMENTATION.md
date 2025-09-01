@@ -1,16 +1,18 @@
+
+
 # Hushie.AI API 接口文档
 
 ## 概述
 
 本文档描述了 Hushie.AI 应用中已实现的所有网络请求接口。所有接口都遵循统一的响应格式，并自动包含完整的安全验签和认证信息。
 
-### 基础信息
+## 基础信息
 
-- **Base URL**: 通过 `ApiConfig.baseUrl` 配置
-- **响应格式**: 统一使用 `{ errNo: 0, data: { ... } }` 格式
-- **认证方式**: Bearer Token (自动添加)
-- **签名算法**: HMAC-SHA256 (自动生成)
-- **安全防护**: 防重放攻击、防篡改、身份验证
+- Base URL: 通过 `ApiConfig.baseUrl` 配置
+- 响应格式: 统一使用 `{ errNo: 0, data: { ... } }` 格式
+- 认证方式: Bearer Token (自动添加)
+- 签名算法: HMAC-SHA256 (自动生成)
+- 安全防护: 防重放攻击、防篡改、身份验证
 
 ### 通用响应格式
 
@@ -23,7 +25,8 @@
 }
 ```
 
-**错误响应格式**:
+### 错误响应格式
+
 ```json
 {
   "errNo": -1,
@@ -31,9 +34,10 @@
 }
 ```
 
-**字段说明**:
-- `errNo`: 错误码，0表示成功，非0表示失败
-- `data`: 响应数据，失败时为null
+### 字段说明
+
+- **errNo**: 错误码，0表示成功，非0表示失败
+- **data**: 响应数据，失败时为null
 
 ---
 
@@ -43,14 +47,15 @@
 
 所有API请求都会自动进行签名验证，确保请求的安全性和完整性：
 
-1. **收集签名参数**: HTTP方法、请求路径、时间戳、随机数、请求体哈希、关键请求头
-2. **构建签名字符串**: 按照固定格式组合所有参数
-3. **生成签名**: 使用HMAC-SHA256算法和应用密钥生成签名
-4. **验证签名**: 服务器验证签名的有效性和时间戳
+1. 收集签名参数: HTTP方法、请求路径、时间戳、随机数、请求体哈希、关键请求头
+2. 构建签名字符串: 按照固定格式组合所有参数
+3. 生成签名: 使用HMAC-SHA256算法和应用密钥生成签名
+4. 验证签名: 服务器验证签名的有效性和时间戳
 
 ### 签名算法详解
 
-**签名字符串格式**:
+#### 签名字符串格式
+
 ```
 HTTP_METHOD
 REQUEST_PATH
@@ -62,17 +67,19 @@ X-App-ID:app_value
 X-API-Version:version_value
 ```
 
-**签名生成**:
+#### 签名生成
+
 ```
 HMAC-SHA256(signature_string, app_secret)
 ```
 
 ### 安全特性
 
-- ✅ **防重放攻击**: 时间戳验证（5分钟有效期）+ 随机数
-- ✅ **防篡改**: 请求体哈希验证 + 关键请求头签名
-- ✅ **身份验证**: 三层身份识别（应用、设备、用户）
-- ✅ **可追踪性**: 请求ID支持全链路追踪
+- ✅ 防重放攻击: 时间戳验证（5分钟有效期）+ 随机数
+- ✅ 防篡改: 请求体哈希验证 + 关键请求头签名
+- ✅ 身份验证: 三层身份识别（应用、设备、用户）
+- ✅ 可追踪性: 请求ID支持全链路追踪
+
 
 ---
 
@@ -84,18 +91,18 @@ HMAC-SHA256(signature_string, app_secret)
 
 | 请求头 | 类型 | 说明 | 示例值 |
 |--------|------|------|--------|
-| **Content-Type** | 基础 | 内容类型 | `application/json` |
-| **Accept** | 基础 | 接受类型 | `application/json` |
-| **User-Agent** | 基础 | 用户代理 | `HushieApp/1.0.0` |
-| **X-API-Version** | 身份 | API版本标识 | `v1` |
-| **X-App-ID** | 身份 | 应用标识 | `hushie_app_v1` |
-| **X-Client-Platform** | 身份 | 客户端平台 | `flutter` |
-| **X-Device-ID** | 身份 | 设备唯一标识 | `device_123abc456def` |
-| **X-Timestamp** | 安全 | Unix时间戳（毫秒） | `1703123456789` |
-| **X-Nonce** | 安全 | 16位随机字符串 | `Ab3X9kP2mN8QwErT` |
-| **X-Request-ID** | 追踪 | 请求唯一标识 | `req_1703123456_123456` |
-| **X-Signature** | 安全 | HMAC-SHA256签名 | `a1b2c3d4e5f6...` |
-| **Authorization** | 认证 | Bearer Token | `Bearer eyJhbGc...` |
+| Content-Type | 基础 | 内容类型 | `application/json` |
+| Accept | 基础 | 接受类型 | `application/json` |
+| User-Agent | 基础 | 用户代理 | `HushieApp/1.0.0` |
+| X-API-Version | 身份 | API版本标识 | `v1` |
+| X-App-ID | 身份 | 应用标识 | `hushie_app_v1` |
+| X-Client-Platform | 身份 | 客户端平台 | `flutter` |
+| X-Device-ID | 身份 | 设备唯一标识 | `device_123abc456def` |
+| X-Timestamp | 安全 | Unix时间戳（毫秒） | `1703123456789` |
+| X-Nonce | 安全 | 16位随机字符串 | `Ab3X9kP2mN8QwErT` |
+| X-Request-ID | 追踪 | 请求唯一标识 | `req_1703123456_123456` |
+| X-Signature | 安全 | HMAC-SHA256签名 | `a1b2c3d4e5f6...` |
+| Authorization | 认证 | Bearer Token | `Bearer eyJhbGc...` |
 
 ### 请求示例
 
@@ -116,6 +123,7 @@ X-Signature: a1b2c3d4e5f6789...
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
+
 ---
 
 ## 🖥️ 服务器端实现指南
@@ -128,39 +136,40 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 | 请求头 | 服务器使用方式 | 验证逻辑 | 示例代码 |
 |--------|----------------|----------|----------|
-| **Content-Type** | 解析请求体格式 | 验证是否为 `application/json` | `if (contentType !== 'application/json') return 400` |
-| **Accept** | 确定响应格式 | 验证客户端接受的格式 | `if (!accept.includes('application/json')) return 406` |
-| **User-Agent** | 日志记录、统计分析 | 检查是否为合法客户端 | `if (!userAgent.startsWith('HushieApp/')) log('unknown_client')` |
+| Content-Type | 解析请求体格式 | 验证是否为 `application/json` | `if (contentType !== 'application/json') return 400` |
+| Accept | 确定响应格式 | 验证客户端接受的格式 | `if (!accept.includes('application/json')) return 406` |
+| User-Agent | 日志记录、统计分析 | 检查是否为合法客户端 | `if (!userAgent.startsWith('HushieApp/')) log('unknown_client')` |
 
 #### 2. 身份识别请求头
 
 | 请求头 | 服务器使用方式 | 验证逻辑 | 安全考虑 |
 |--------|----------------|----------|----------|
-| **X-API-Version** | API版本路由 | 检查版本兼容性 | 拒绝不支持的版本 |
-| **X-App-ID** | 应用身份验证 | 验证应用合法性 | 检查应用是否被禁用 |
-| **X-Client-Platform** | 平台特定逻辑 | 验证平台标识 | 统计平台使用情况 |
-| **X-Device-ID** | 设备追踪、风控 | 设备唯一性验证 | 检测异常设备行为 |
+| X-API-Version | API版本路由 | 检查版本兼容性 | 拒绝不支持的版本 |
+| X-App-ID | 应用身份验证 | 验证应用合法性 | 检查应用是否被禁用 |
+| X-Client-Platform | 平台特定逻辑 | 验证平台标识 | 统计平台使用情况 |
+| X-Device-ID | 设备追踪、风控 | 设备唯一性验证 | 检测异常设备行为 |
 
 #### 3. 安全验证请求头
 
 | 请求头 | 服务器使用方式 | 验证逻辑 | 安全级别 |
 |--------|----------------|----------|----------|
-| **X-Timestamp** | 防重放攻击 | 检查时间戳有效性 | ⭐⭐⭐⭐⭐ 关键 |
-| **X-Nonce** | 防重放攻击 | 验证随机数唯一性 | ⭐⭐⭐⭐⭐ 关键 |
-| **X-Signature** | 请求完整性验证 | HMAC-SHA256签名验证 | ⭐⭐⭐⭐⭐ 关键 |
+| X-Timestamp | 防重放攻击 | 检查时间戳有效性 | ⭐⭐⭐⭐⭐ 关键 |
+| X-Nonce | 防重放攻击 | 验证随机数唯一性 | ⭐⭐⭐⭐⭐ 关键 |
+| X-Signature | 请求完整性验证 | HMAC-SHA256签名验证 | ⭐⭐⭐⭐⭐ 关键 |
 
 #### 4. 认证和追踪请求头
 
 | 请求头 | 服务器使用方式 | 验证逻辑 | 业务价值 |
 |--------|----------------|----------|----------|
-| **Authorization** | 用户身份验证 | JWT Token解析验证 | 用户权限控制 |
-| **X-Request-ID** | 链路追踪 | 日志关联分析 | 问题排查、性能监控 |
+| Authorization | 用户身份验证 | JWT Token解析验证 | 用户权限控制 |
+| X-Request-ID | 链路追踪 | 日志关联分析 | 问题排查、性能监控 |
+
 
 ---
 
-### 🔐 服务器端签名验证实现
+## 🔐 服务器端签名验证实现
 
-#### 核心验证流程
+### 核心验证流程
 
 ```python
 def validate_request_signature(request):
@@ -284,11 +293,12 @@ def secure_compare(a, b):
     return hmac.compare_digest(a, b)
 ```
 
+
 ---
 
-### 🛡️ 分层安全验证策略
+## 🛡️ 分层安全验证策略
 
-#### 第一层：基础格式验证
+### 第一层：基础格式验证
 
 ```python
 def validate_basic_headers(request):
@@ -346,7 +356,7 @@ def validate_header_formats(headers):
     return True
 ```
 
-#### 第二层：应用身份验证
+### 第二层：应用身份验证
 
 ```python
 def validate_app_identity(headers):
@@ -393,7 +403,7 @@ def get_app_config(app_id):
     return app_configs.get(app_id)
 ```
 
-#### 第三层：设备风控
+### 第三层：设备风控
 
 ```python
 def validate_device_behavior(headers, user_context):
@@ -440,7 +450,7 @@ def calculate_device_risk(device_id, user_context):
     return min(risk_score, 100)
 ```
 
-#### 第四层：用户认证
+### 第四层：用户认证
 
 ```python
 def validate_user_authentication(headers):
@@ -492,9 +502,10 @@ def verify_jwt_token(token):
         raise Exception("Invalid token")
 ```
 
+
 ---
 
-### 📊 请求处理中间件示例
+## 📊 请求处理中间件示例
 
 ```python
 class SecurityMiddleware:
@@ -578,9 +589,10 @@ class SecurityMiddleware:
         }
 ```
 
+
 ---
 
-### 🔧 配置管理
+## 🔧 配置管理
 
 ```python
 class SecurityConfig:
@@ -626,9 +638,10 @@ class SecurityConfig:
         return SecurityConfig.RATE_LIMITS.get(user_tier, SecurityConfig.RATE_LIMITS['default'])
 ```
 
+
 ---
 
-### 📈 监控和告警
+## 📈 监控和告警
 
 ```python
 class SecurityMonitor:
@@ -673,26 +686,29 @@ class SecurityMonitor:
 
 这个服务器端实现指南为开发者提供了完整的安全验证框架，确保API的安全性和可靠性！
 
+
 ---
 
 ## 1. 音频相关接口
 
 ### 1.1 获取音频列表
 
-**接口描述**: 获取音频列表，支持按标签筛选和从指定ID开始获取
+接口描述: 获取音频列表，支持按标签筛选和从指定ID开始获取
 
-**请求信息**:
-- **URL**: `GET /audio/list`
-- **方法**: GET
+请求信息:
+- URL: `GET /audio/list`
+- 方法: GET
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 默认值 | 说明 |
 |--------|------|------|--------|------|
 | tag | String | 否 | - | 音频标签，用于筛选 |
 | cid | String | 否 | - | 从此ID开始往下获取 |
 | count | int | 否 | 10 | 返回的音频数量 |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 GET /audio/list?tag=rock&count=20 HTTP/1.1
 Host: api.example.com
@@ -705,7 +721,8 @@ X-Signature: a1b2c3d4e5f6789...
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -755,7 +772,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         "audio_url": "https://example.com/audio1.mp3",
         "duration": "180000",
         "preview_start_ms": 30000,
-        "preview_duration_ms": 15000
+        "preview_duration_ms": 15000,
+        "is_liked": true,
       }
     ]
   }
@@ -766,20 +784,22 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### 1.2 搜索音频
 
-**接口描述**: 根据搜索关键词搜索音频
+接口描述: 根据搜索关键词搜索音频
 
-**请求信息**:
-- **URL**: `GET /audio/search`
-- **方法**: GET
+请求信息:
+- URL: `GET /audio/search`
+- 方法: GET
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 默认值 | 说明 |
 |--------|------|------|--------|------|
 | q | String | 是 | - | 搜索关键词 |
 | cid | String | 否 | - | 从此ID开始往下获取 |
 | count | int | 否 | 10 | 返回的音频数量 |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 GET /audio/search?q=rock&count=15 HTTP/1.1
 Host: api.example.com
@@ -792,7 +812,8 @@ X-Signature: a1b2c3d4e5f6789...
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -842,7 +863,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         "audio_url": "https://example.com/audio2.mp3",
         "duration": "180000",
         "preview_start_ms": 30000,
-        "preview_duration_ms": 15000
+        "preview_duration_ms": 15000,
+        "is_liked": false,
       }
     ]
   }
@@ -853,19 +875,21 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### 1.3 获取用户喜欢的音频
 
-**接口描述**: 获取当前登录用户喜欢的音频列表
+接口描述: 获取当前登录用户喜欢的音频列表
 
-**请求信息**:
-- **URL**: `GET /user/likes`
-- **方法**: GET
+请求信息:
+- URL: `GET /user/likes`
+- 方法: GET
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 默认值 | 说明 |
 |--------|------|------|--------|------|
 | cid | String | 否 | - | 从此ID开始往下获取 |
 | count | int | 否 | 20 | 返回的音频数量 |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 GET /user/likes?count=25 HTTP/1.1
 Host: api.example.com
@@ -878,7 +902,8 @@ X-Signature: a1b2c3d4e5f6789...
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -905,7 +930,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
             }
           }
         },
-        "bg_image": {
+        "bgImage": {
           "urls": {
             "x1": {
                 "url": "https://example.com/cover3_400x600.jpg",
@@ -928,7 +953,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         "audio_url": "https://example.com/audio3.mp3",
         "duration": "180000",
         "preview_start_ms": 30000,
-        "preview_duration_ms": 15000
+        "preview_duration_ms": 15000,
+        "is_liked": true,
       }
     ]
   }
@@ -937,19 +963,104 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
+### 1.4 点赞/取消点赞音频
+
+接口描述: 对指定音频进行点赞或取消点赞操作
+
+请求信息:
+- URL: `POST /audio/like`
+- 方法: POST
+
+#### 上行参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| cid | String | 是 | 音频唯一标识 |
+| action | String | 是 | 操作类型: "like" 或 "unlike" |
+
+#### 请求示例
+
+```http
+POST /audio/like HTTP/1.1
+Host: api.example.com
+X-API-Version: v1
+X-App-ID: hushie_app_v1
+X-Device-ID: device_123abc456def
+X-Timestamp: 1703123456789
+X-Nonce: Ab3X9kP2mN8QwErT
+X-Signature: a1b2c3d4e5f6789...
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "cid": "audio_001",
+  "action": "like"
+}
+```
+
+#### 响应格式
+
+```json
+{
+  "errNo": 0,
+  "data": {
+    "cid": "audio_001",
+    "is_liked": true,
+    "likes_count": 22934,
+  }
+}
+```
+
+#### 取消点赞示例
+
+```http
+POST /audio/like HTTP/1.1
+Host: api.example.com
+X-API-Version: v1
+X-App-ID: hushie_app_v1
+X-Device-ID: device_123abc456def
+X-Timestamp: 1703123456789
+X-Nonce: Ab3X9kP2mN8QwErT
+X-Signature: a1b2c3d4e5f6789...
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "cid": "audio_001",
+  "action": "unlike"
+}
+```
+
+#### 取消点赞响应
+
+```json
+{
+  "errNo": 0,
+  "data": {
+    "cid": "audio_001",
+    "is_liked": false,
+    "likes_count": 22933,
+  }
+}
+```
+
+
+---
+
 ## 2. 首页相关接口
 
 ### 2.1 获取首页Tabs
 
-**接口描述**: 获取首页的标签页配置
+接口描述: 获取首页的标签页配置
 
-**请求信息**:
-- **URL**: `GET /home/tabs`
-- **方法**: GET
+请求信息:
+- URL: `GET /home/tabs`
+- 方法: GET
 
-**上行参数**: 无
+上行参数: 无
 
-**请求示例**:
+#### 请求示例
+
 ```http
 GET /home/tabs HTTP/1.1
 Host: api.example.com
@@ -962,7 +1073,8 @@ X-Signature: a1b2c3d4e5f6789...
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -970,11 +1082,111 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "tabs": [
       {
         "id": "tab_1",
-        "label": "F/W"
+        "label": "F/W",
+        "items": "items": [
+          {
+            "id": "audio_003",
+            "cover": {
+              "urls": {
+                "x1": {
+                  "url": "https://example.com/cover3_400x600.jpg",
+                  "width": 400,
+                  "height": 600
+                },
+                "x2": {
+                  "url": "https://example.com/cover3_800x1200.jpg",
+                  "width": 800,
+                  "height": 1200
+                },
+                "x3": {
+                  "url": "https://example.com/cover3_1200x1800.jpg",
+                  "width": 1200,
+                  "height": 1800
+                }
+              }
+            },
+            "bgImage": {
+              "urls": {
+                "x1": {
+                    "url": "https://example.com/cover3_400x600.jpg",
+                    "width": 400,
+                    "height": 600
+                  },
+                  "x2": {
+                    "url": "https://example.com/cover3_800x1200.jpg",
+                    "width": 800,
+                    "height": 1200
+                }
+              },
+            },
+            "title": "Favorite Song",
+            "desc": "User's favorite audio track",
+            "author": "Favorite Artist",
+            "avatar": "https://example.com/avatar3.jpg",
+            "play_times": 1200000,
+            "likes_count": 45000,
+            "audio_url": "https://example.com/audio3.mp3",
+            "duration": "180000",
+            "preview_start_ms": 30000,
+            "preview_duration_ms": 15000,
+            "is_liked": true,
+          }
+        ],
+        ...
       },
       {
         "id": "tab_2",
-        "label": "W/F"
+        "label": "W/F",
+        "items": "items": [
+          {
+            "id": "audio_003",
+            "cover": {
+              "urls": {
+                "x1": {
+                  "url": "https://example.com/cover3_400x600.jpg",
+                  "width": 400,
+                  "height": 600
+                },
+                "x2": {
+                  "url": "https://example.com/cover3_800x1200.jpg",
+                  "width": 800,
+                  "height": 1200
+                },
+                "x3": {
+                  "url": "https://example.com/cover3_1200x1800.jpg",
+                  "width": 1200,
+                  "height": 1800
+                }
+              }
+            },
+            "bgImage": {
+              "urls": {
+                "x1": {
+                    "url": "https://example.com/cover3_400x600.jpg",
+                    "width": 400,
+                    "height": 600
+                  },
+                  "x2": {
+                    "url": "https://example.com/cover3_800x1200.jpg",
+                    "width": 800,
+                    "height": 1200
+                }
+              },
+            },
+            "title": "Favorite Song",
+            "desc": "User's favorite audio track",
+            "author": "Favorite Artist",
+            "avatar": "https://example.com/avatar3.jpg",
+            "play_times": 1200000,
+            "likes_count": 45000,
+            "audio_url": "https://example.com/audio3.mp3",
+            "duration": "180000",
+            "preview_start_ms": 30000,
+            "preview_duration_ms": 15000,
+            "is_liked": true,
+          }
+        ],
+        ...
       }
     ]
   }
@@ -987,19 +1199,21 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### 3.1 Google账号登录
 
-**接口描述**: 使用Google账号进行登录，获取授权码或ID Token
+接口描述: 使用Google账号进行登录，获取授权码或ID Token
 
-**请求信息**:
-- **URL**: `POST /auth/google/login`
-- **方法**: POST
+请求信息:
+- URL: `POST /auth/google/login`
+- 方法: POST
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | google_token | String | 是 | Google授权码或ID Token |
 | grant_type | String | 是 | 授权类型: "google_token" 或 "authorization_code" |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 POST /auth/google/login HTTP/1.1
 Host: api.example.com
@@ -1017,7 +1231,8 @@ Content-Type: application/json
 }
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -1031,23 +1246,26 @@ Content-Type: application/json
 }
 ```
 
+
 ---
 
 ### 3.2 刷新Access Token
 
-**接口描述**: 使用Refresh Token刷新访问令牌
+接口描述: 使用Refresh Token刷新访问令牌
 
-**请求信息**:
-- **URL**: `POST /auth/google/refresh`
-- **方法**: POST
+请求信息:
+- URL: `POST /auth/google/refresh`
+- 方法: POST
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | refresh_token | String | 是 | 刷新令牌 |
 | grant_type | String | 是 | 固定值: "refresh_token" |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 POST /auth/google/refresh HTTP/1.1
 Host: api.example.com
@@ -1065,7 +1283,8 @@ Content-Type: application/json
 }
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -1079,22 +1298,25 @@ Content-Type: application/json
 }
 ```
 
+
 ---
 
 ### 3.3 验证Token
 
-**接口描述**: 验证Access Token的有效性
+接口描述: 验证Access Token的有效性
 
-**请求信息**:
-- **URL**: `POST /auth/google/validate`
-- **方法**: POST
+请求信息:
+- URL: `POST /auth/google/validate`
+- 方法: POST
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | access_token | String | 是 | 访问令牌 |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 POST /auth/google/validate HTTP/1.1
 Host: api.example.com
@@ -1112,7 +1334,8 @@ Content-Type: application/json
 }
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -1126,23 +1349,26 @@ Content-Type: application/json
 }
 ```
 
+
 ---
 
 ### 3.4 服务器登出
 
-**接口描述**: 通知服务器用户登出
+接口描述: 通知服务器用户登出
 
-**请求信息**:
-- **URL**: `POST /auth/google/logout`
-- **方法**: POST
+请求信息:
+- URL: `POST /auth/google/logout`
+- 方法: POST
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | action | String | 是 | 固定值: "logout" |
 | timestamp | int | 是 | 当前时间戳 |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 POST /auth/google/logout HTTP/1.1
 Host: api.example.com
@@ -1161,7 +1387,8 @@ Content-Type: application/json
 }
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
@@ -1169,24 +1396,27 @@ Content-Type: application/json
 }
 ```
 
+
 ---
 
 ### 3.5 删除账户
 
-**接口描述**: 删除用户账户
+接口描述: 删除用户账户
 
-**请求信息**:
-- **URL**: `POST /auth/google/delete`
-- **方法**: POST
+请求信息:
+- URL: `POST /auth/google/delete`
+- 方法: POST
 
-**上行参数**:
+#### 上行参数
+
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | action | String | 是 | 固定值: "delete_account" |
 | timestamp | int | 是 | 当前时间戳 |
 | confirmation | bool | 是 | 确认删除，固定值: true |
 
-**请求示例**:
+#### 请求示例
+
 ```http
 POST /auth/google/delete HTTP/1.1
 Host: api.example.com
@@ -1206,13 +1436,62 @@ Content-Type: application/json
 }
 ```
 
-**响应格式**:
+#### 响应格式
+
 ```json
 {
   "errNo": 0,
   "data": null
 }
 ```
+
+
+---
+
+### 3.6 获取用户信息
+
+接口描述: 获取当前登录用户的基本信息
+
+请求信息:
+- URL: `GET /auth/userinfo`
+- 方法: GET
+
+#### 上行参数: 无
+
+#### 请求示例:
+```
+GET /auth/userinfo HTTP/1.1
+Host: api.example.com
+X-API-Version: v1
+X-App-ID: hushie_app_v1
+X-Device-ID: device_123abc456def
+X-Timestamp: 1703123456789
+X-Nonce: Ab3X9kP2mN8QwErT
+X-Signature: a1b2c3d4e5f6789...
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### 响应格式:
+```json
+{
+  "errNo": 0,
+  "data": {
+    "uid": "user_12345",
+    "nickname": "SexiestGod",
+    "avatar": "https://example.com/avatars/user_12345.jpg",
+    "is_vip": true
+  }
+}
+```
+
+#### 字段说明:
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| uid | String | 用户唯一标识 |
+| nickname | String | 用户昵称 |
+| avatar | String | 用户头像URL |
+| is_vip | Boolean | 是否为VIP用户 |
+
 
 ---
 
@@ -1270,6 +1549,7 @@ Content-Type: application/json
   "last_played_at": "int",        // 最后播放时间戳
   "preview_start_ms": "int",      // 可预览开始时间点(毫秒)
   "preview_duration_ms": "int"    // 可预览时长(毫秒)
+  "is_liked": "bool"              // 是否赞过
 }
 ```
 
@@ -1330,6 +1610,17 @@ Content-Type: application/json
 }
 ```
 
+### 4.6 UserInfoModel (用户信息模型)
+
+```json
+{
+  "uid": "string",          // 用户唯一标识
+  "nickname": "string",     // 用户昵称
+  "avatar": "string",       // 用户头像URL
+  "is_vip": "boolean"       // 是否为VIP用户
+}
+```
+
 
 ## 6. 音频预览功能
 
@@ -1346,11 +1637,11 @@ Content-Type: application/json
 
 #### 预览逻辑
 
-1. **预览范围**: 从 `preview_start_ms` 开始，播放 `preview_duration_ms` 时长
-2. **预览示例**: 如果 `preview_start_ms = 30000`, `preview_duration_ms = 15000`
-   - 预览将从音频的第30秒开始
-   - 播放15秒的音频片段
-   - 预览结束时间为第45秒
+1. 预览范围: 从 `preview_start_ms` 开始，播放 `preview_duration_ms` 时长
+2. 预览示例: 如果 `preview_start_ms = 30000`, `preview_duration_ms = 15000`
+- 预览将从音频的第30秒开始
+- 播放15秒的音频片段
+- 预览结束时间为第45秒
 
 #### 使用场景
 
@@ -1358,6 +1649,7 @@ Content-Type: application/json
 - **内容预览**: 快速了解音频内容和风格
 - **版权保护**: 限制用户只能听到部分内容
 - **用户体验**: 提供快速的内容概览
+
 
 ---
 
@@ -1373,6 +1665,7 @@ Content-Type: application/json
 | 403 | 签名验证失败 | 检查签名算法和应用密钥 |
 | 429 | 请求过于频繁 | 实施请求限流和重试机制 |
 | 500 | 服务器内部错误 | 稍后重试或联系技术支持 |
+
 
 ---
 
@@ -1393,11 +1686,11 @@ class ApiConfig {
 
 ### 8.2 安全检查
 
-- ✅ **时间戳验证**: 服务器检查时间戳是否在5分钟内
-- ✅ **随机数验证**: 确保每个随机数在短时间内唯一
-- ✅ **签名验证**: 验证请求签名的完整性
-- ✅ **Token验证**: 检查访问令牌的有效性
-- ✅ **设备验证**: 验证设备ID的合法性
+- ✅ 时间戳验证: 服务器检查时间戳是否在5分钟内
+- ✅ 随机数验证: 确保每个随机数在短时间内唯一
+- ✅ 签名验证: 验证请求签名的完整性
+- ✅ Token验证: 检查访问令牌的有效性
+- ✅ 设备验证: 验证设备ID的合法性
 
 ### 8.3 自定义请求头
 
@@ -1412,6 +1705,7 @@ final response = await HttpClientService.get(
   },
 );
 ```
+
 
 ---
 

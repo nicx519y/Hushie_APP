@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../models/api_response.dart';
 import 'api/google_auth_service.dart';
 import '../services/mock/google_auth_mock.dart';
