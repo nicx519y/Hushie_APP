@@ -29,188 +29,109 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final int _pageSize = 10;
 
   // Tab 相关
+  List<TabItemModel> _tabItems = [];
   late TabController _tabController;
   int _currentTabIndex = 0;
-
-  // 不同 tab 的数据
-  List<TabItem> _tabItems = [];
-  final Map<int, List<AudioItem>> _tabData = {};
-  final Map<int, bool> _tabLoading = {};
-  final Map<int, String?> _tabErrors = {};
-  final Map<int, int> _tabPages = {};
-  final Map<int, bool> _tabHasMore = {};
+  bool _isLoading = false;
+  bool _isRefreshing = false;
+  List<AudioItem> _audioItems = [];
+  bool _hasMoreData = true;
+  String? _lastAudioId;
+  int _currentPage = 1;
 
   @override
   void initState() {
     super.initState();
-
-    // 先加载 tabs，然后初始化其他内容
-    _initializeTabs();
+    _initTabs();
+    _loadAudioData();
   }
 
-  Future<void> _initializeTabs() async {
+  void _initTabs() async {
     try {
-      // 从 TabManager 获取 tabs
-      final tabs = await TabManager.instance.getAllTabs();
-
+      final tabs = await TabManager().getAllTabs();
       setState(() {
         _tabItems = tabs;
       });
-
-      // 初始化 Tab 控制器
       _tabController = TabController(length: _tabItems.length, vsync: this);
       _tabController.addListener(() {
         if (_tabController.indexIsChanging) {
-          setState(() {
-            _currentTabIndex = _tabController.index;
-          });
-          // 切换到新 tab 时加载数据
-          _loadTabData(_currentTabIndex);
+          _onTabChanged(_tabController.index);
         }
       });
-
-      // 初始化各个 tab 的数据状态
-      for (int i = 0; i < _tabItems.length; i++) {
-        _tabData[i] = [];
-        _tabLoading[i] = false;
-        _tabErrors[i] = null;
-        _tabPages[i] = 1;
-        _tabHasMore[i] = true;
-      }
-
-      // 加载第一个 tab 的数据
-      _loadTabData(0);
     } catch (e) {
-      print('初始化 tabs 失败: $e');
-      // 如果失败，使用默认 tabs
-      _useDefaultTabs();
+      print('初始化tabs失败: $e');
+      _initDefaultTabs();
     }
   }
 
-  void _useDefaultTabs() {
+  void _initDefaultTabs() {
     setState(() {
       _tabItems = [
-        const TabItem(
-          id: 'for_you',
-          title: 'For You',
-          tag: null,
-          isDefault: true,
-          order: 0,
-        ),
-        const TabItem(id: 'mf', title: 'M/F', tag: 'M/F', order: 1),
-        const TabItem(id: 'fm', title: 'F/M', tag: 'F/M', order: 2),
-        const TabItem(id: 'asmr', title: 'ASMR', tag: 'ASMR', order: 3),
-        const TabItem(id: 'nsfw', title: 'NSFW', tag: 'NSFW', order: 4),
+        const TabItemModel(id: 'for_you', label: '为你推荐'),
+        const TabItemModel(id: 'mf', label: 'M/F'),
+        const TabItemModel(id: 'fm', label: 'F/M'),
+        const TabItemModel(id: 'asmr', label: 'ASMR'),
+        const TabItemModel(id: 'nsfw', label: 'NSFW'),
       ];
     });
-
-    // 初始化 Tab 控制器
     _tabController = TabController(length: _tabItems.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
-        setState(() {
-          _currentTabIndex = _tabController.index;
-        });
-        // 切换到新 tab 时加载数据
-        _loadTabData(_currentTabIndex);
+        _onTabChanged(_tabController.index);
       }
     });
-
-    // 初始化各个 tab 的数据状态
-    for (int i = 0; i < _tabItems.length; i++) {
-      _tabData[i] = [];
-      _tabLoading[i] = false;
-      _tabErrors[i] = null;
-      _tabPages[i] = 1;
-      _tabHasMore[i] = true;
-    }
-
-    // 加载第一个 tab 的数据
-    _loadTabData(0);
   }
 
-  Future<void> _loadTabData(int tabIndex, {bool refresh = false}) async {
-    if (refresh) {
-      setState(() {
-        _tabLoading[tabIndex] = true;
-        _tabPages[tabIndex] = 1;
-        _tabData[tabIndex]!.clear();
-        _tabErrors[tabIndex] = null;
-        _tabHasMore[tabIndex] = true;
-      });
-    }
-
-    try {
-      // 根据不同的 tab 调用不同的 API 方法
-      final response = await _getApiResponseForTab(
-        tabIndex,
-        _tabPages[tabIndex]!,
-      );
-
-      if (mounted) {
-        setState(() {
-          _tabLoading[tabIndex] = false;
-
-          if (response.success && response.data != null) {
-            if (refresh || _tabPages[tabIndex] == 1) {
-              _tabData[tabIndex] = response.data!.items;
-            } else {
-              _tabData[tabIndex]!.addAll(response.data!.items);
-            }
-            _tabHasMore[tabIndex] = response.data!.hasNextPage;
-            _tabErrors[tabIndex] = null;
-
-            // 将新加载的音频数据缓存到数据池
-            AudioDataPool.instance.addAudioList(response.data!.items);
-            print('Tab $tabIndex 已缓存 ${response.data!.items.length} 个音频到数据池');
-          } else {
-            _tabErrors[tabIndex] = response.message;
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _tabLoading[tabIndex] = false;
-          _tabErrors[tabIndex] = '加载失败: $e';
-        });
-      }
-    }
+  void _onTabChanged(int tabIndex) {
+    setState(() {
+      _currentTabIndex = tabIndex;
+    });
+    // 切换到新 tab 时加载数据
+    _loadTabData(tabIndex);
   }
 
-  Future<dynamic> _getApiResponseForTab(int tabIndex, int page) async {
-    // 确保 tabIndex 在有效范围内
+  void _loadTabData(int tabIndex) async {
     if (tabIndex < 0 || tabIndex >= _tabItems.length) {
-      return await ApiService.getHomeAudioList(
-        page: page,
-        pageSize: _pageSize,
-        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-      );
+      return;
     }
 
     final tabItem = _tabItems[tabIndex];
 
-    // 根据 tab 的 tag 来请求数据
-    if (tabItem.tag != null) {
-      return await ApiService.getHomeAudioList(
-        page: page,
-        pageSize: _pageSize,
-        tags: [tabItem.tag!],
-        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-      );
+    // 如果指定了标签，使用标签过滤
+    if (tabItem.id != 'for_you') {
+      await _loadAudioDataByTag(tabItem.id);
     } else {
-      // 没有 tag 的 tab（如 "For You"）返回推荐数据
-      return await ApiService.getHomeAudioList(
-        page: page,
-        pageSize: _pageSize,
-        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-      );
+      // 否则加载推荐数据
+      await _loadAudioData();
     }
   }
 
-  Future<void> _loadAudioData({bool refresh = false}) async {
-    // 保持原有方法以兼容，现在调用当前 tab 的数据加载
-    await _loadTabData(_currentTabIndex, refresh: refresh);
+  Future<void> _loadAudioDataByTag(String tag) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final response = await ApiService.getAudioList(tag: tag, count: 20);
+
+      if (response.errNo == 0 && response.data != null) {
+        setState(() {
+          _audioItems = response.data!.items;
+          _hasMoreData = response.data!.items.length >= 20;
+          if (_audioItems.isNotEmpty) {
+            _lastAudioId = _audioItems.last.id;
+          }
+        });
+      } else {
+        print('加载音频数据失败: 错误码 ${response.errNo}');
+      }
+    } catch (e) {
+      print('加载音频数据异常: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   // 获取用于显示的数据列表（转换为 Map 格式以兼容现有组件）

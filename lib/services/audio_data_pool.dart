@@ -53,6 +53,8 @@ class AudioDataPool {
           tags: [], // 历史记录中没有标签信息
           playbackPosition: history.playbackPosition, // 保存播放进度
           lastPlayedAt: history.lastPlayedAt, // 保存最后播放时间
+          previewStart: null, // 历史记录中没有预览信息
+          previewDuration: null, // 历史记录中没有预览信息
         );
 
         _audioCache[audioItem.id] = audioItem;
@@ -108,6 +110,8 @@ class AudioDataPool {
           ? _parseDuration(audioItem.duration!)
           : Duration.zero,
       likesCount: audioItem.likesCount,
+      previewStart: audioItem.previewStart, // 添加预览开始时间
+      previewDuration: audioItem.previewDuration, // 添加预览时长
     );
   }
 

@@ -55,16 +55,16 @@ class ApiService {
   }
 
   /// 获取首页 tabs
-  static Future<ApiResponse<List<TabItem>>> getHomeTabs() async {
+  static Future<ApiResponse<List<TabItemModel>>> getHomeTabs() async {
     return HomeTabsService.getHomeTabs();
   }
 
   /// 获取用户喜欢的音频列表
-  static Future<ApiResponse<PaginatedResponse<AudioItem>>> getUserLikedAudios({
-    int page = 1,
-    int pageSize = 20,
+  static Future<ApiResponse<SimpleResponse<AudioItem>>> getUserLikedAudios({
+    String? cid,
+    int count = 20,
   }) async {
-    return UserLikesService.getUserLikedAudios(page: page, pageSize: pageSize);
+    return UserLikesService.getUserLikedAudios(cid: cid, count: count);
   }
 
   /// Google账号登录

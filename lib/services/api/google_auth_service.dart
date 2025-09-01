@@ -10,12 +10,14 @@ import '../http_client_service.dart';
 class GoogleAuthService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
-  // 创建GoogleSignIn实例
+  // 创建GoogleSignIn实例，配置服务器端认证
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    // 如果需要服务器端认证，应该配置 serverClientId
+    // serverClientId: 'your-server-client-id.googleusercontent.com',
   );
 
-  /// Google账号登录
+  /// Google账号登录 - 完整的OAuth 2.0流程
   static Future<ApiResponse<GoogleAuthResponse>> googleSignIn() async {
     if (ApiService.currentMode == ApiMode.mock) {
       return GoogleAuthMock.getMockGoogleSignIn();
@@ -32,6 +34,38 @@ class GoogleAuthService {
       return GoogleAuthMock.getMockAccessToken(googleToken: googleToken);
     } else {
       return _getRealAccessToken(googleToken: googleToken);
+    }
+  }
+
+  /// 刷新Access Token
+  static Future<ApiResponse<AccessTokenResponse>> refreshAccessToken({
+    required String refreshToken,
+  }) async {
+    if (ApiService.currentMode == ApiMode.mock) {
+      // Mock模式下模拟刷新Token
+      return GoogleAuthMock.getMockAccessToken(googleToken: refreshToken);
+    } else {
+      return _getRealRefreshToken(refreshToken: refreshToken);
+    }
+  }
+
+  /// 验证Token是否有效
+  static Future<ApiResponse<TokenValidationResponse>> validateToken({
+    required String accessToken,
+  }) async {
+    if (ApiService.currentMode == ApiMode.mock) {
+      // Mock模式下总是返回有效
+      return ApiResponse.success(
+        data: TokenValidationResponse(
+          isValid: true,
+          expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          userId: 'mock_user_id',
+          email: 'mock@example.com',
+        ),
+        errNo: 0,
+      );
+    } else {
+      return _getRealTokenValidation(accessToken: accessToken);
     }
   }
 
@@ -55,13 +89,26 @@ class GoogleAuthService {
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // 构建响应数据
+      // 在标准OAuth 2.0流程中，这里应该获取授权码
+      // 但Google Sign-In Flutter插件直接返回tokens
+      // 如果需要完整的OAuth流程，应该使用Web Auth或自定义OAuth实现
+
+      final String? authorizationCode = googleAuth.serverAuthCode;
+      final String? idToken = googleAuth.idToken;
+
+      if (authorizationCode == null && idToken == null) {
+        return ApiResponse.error(errNo: -3);
+      }
+
+      // 构建响应数据，优先使用授权码
       final googleAuthResponse = GoogleAuthResponse(
         userId: googleUser.id,
         email: googleUser.email,
         displayName: googleUser.displayName ?? '',
         photoUrl: googleUser.photoUrl,
-        idToken: googleAuth.idToken ?? '',
+        // 优先使用授权码，如果没有则使用idToken
+        authCode: authorizationCode ?? idToken ?? '',
+        authType: authorizationCode != null ? 'authorization_code' : 'id_token',
       );
 
       return ApiResponse.success(data: googleAuthResponse, errNo: 0);
@@ -80,7 +127,10 @@ class GoogleAuthService {
 
       final response = await HttpClientService.postJson(
         uri,
-        body: {'google_token': googleToken, 'grant_type': 'google_token'},
+        body: {
+          'google_token': googleToken,
+          'grant_type': 'google_token', // 或 'authorization_code'
+        },
         timeout: _defaultTimeout,
       );
 
@@ -91,6 +141,67 @@ class GoogleAuthService {
         return ApiResponse.fromJson(
           jsonData,
           (dataJson) => AccessTokenResponse.fromMap(dataJson),
+        );
+      } else {
+        return ApiResponse.error(errNo: response.statusCode);
+      }
+    } catch (e) {
+      return ApiResponse.error(errNo: -1);
+    }
+  }
+
+  /// 真实接口 - 刷新Token
+  static Future<ApiResponse<AccessTokenResponse>> _getRealRefreshToken({
+    required String refreshToken,
+  }) async {
+    try {
+      final uri = Uri.parse(
+        ApiConfig.getFullUrl(ApiEndpoints.googleRefreshToken),
+      );
+
+      final response = await HttpClientService.postJson(
+        uri,
+        body: {'refresh_token': refreshToken, 'grant_type': 'refresh_token'},
+        timeout: _defaultTimeout,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+
+        return ApiResponse.fromJson(
+          jsonData,
+          (dataJson) => AccessTokenResponse.fromMap(dataJson),
+        );
+      } else {
+        return ApiResponse.error(errNo: response.statusCode);
+      }
+    } catch (e) {
+      return ApiResponse.error(errNo: -1);
+    }
+  }
+
+  /// 真实接口 - 验证Token
+  static Future<ApiResponse<TokenValidationResponse>> _getRealTokenValidation({
+    required String accessToken,
+  }) async {
+    try {
+      final uri = Uri.parse(
+        ApiConfig.getFullUrl(ApiEndpoints.googleTokenValidate),
+      );
+
+      final response = await HttpClientService.postJson(
+        uri,
+        body: {'access_token': accessToken},
+        timeout: _defaultTimeout,
+        headers: ApiConfig.getAuthHeaders(token: accessToken),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+
+        return ApiResponse.fromJson(
+          jsonData,
+          (dataJson) => TokenValidationResponse.fromMap(dataJson),
         );
       } else {
         return ApiResponse.error(errNo: response.statusCode);

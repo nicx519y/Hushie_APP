@@ -34,7 +34,7 @@ class AudioCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: AspectRatio(
-                    aspectRatio: 3 / 4, // 3:4 的宽高比，确保合适的显示比例
+                    aspectRatio: 0.9, // 0.9 的宽高比，确保合适的显示比例
                     child: CachedNetworkImage(
                       imageUrl: item['cover'],
                       placeholder: (context, url) => Container(

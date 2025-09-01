@@ -11,7 +11,7 @@ class HomeTabsService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 获取首页tabs
-  static Future<ApiResponse<List<TabItem>>> getHomeTabs() async {
+  static Future<ApiResponse<List<TabItemModel>>> getHomeTabs() async {
     if (ApiService.currentMode == ApiMode.mock) {
       return HomeTabsMock.getMockHomeTabs();
     } else {
@@ -20,7 +20,7 @@ class HomeTabsService {
   }
 
   /// 真实接口 - 获取首页tabs
-  static Future<ApiResponse<List<TabItem>>> _getRealHomeTabs() async {
+  static Future<ApiResponse<List<TabItemModel>>> _getRealHomeTabs() async {
     try {
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.homeTabs));
 
@@ -35,8 +35,8 @@ class HomeTabsService {
         // 使用统一的JSON处理函数
         return ApiResponse.fromJson(jsonData, (dataJson) {
           final List<dynamic> tabsData = dataJson['tabs'] ?? [];
-          final List<TabItem> tabs = tabsData
-              .map((tab) => TabItem.fromMap(tab as Map<String, dynamic>))
+          final List<TabItemModel> tabs = tabsData
+              .map((tab) => TabItemModel.fromMap(tab as Map<String, dynamic>))
               .toList();
           return tabs;
         });

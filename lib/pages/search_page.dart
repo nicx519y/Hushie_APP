@@ -130,6 +130,8 @@ class _SearchPageState extends State<SearchPage> {
         avatar: '',
         playTimes: 13000,
         likesCount: 2293,
+        previewStart: Duration(milliseconds: 30000), // 从30秒开始预览
+        previewDuration: Duration(milliseconds: 15000), // 预览15秒
       ),
       AudioItem(
         id: '2',
@@ -140,6 +142,8 @@ class _SearchPageState extends State<SearchPage> {
         avatar: '',
         playTimes: 8900,
         likesCount: 1567,
+        previewStart: Duration(milliseconds: 25000), // 从25秒开始预览
+        previewDuration: Duration(milliseconds: 18000), // 预览18秒
       ),
       AudioItem(
         id: '3',
@@ -150,6 +154,8 @@ class _SearchPageState extends State<SearchPage> {
         avatar: '',
         playTimes: 21000,
         likesCount: 3421,
+        previewStart: Duration(milliseconds: 20000), // 从20秒开始预览
+        previewDuration: Duration(milliseconds: 12000), // 预览12秒
       ),
     ];
   }

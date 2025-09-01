@@ -16,7 +16,8 @@ class GoogleAuthMock {
         email: 'user${Random().nextInt(1000)}@gmail.com',
         displayName: 'User ${Random().nextInt(1000)}',
         photoUrl: 'https://via.placeholder.com/150',
-        idToken: 'mock_google_id_token_${Random().nextInt(1000000)}',
+        authCode: 'mock_authorization_code_${Random().nextInt(1000000)}',
+        authType: 'authorization_code',
       );
 
       // 随机模拟一些错误情况用于测试
@@ -102,14 +103,16 @@ class GoogleAuthResponse {
   final String email;
   final String displayName;
   final String? photoUrl;
-  final String idToken;
+  final String authCode; // 授权码或idToken
+  final String authType; // 'authorization_code' 或 'id_token'
 
   GoogleAuthResponse({
     required this.userId,
     required this.email,
     required this.displayName,
     this.photoUrl,
-    required this.idToken,
+    required this.authCode,
+    required this.authType,
   });
 
   factory GoogleAuthResponse.fromMap(Map<String, dynamic> map) {
@@ -118,7 +121,8 @@ class GoogleAuthResponse {
       email: map['email'] ?? '',
       displayName: map['display_name'] ?? '',
       photoUrl: map['photo_url'],
-      idToken: map['id_token'] ?? '',
+      authCode: map['auth_code'] ?? map['id_token'] ?? '',
+      authType: map['auth_type'] ?? 'id_token',
     );
   }
 
@@ -128,7 +132,8 @@ class GoogleAuthResponse {
       'email': email,
       'display_name': displayName,
       'photo_url': photoUrl,
-      'id_token': idToken,
+      'auth_code': authCode,
+      'auth_type': authType,
     };
   }
 }
@@ -139,20 +144,26 @@ class AccessTokenResponse {
   final String refreshToken;
   final int expiresIn;
   final String tokenType;
+  final DateTime? expiresAt; // 过期时间
 
   AccessTokenResponse({
     required this.accessToken,
     required this.refreshToken,
     required this.expiresIn,
     required this.tokenType,
+    this.expiresAt,
   });
 
   factory AccessTokenResponse.fromMap(Map<String, dynamic> map) {
+    final expiresIn = map['expires_in'] ?? 0;
     return AccessTokenResponse(
       accessToken: map['access_token'] ?? '',
       refreshToken: map['refresh_token'] ?? '',
-      expiresIn: map['expires_in'] ?? 0,
+      expiresIn: expiresIn,
       tokenType: map['token_type'] ?? 'Bearer',
+      expiresAt: map['expires_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['expires_at'] * 1000)
+          : DateTime.now().add(Duration(seconds: expiresIn)),
     );
   }
 
@@ -162,6 +173,62 @@ class AccessTokenResponse {
       'refresh_token': refreshToken,
       'expires_in': expiresIn,
       'token_type': tokenType,
+      'expires_at': expiresAt?.millisecondsSinceEpoch != null
+          ? (expiresAt!.millisecondsSinceEpoch / 1000).round()
+          : null,
+    };
+  }
+
+  /// 检查Token是否即将过期（5分钟内）
+  bool get isExpiringSoon {
+    if (expiresAt == null) return false;
+    return DateTime.now().add(const Duration(minutes: 5)).isAfter(expiresAt!);
+  }
+
+  /// 检查Token是否已过期
+  bool get isExpired {
+    if (expiresAt == null) return false;
+    return DateTime.now().isAfter(expiresAt!);
+  }
+}
+
+/// Token验证响应数据
+class TokenValidationResponse {
+  final bool isValid;
+  final DateTime? expiresAt;
+  final String? userId;
+  final String? email;
+  final List<String>? scopes;
+
+  TokenValidationResponse({
+    required this.isValid,
+    this.expiresAt,
+    this.userId,
+    this.email,
+    this.scopes,
+  });
+
+  factory TokenValidationResponse.fromMap(Map<String, dynamic> map) {
+    return TokenValidationResponse(
+      isValid: map['is_valid'] ?? false,
+      expiresAt: map['expires_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['expires_at'] * 1000)
+          : null,
+      userId: map['user_id'],
+      email: map['email'],
+      scopes: map['scopes'] != null ? List<String>.from(map['scopes']) : null,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'is_valid': isValid,
+      'expires_at': expiresAt?.millisecondsSinceEpoch != null
+          ? (expiresAt!.millisecondsSinceEpoch / 1000).round()
+          : null,
+      'user_id': userId,
+      'email': email,
+      'scopes': scopes,
     };
   }
 }

@@ -1,368 +1,295 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'api_service.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../models/api_response.dart';
+import 'api/google_auth_service.dart';
+import '../services/mock/google_auth_mock.dart';
 
-/// 认证服务 - 管理账户相关操作
+/// 认证服务 - 管理Token生命周期和自动刷新
 class AuthService {
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
-
-  // 存储键名
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
-  static const String _tokenExpiryKey = 'token_expiry';
-  static const String _userIdKey = 'user_id';
-  static const String _userEmailKey = 'user_email';
-  static const String _userDisplayNameKey = 'user_display_name';
-  static const String _userPhotoUrlKey = 'user_photo_url';
+  static const String _tokenExpiresAtKey = 'token_expires_at';
+  static const String _userInfoKey = 'user_info';
 
-  /// Google登录流程
-  /// 包含：Google账户登录 -> 服务器获取accessToken -> 存储到本地安全存储
-  static Future<AuthResult> googleLogin() async {
-    try {
-      // 1. Google账户登录
-      final googleResponse = await ApiService.googleSignIn();
-      if (googleResponse.errNo != 0) {
-        return AuthResult.error(
-          errNo: googleResponse.errNo,
-          message: 'Google登录失败',
-        );
-      }
+  static AccessTokenResponse? _currentToken;
+  static GoogleAuthResponse? _currentUser;
 
-      final userInfo = googleResponse.data!;
-
-      // 2. 到服务器获取accessToken
-      final tokenResponse = await ApiService.getGoogleAccessToken(
-        googleToken: userInfo.idToken,
-      );
-
-      if (tokenResponse.errNo != 0) {
-        return AuthResult.error(
-          errNo: tokenResponse.errNo,
-          message: '获取access token失败',
-        );
-      }
-
-      final tokenInfo = tokenResponse.data!;
-
-      // 3. 存储到本地安全存储
-      await _saveAuthData(
-        accessToken: tokenInfo.accessToken,
-        refreshToken: tokenInfo.refreshToken,
-        expiresIn: tokenInfo.expiresIn,
-        userId: userInfo.userId,
-        email: userInfo.email,
-        displayName: userInfo.displayName,
-        photoUrl: userInfo.photoUrl,
-      );
-
-      // 转换为本地类型
-      final localUserInfo = UserInfo(
-        userId: userInfo.userId,
-        email: userInfo.email,
-        displayName: userInfo.displayName,
-        photoUrl: userInfo.photoUrl,
-      );
-
-      final localTokenInfo = AccessTokenInfo(
-        accessToken: tokenInfo.accessToken,
-        refreshToken: tokenInfo.refreshToken,
-        expiresIn: tokenInfo.expiresIn,
-        tokenType: tokenInfo.tokenType,
-      );
-
-      return AuthResult.success(
-        userInfo: localUserInfo,
-        tokenInfo: localTokenInfo,
-      );
-    } catch (e) {
-      return AuthResult.error(errNo: -1, message: '登录流程异常: $e');
-    }
-  }
-
-  /// Google登出流程
-  /// 包含：请求服务器logout接口 -> Google账户登出 -> 清除本地安全存储
-  static Future<AuthResult> googleLogout() async {
-    try {
-      // 1. 请求服务器logout接口
-      final logoutResponse = await ApiService.googleLogout();
-      if (logoutResponse.errNo != 0) {
-        print('服务器登出失败: 错误码 ${logoutResponse.errNo}');
-      }
-
-      // 2. Google账户登出
-      await ApiService.googleSignOut();
-
-      // 3. 清除本地安全存储
-      await _clearAuthData();
-
-      return AuthResult.success(message: '登出成功');
-    } catch (e) {
-      print('登出失败: $e');
-      // 即使服务器登出失败，也要清除本地数据
-      await _clearAuthData();
-      return AuthResult.error(errNo: -1, message: '登出失败: $e');
-    }
-  }
-
-  /// Google账户删除流程
-  /// 包含：Google账户登出 -> 请求服务器删除账户接口 -> 清除本地安全存储
-  static Future<AuthResult> googleAccountDelete() async {
-    try {
-      // 1. Google账户登出
-      await ApiService.googleSignOut();
-
-      // 2. 请求服务器删除账户接口
-      final deleteResponse = await ApiService.googleDeleteAccount();
-      if (deleteResponse.errNo != 0) {
-        return AuthResult.error(
-          errNo: deleteResponse.errNo,
-          message: '服务器删除账户失败: 错误码 ${deleteResponse.errNo}',
-        );
-      }
-
-      // 3. 清除本地安全存储
-      await _clearAuthData();
-
-      return AuthResult.success(message: '账户已成功删除');
-    } catch (e) {
-      return AuthResult.error(errNo: -1, message: '删除账户失败: $e');
-    }
-  }
-
-  /// 获取access token
+  /// 获取当前访问Token
   static Future<String?> getAccessToken() async {
-    try {
-      final token = await _storage.read(key: _accessTokenKey);
-      if (token == null) return null;
-
-      // 检查token是否过期
-      final expiry = await _storage.read(key: _tokenExpiryKey);
-      if (expiry != null) {
-        final expiryTime = int.tryParse(expiry) ?? 0;
-        final currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-        if (currentTime >= expiryTime) {
-          // Token已过期，尝试刷新
-          final refreshed = await _refreshToken();
-          if (refreshed) {
-            return await _storage.read(key: _accessTokenKey);
-          } else {
-            // 刷新失败，清除过期数据
-            await _clearAuthData();
-            return null;
-          }
+    // 先检查内存中的Token
+    if (_currentToken != null) {
+      // 如果Token即将过期，尝试刷新
+      if (_currentToken!.isExpiringSoon) {
+        final refreshed = await _refreshTokenIfNeeded();
+        if (!refreshed) {
+          return null;
         }
       }
-
-      return token;
-    } catch (e) {
-      print('获取access token失败: $e');
-      return null;
+      return _currentToken!.accessToken;
     }
+
+    // 从本地存储加载Token
+    await _loadTokenFromStorage();
+
+    if (_currentToken != null) {
+      // 检查是否需要刷新
+      if (_currentToken!.isExpired) {
+        final refreshed = await _refreshTokenIfNeeded();
+        if (!refreshed) {
+          return null;
+        }
+      }
+      return _currentToken!.accessToken;
+    }
+
+    return null;
   }
 
-  /// 获取refresh token
-  static Future<String?> getRefreshToken() async {
-    try {
-      return await _storage.read(key: _refreshTokenKey);
-    } catch (e) {
-      print('获取refresh token失败: $e');
-      return null;
+  /// 获取当前用户信息
+  static Future<GoogleAuthResponse?> getCurrentUser() async {
+    if (_currentUser != null) {
+      return _currentUser;
     }
+
+    await _loadUserFromStorage();
+    return _currentUser;
   }
 
-  /// 获取用户信息
-  static Future<UserInfo?> getUserInfo() async {
+  /// 执行Google登录流程
+  static Future<ApiResponse<GoogleAuthResponse>> signInWithGoogle() async {
     try {
-      final userId = await _storage.read(key: _userIdKey);
-      final email = await _storage.read(key: _userEmailKey);
-      final displayName = await _storage.read(key: _userDisplayNameKey);
-      final photoUrl = await _storage.read(key: _userPhotoUrlKey);
+      // 第一步：获取Google认证信息（授权码或idToken）
+      final googleAuthResult = await GoogleAuthService.googleSignIn();
 
-      if (userId == null || email == null) return null;
+      if (googleAuthResult.errNo != 0 || googleAuthResult.data == null) {
+        return googleAuthResult;
+      }
 
-      return UserInfo(
-        userId: userId,
-        email: email,
-        displayName: displayName ?? '',
-        photoUrl: photoUrl,
+      final googleAuth = googleAuthResult.data!;
+
+      // 第二步：用Google认证信息换取服务器Token
+      final tokenResult = await GoogleAuthService.getAccessToken(
+        googleToken: googleAuth.authCode,
       );
+
+      if (tokenResult.errNo != 0 || tokenResult.data == null) {
+        return ApiResponse.error(errNo: tokenResult.errNo);
+      }
+
+      final accessToken = tokenResult.data!;
+
+      // 第三步：保存Token和用户信息
+      await _saveTokenToStorage(accessToken);
+      await _saveUserToStorage(googleAuth);
+
+      _currentToken = accessToken;
+      _currentUser = googleAuth;
+
+      return googleAuthResult;
     } catch (e) {
-      print('获取用户信息失败: $e');
-      return null;
+      print('Google登录流程失败: $e');
+      return ApiResponse.error(errNo: -1);
+    }
+  }
+
+  /// 登出
+  static Future<void> signOut() async {
+    try {
+      // 调用服务器登出接口
+      await GoogleAuthService.logout();
+
+      // 调用Google登出
+      await GoogleAuthService.signOut();
+
+      // 清除本地存储
+      await _clearTokenFromStorage();
+      await _clearUserFromStorage();
+
+      _currentToken = null;
+      _currentUser = null;
+    } catch (e) {
+      print('登出失败: $e');
+    }
+  }
+
+  /// 验证当前Token是否有效
+  static Future<bool> validateCurrentToken() async {
+    final token = await getAccessToken();
+    if (token == null) return false;
+
+    try {
+      final result = await GoogleAuthService.validateToken(accessToken: token);
+      return result.errNo == 0 && result.data?.isValid == true;
+    } catch (e) {
+      print('Token验证失败: $e');
+      return false;
     }
   }
 
   /// 检查是否已登录
-  static Future<bool> isLoggedIn() async {
-    try {
-      final token = await getAccessToken();
-      return token != null;
-    } catch (e) {
+  static Future<bool> isSignedIn() async {
+    final token = await getAccessToken();
+    if (token == null) return false;
+
+    return await validateCurrentToken();
+  }
+
+  /// 强制刷新Token
+  static Future<bool> refreshToken() async {
+    return await _refreshTokenIfNeeded(force: true);
+  }
+
+  /// 内部方法：刷新Token（如果需要）
+  static Future<bool> _refreshTokenIfNeeded({bool force = false}) async {
+    if (_currentToken == null) {
+      await _loadTokenFromStorage();
+    }
+
+    if (_currentToken == null || _currentToken!.refreshToken.isEmpty) {
       return false;
     }
-  }
 
-  /// 刷新token
-  static Future<bool> _refreshToken() async {
+    // 检查是否需要刷新
+    if (!force && !_currentToken!.isExpiringSoon && !_currentToken!.isExpired) {
+      return true; // 不需要刷新
+    }
+
     try {
-      final refreshToken = await getRefreshToken();
-      if (refreshToken == null) return false;
+      final result = await GoogleAuthService.refreshAccessToken(
+        refreshToken: _currentToken!.refreshToken,
+      );
 
-      // TODO: 实现token刷新API调用
-      // final response = await ApiService.refreshToken(refreshToken: refreshToken);
-      // if (response.errNo == 0) {
-      //   final newTokenInfo = response.data!;
-      //   await _updateTokens(
-      //         accessToken: newTokenInfo.accessToken,
-      //         refreshToken: newTokenInfo.refreshToken,
-      //         expiresIn: newTokenInfo.expiresIn,
-      //       );
-      //   return true;
-      // }
+      if (result.errNo == 0 && result.data != null) {
+        var newToken = result.data!;
 
-      return false;
+        // 保留原有的refresh token（如果新的为空）
+        if (newToken.refreshToken.isEmpty && _currentToken != null) {
+          newToken = AccessTokenResponse(
+            accessToken: newToken.accessToken,
+            refreshToken: _currentToken!.refreshToken,
+            expiresIn: newToken.expiresIn,
+            tokenType: newToken.tokenType,
+            expiresAt: newToken.expiresAt,
+          );
+        }
+
+        await _saveTokenToStorage(newToken);
+        _currentToken = newToken;
+        return true;
+      }
     } catch (e) {
-      print('刷新token失败: $e');
-      return false;
+      print('Token刷新失败: $e');
     }
+
+    // 刷新失败，清除Token
+    await _clearTokenFromStorage();
+    _currentToken = null;
+    return false;
   }
 
-  /// 保存认证数据到本地
-  static Future<void> _saveAuthData({
-    required String accessToken,
-    required String refreshToken,
-    required int expiresIn,
-    required String userId,
-    required String email,
-    required String displayName,
-    String? photoUrl,
-  }) async {
+  /// 从本地存储加载Token
+  static Future<void> _loadTokenFromStorage() async {
     try {
-      final currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final expiryTime = currentTime + expiresIn;
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString(_accessTokenKey);
+      final refreshToken = prefs.getString(_refreshTokenKey);
+      final expiresAtMs = prefs.getInt(_tokenExpiresAtKey);
 
-      await Future.wait([
-        _storage.write(key: _accessTokenKey, value: accessToken),
-        _storage.write(key: _refreshTokenKey, value: refreshToken),
-        _storage.write(key: _tokenExpiryKey, value: expiryTime.toString()),
-        _storage.write(key: _userIdKey, value: userId),
-        _storage.write(key: _userEmailKey, value: email),
-        _storage.write(key: _userDisplayNameKey, value: displayName),
-        if (photoUrl != null)
-          _storage.write(key: _userPhotoUrlKey, value: photoUrl),
-      ]);
-
-      print('认证数据已保存到本地');
+      if (accessToken != null && refreshToken != null) {
+        _currentToken = AccessTokenResponse(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          expiresIn: 3600, // 默认1小时
+          tokenType: 'Bearer',
+          expiresAt: expiresAtMs != null
+              ? DateTime.fromMillisecondsSinceEpoch(expiresAtMs)
+              : null,
+        );
+      }
     } catch (e) {
-      print('保存认证数据失败: $e');
+      print('加载Token失败: $e');
     }
   }
 
-  /// 更新token信息
-  static Future<void> _updateTokens({
-    required String accessToken,
-    required String refreshToken,
-    required int expiresIn,
-  }) async {
+  /// 保存Token到本地存储
+  static Future<void> _saveTokenToStorage(AccessTokenResponse token) async {
     try {
-      final currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final expiryTime = currentTime + expiresIn;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_accessTokenKey, token.accessToken);
+      await prefs.setString(_refreshTokenKey, token.refreshToken);
 
-      await Future.wait([
-        _storage.write(key: _accessTokenKey, value: accessToken),
-        _storage.write(key: _refreshTokenKey, value: refreshToken),
-        _storage.write(key: _tokenExpiryKey, value: expiryTime.toString()),
-      ]);
-
-      print('Token信息已更新');
+      if (token.expiresAt != null) {
+        await prefs.setInt(
+          _tokenExpiresAtKey,
+          token.expiresAt!.millisecondsSinceEpoch,
+        );
+      }
     } catch (e) {
-      print('更新token信息失败: $e');
+      print('保存Token失败: $e');
     }
   }
 
-  /// 清除本地认证数据
-  static Future<void> _clearAuthData() async {
+  /// 清除Token从本地存储
+  static Future<void> _clearTokenFromStorage() async {
     try {
-      await Future.wait([
-        _storage.delete(key: _accessTokenKey),
-        _storage.delete(key: _refreshTokenKey),
-        _storage.delete(key: _tokenExpiryKey),
-        _storage.delete(key: _userIdKey),
-        _storage.delete(key: _userEmailKey),
-        _storage.delete(key: _userDisplayNameKey),
-        _storage.delete(key: _userPhotoUrlKey),
-      ]);
-
-      print('本地认证数据已清除');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_accessTokenKey);
+      await prefs.remove(_refreshTokenKey);
+      await prefs.remove(_tokenExpiresAtKey);
     } catch (e) {
-      print('清除认证数据失败: $e');
+      print('清除Token失败: $e');
     }
   }
-}
 
-/// 认证结果
-class AuthResult {
-  final bool success;
-  final int errNo;
-  final String? message;
-  final UserInfo? userInfo;
-  final AccessTokenInfo? tokenInfo;
+  /// 从本地存储加载用户信息
+  static Future<void> _loadUserFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString(_userInfoKey);
 
-  AuthResult.success({this.userInfo, this.tokenInfo, this.message})
-    : success = true,
-      errNo = 0;
-
-  AuthResult.error({required this.errNo, required this.message})
-    : success = false,
-      userInfo = null,
-      tokenInfo = null;
-
-  @override
-  String toString() {
-    if (success) {
-      return 'AuthResult.success(message: $message)';
-    } else {
-      return 'AuthResult.error(errNo: $errNo, message: $message)';
+      if (userJson != null) {
+        final userMap = json.decode(userJson) as Map<String, dynamic>;
+        _currentUser = GoogleAuthResponse.fromMap(userMap);
+      }
+    } catch (e) {
+      print('加载用户信息失败: $e');
     }
   }
-}
 
-/// 用户信息
-class UserInfo {
-  final String userId;
-  final String email;
-  final String displayName;
-  final String? photoUrl;
-
-  UserInfo({
-    required this.userId,
-    required this.email,
-    required this.displayName,
-    this.photoUrl,
-  });
-
-  @override
-  String toString() {
-    return 'UserInfo(userId: $userId, email: $email, displayName: $displayName)';
+  /// 保存用户信息到本地存储
+  static Future<void> _saveUserToStorage(GoogleAuthResponse user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = json.encode(user.toMap());
+      await prefs.setString(_userInfoKey, userJson);
+    } catch (e) {
+      print('保存用户信息失败: $e');
+    }
   }
-}
 
-/// Access Token信息
-class AccessTokenInfo {
-  final String accessToken;
-  final String refreshToken;
-  final int expiresIn;
-  final String tokenType;
+  /// 清除用户信息从本地存储
+  static Future<void> _clearUserFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_userInfoKey);
+    } catch (e) {
+      print('清除用户信息失败: $e');
+    }
+  }
 
-  AccessTokenInfo({
-    required this.accessToken,
-    required this.refreshToken,
-    required this.expiresIn,
-    required this.tokenType,
-  });
+  /// 获取带有认证头的请求头
+  static Future<Map<String, String>> getAuthHeaders() async {
+    final token = await getAccessToken();
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
 
-  @override
-  String toString() {
-    return 'AccessTokenInfo(expiresIn: $expiresIn, tokenType: $tokenType)';
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    return headers;
   }
 }

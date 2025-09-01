@@ -17,6 +17,8 @@ class MockData {
       'duration': '3:24',
       'created_at': '2024-01-15T10:30:00Z',
       'tags': ['pop', 'trending', 'M/F'],
+      'preview_start_ms': 30000, // 从30秒开始预览
+      'preview_duration_ms': 15000, // 预览15秒
     },
     {
       'id': '2',
@@ -32,6 +34,8 @@ class MockData {
       'duration': '4:12',
       'created_at': '2024-01-14T15:45:00Z',
       'tags': ['ambient', 'chill', 'F/M'],
+      'preview_start_ms': 45000, // 从45秒开始预览
+      'preview_duration_ms': 20000, // 预览20秒
     },
     {
       'id': '3',
@@ -47,6 +51,8 @@ class MockData {
       'duration': '2:56',
       'created_at': '2024-01-13T09:20:00Z',
       'tags': ['electronic', 'dance', 'ASMR'],
+      'preview_start_ms': 20000, // 从20秒开始预览
+      'preview_duration_ms': 12000, // 预览12秒
     },
     {
       'id': '4',
@@ -62,6 +68,8 @@ class MockData {
       'duration': '5:33',
       'created_at': '2024-01-12T18:15:00Z',
       'tags': ['nature', 'relaxing', 'NSFW'],
+      'preview_start_ms': 60000, // 从1分钟开始预览
+      'preview_duration_ms': 25000, // 预览25秒
     },
     {
       'id': '5',
@@ -77,6 +85,8 @@ class MockData {
       'duration': '3:45',
       'created_at': '2024-01-11T12:00:00Z',
       'tags': ['hip-hop', 'urban', 'M/F'],
+      'preview_start_ms': 25000, // 从25秒开始预览
+      'preview_duration_ms': 18000, // 预览18秒
     },
     {
       'id': '6',
@@ -92,6 +102,8 @@ class MockData {
       'duration': '6:18',
       'created_at': '2024-01-10T07:30:00Z',
       'tags': ['classical', 'morning', 'M/F'],
+      'preview_start_ms': 90000, // 从1分30秒开始预览
+      'preview_duration_ms': 30000, // 预览30秒
     },
     {
       'id': '7',
@@ -107,6 +119,8 @@ class MockData {
       'duration': '4:42',
       'created_at': '2024-01-09T20:15:00Z',
       'tags': ['jazz', 'evening', 'F/M'],
+      'preview_start_ms': 35000, // 从35秒开始预览
+      'preview_duration_ms': 22000, // 预览22秒
     },
     {
       'id': '8',
@@ -122,6 +136,8 @@ class MockData {
       'duration': '4:05',
       'created_at': '2024-01-08T16:45:00Z',
       'tags': ['rock', 'energetic', 'ASMR'],
+      'preview_start_ms': 15000, // 从15秒开始预览
+      'preview_duration_ms': 16000, // 预览16秒
     },
   ];
 

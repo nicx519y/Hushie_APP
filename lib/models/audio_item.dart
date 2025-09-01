@@ -16,21 +16,27 @@ class AudioItem {
   final Duration? playbackPosition; // 上次播放的进度位置
   final DateTime? lastPlayedAt; // 最后播放时间
 
+  // 预览相关字段
+  final Duration? previewStart; // 可预览开始时间点
+  final Duration? previewDuration; // 可预览时长
+
   AudioItem({
-    required this.id,
-    required this.cover,
-    required this.title,
-    required this.desc,
-    required this.author,
-    required this.avatar,
-    required this.playTimes,
-    required this.likesCount,
-    this.audioUrl,
-    this.duration,
-    this.createdAt,
-    this.tags,
-    this.playbackPosition,
-    this.lastPlayedAt,
+    required this.id, // id
+    required this.cover, // 封面
+    required this.title, // 标题
+    required this.desc, // 描述
+    required this.author, // 作者
+    required this.avatar, // 头像
+    required this.playTimes, // 播放次数
+    required this.likesCount, // 点赞数
+    this.audioUrl, // 音频URL
+    this.duration, // 时长 单位：毫秒
+    this.createdAt, // 创建时间
+    this.tags, // 标签
+    this.playbackPosition, // 播放进度 单位：毫秒
+    this.lastPlayedAt, // 最后播放时间
+    this.previewStart, // 可预览开始时间点 单位：毫秒
+    this.previewDuration, // 可预览时长 单位：毫秒
   });
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
@@ -55,6 +61,12 @@ class AudioItem {
       lastPlayedAt: map['last_played_at'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['last_played_at'])
           : null,
+      previewStart: map['preview_start_ms'] != null
+          ? Duration(milliseconds: map['preview_start_ms'])
+          : null,
+      previewDuration: map['preview_duration_ms'] != null
+          ? Duration(milliseconds: map['preview_duration_ms'])
+          : null,
     );
   }
 
@@ -74,6 +86,8 @@ class AudioItem {
       'tags': tags,
       'playback_position_ms': playbackPosition?.inMilliseconds,
       'last_played_at': lastPlayedAt?.millisecondsSinceEpoch,
+      'preview_start_ms': previewStart?.inMilliseconds,
+      'preview_duration_ms': previewDuration?.inMilliseconds,
     };
   }
 
@@ -92,6 +106,8 @@ class AudioItem {
     List<String>? tags,
     Duration? playbackPosition,
     DateTime? lastPlayedAt,
+    Duration? previewStart,
+    Duration? previewDuration,
   }) {
     return AudioItem(
       id: id ?? this.id,
@@ -108,6 +124,8 @@ class AudioItem {
       tags: tags ?? this.tags,
       playbackPosition: playbackPosition ?? this.playbackPosition,
       lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
+      previewStart: previewStart ?? this.previewStart,
+      previewDuration: previewDuration ?? this.previewDuration,
     );
   }
 

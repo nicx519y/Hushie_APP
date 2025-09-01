@@ -11,28 +11,26 @@ class UserLikesService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 获取用户喜欢的音频列表
-  static Future<ApiResponse<PaginatedResponse<AudioItem>>> getUserLikedAudios({
-    int page = 1,
-    int pageSize = 20,
+  static Future<ApiResponse<SimpleResponse<AudioItem>>> getUserLikedAudios({
+    String? cid,
+    int count = 20,
   }) async {
     if (ApiService.currentMode == ApiMode.mock) {
-      return UserLikesMock.getMockUserLikedAudios(
-        page: page,
-        pageSize: pageSize,
-      );
+      return UserLikesMock.getMockUserLikedAudios(cid: cid, count: count);
     } else {
-      return _getRealUserLikedAudios(page: page, pageSize: pageSize);
+      return _getRealUserLikedAudios(cid: cid, count: count);
     }
   }
 
   /// 真实接口 - 获取用户喜欢的音频列表
-  static Future<ApiResponse<PaginatedResponse<AudioItem>>>
-  _getRealUserLikedAudios({int page = 1, int pageSize = 20}) async {
+  static Future<ApiResponse<SimpleResponse<AudioItem>>>
+  _getRealUserLikedAudios({String? cid, int count = 20}) async {
     try {
-      final queryParams = <String, String>{
-        'page': page.toString(),
-        'page_size': pageSize.toString(),
-      };
+      final queryParams = <String, String>{'count': count.toString()};
+
+      if (cid != null && cid.isNotEmpty) {
+        queryParams['cid'] = cid;
+      }
 
       final uri = Uri.parse(
         ApiConfig.getFullUrl(ApiEndpoints.userLikes),
@@ -49,7 +47,7 @@ class UserLikesService {
         // 使用统一的JSON处理函数
         return ApiResponse.fromJson(
           jsonData,
-          (dataJson) => PaginatedResponse<AudioItem>.fromMap(
+          (dataJson) => SimpleResponse<AudioItem>.fromMap(
             dataJson,
             (itemJson) => AudioItem.fromMap(itemJson),
           ),

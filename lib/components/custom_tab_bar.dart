@@ -194,7 +194,7 @@ class _CustomTabBarState extends State<CustomTabBar> {
         child: TabBar(
           controller: widget.controller,
           tabAlignment: TabAlignment.start,
-          tabs: widget.tabItems.map((tab) => Tab(text: tab.title)).toList(),
+          tabs: widget.tabItems.map((tab) => Tab(text: tab.label)).toList(),
           labelColor: widget.labelColor ?? const Color(0xFF333333),
           unselectedLabelColor:
               widget.unselectedLabelColor ?? const Color(0xFF787878),

@@ -9,16 +9,22 @@ class AudioModel {
   final Duration duration;
   final int likesCount;
 
+  // 预览相关字段
+  final Duration? previewStart; // 可预览开始时间点
+  final Duration? previewDuration; // 可预览时长
+
   const AudioModel({
-    required this.id,
-    required this.title,
-    required this.artist,
-    required this.artistAvatar,
-    required this.description,
-    required this.audioUrl,
-    required this.coverUrl,
-    required this.duration,
-    required this.likesCount,
+    required this.id, // id
+    required this.title, // 标题
+    required this.artist, // 艺术家
+    required this.artistAvatar, // 艺术家头像
+    required this.description, // 描述
+    required this.audioUrl, // 音频URL
+    required this.coverUrl, // 封面URL
+    required this.duration, // 时长 单位：毫秒
+    required this.likesCount, // 点赞数
+    this.previewStart, // 可预览开始时间点 单位：毫秒
+    this.previewDuration, // 可预览时长 单位：毫秒
   });
 
   // 转换为MediaItem用于audio_service
@@ -33,6 +39,8 @@ class AudioModel {
       'coverUrl': coverUrl,
       'duration': duration.inMilliseconds,
       'likesCount': likesCount,
+      'previewStart': previewStart?.inMilliseconds,
+      'previewDuration': previewDuration?.inMilliseconds,
     };
   }
 
@@ -47,6 +55,12 @@ class AudioModel {
       coverUrl: json['coverUrl'],
       duration: Duration(milliseconds: json['duration']),
       likesCount: json['likesCount'],
+      previewStart: json['previewStart'] != null
+          ? Duration(milliseconds: json['previewStart'])
+          : null,
+      previewDuration: json['previewDuration'] != null
+          ? Duration(milliseconds: json['previewDuration'])
+          : null,
     );
   }
 
@@ -60,6 +74,8 @@ class AudioModel {
     String? coverUrl,
     Duration? duration,
     int? likesCount,
+    Duration? previewStart,
+    Duration? previewDuration,
   }) {
     return AudioModel(
       id: id ?? this.id,
@@ -71,6 +87,8 @@ class AudioModel {
       coverUrl: coverUrl ?? this.coverUrl,
       duration: duration ?? this.duration,
       likesCount: likesCount ?? this.likesCount,
+      previewStart: previewStart ?? this.previewStart,
+      previewDuration: previewDuration ?? this.previewDuration,
     );
   }
 }

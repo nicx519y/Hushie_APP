@@ -24,11 +24,9 @@ class _ProfilePageState extends State<ProfilePage>
   String userName = 'Queen X';
 
   // 标签页状态
+  late List<TabItemModel> _tabItems;
   late TabController _tabController;
   int currentTabIndex = 0;
-
-  // 定义 tabs
-  late List<TabItem> _tabItems;
 
   // 音频数据
   List<AudioHistory> historyAudios = [];
@@ -37,20 +35,15 @@ class _ProfilePageState extends State<ProfilePage>
   bool _isLoadingLiked = false;
   int _likedPage = 1;
   bool _hasMoreLiked = true;
+  String? _lastLikedId; // 用于存储最后一个喜欢的音频ID，以便进行分页
 
   @override
   void initState() {
     super.initState();
-    _initTabs();
-    _initMockData();
-  }
-
-  void _initTabs() {
     _tabItems = [
-      const TabItem(id: 'history', title: 'History', order: 0),
-      const TabItem(id: 'like', title: 'Like', order: 1),
+      const TabItemModel(id: 'history', label: 'History'),
+      const TabItemModel(id: 'like', label: 'Like'),
     ];
-
     _tabController = TabController(length: _tabItems.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
@@ -106,6 +99,7 @@ class _ProfilePageState extends State<ProfilePage>
         _likedPage = 1;
         likedAudios.clear();
         _hasMoreLiked = true;
+        _lastLikedId = null; // 刷新时重置最后一个ID
       });
     }
 
@@ -117,24 +111,31 @@ class _ProfilePageState extends State<ProfilePage>
 
     try {
       final response = await ApiService.getUserLikedAudios(
-        page: _likedPage,
-        pageSize: 20,
+        cid: _likedPage == 1 ? null : _lastLikedId,
+        count: 20,
       );
 
       if (mounted) {
         setState(() {
           _isLoadingLiked = false;
 
-          if (response.success && response.data != null) {
+          if (response.errNo == 0 && response.data != null) {
             if (refresh || _likedPage == 1) {
               likedAudios = response.data!.items;
             } else {
               likedAudios.addAll(response.data!.items);
             }
-            _hasMoreLiked = response.data!.hasNextPage;
+
+            // 更新分页信息
+            if (response.data!.items.isNotEmpty) {
+              _lastLikedId = response.data!.items.last.id;
+              _hasMoreLiked = response.data!.items.length >= 20;
+            } else {
+              _hasMoreLiked = false;
+            }
             _likedPage++;
           } else {
-            print('获取喜欢音频失败: ${response.message}');
+            print('获取喜欢音频失败: 错误码 ${response.errNo}');
           }
         });
       }
@@ -279,6 +280,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 avatar: history.artistAvatar ?? '',
                                 playTimes: history.likesCount,
                                 likesCount: history.likesCount,
+                                previewStart: null, // 历史记录中没有预览信息
+                                previewDuration: null, // 历史记录中没有预览信息
                               ),
                             )
                             .toList(),

@@ -71,6 +71,9 @@ dependencies:
   
   # 安全存储
   flutter_secure_storage: ^9.0.0
+  
+  # 加密算法（用于API签名）
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
