@@ -54,11 +54,27 @@ class AudioList extends StatelessWidget {
               width: 70,
               height: 78,
               color: const Color(0xFFF5F5F5),
-              child: Image.network(
-                audio.cover.getBestResolution(70).url, // 70px 是容器宽度
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.play_arrow, size: 30);
+              child: Builder(
+                builder: (context) {
+                  String? imageUrl;
+                  try {
+                    imageUrl = audio.cover.getBestResolution(70).url;
+                  } catch (e) {
+                    print('获取封面图片失败: $e');
+                    imageUrl = null;
+                  }
+
+                  if (imageUrl != null && imageUrl.isNotEmpty) {
+                    return Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.play_arrow, size: 30);
+                      },
+                    );
+                  } else {
+                    return const Icon(Icons.play_arrow, size: 30);
+                  }
                 },
               ),
             ),

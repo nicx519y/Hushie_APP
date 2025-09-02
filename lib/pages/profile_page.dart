@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
-import '../models/audio_history.dart';
 import '../components/custom_tab_bar.dart';
 import '../components/audio_list.dart';
 import '../components/user_header.dart';
@@ -29,7 +28,7 @@ class _ProfilePageState extends State<ProfilePage>
   int currentTabIndex = 0;
 
   // 音频数据
-  List<AudioHistory> historyAudios = [];
+  List<AudioItem> historyAudios = [];
   List<AudioItem> likedAudios = [];
   bool _isLoadingHistory = false;
   bool _isLoadingLiked = false;
@@ -273,16 +272,22 @@ class _ProfilePageState extends State<ProfilePage>
                             .map(
                               (history) => AudioItem(
                                 id: history.id,
-                                cover: history.coverUrl,
-                                bgImage: history.bgImageUrl,
+                                cover: history.cover,
+                                bgImage: history.bgImage,
                                 title: history.title,
-                                desc: history.description ?? '',
-                                author: history.artist,
-                                avatar: history.artistAvatar ?? '',
-                                playTimes: history.likesCount,
+                                desc: history.desc,
+                                author: history.author,
+                                avatar: history.avatar,
+                                playTimes: history.playTimes,
                                 likesCount: history.likesCount,
-                                previewStart: null, // 历史记录中没有预览信息
-                                previewDuration: null, // 历史记录中没有预览信息
+                                audioUrl: history.audioUrl,
+                                duration: history.duration,
+                                createdAt: history.createdAt,
+                                tags: history.tags,
+                                playbackPosition: history.playbackPosition,
+                                lastPlayedAt: history.lastPlayedAt,
+                                previewStart: history.previewStart,
+                                previewDuration: history.previewDuration,
                               ),
                             )
                             .toList(),

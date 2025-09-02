@@ -48,22 +48,27 @@ class AudioListMock {
 
     // 如果提供了cid，找到对应的起始位置
     if (cid != null && cid.isNotEmpty) {
-      // 在已生成的数据中找到cid对应的位置
-      final existingIndex = _lastIndexMap[cacheKey] ?? 0;
-      startIndex = existingIndex;
+      // 在基础数据中找到cid对应的位置
+      final cidIndex = baseItems.indexWhere((item) => item.id == cid);
+      if (cidIndex != -1 && cidIndex < baseItems.length - 1) {
+        // 从 cid 下一个位置开始
+        startIndex = cidIndex + 1;
+      } else {
+        // 如果找不到 cid 或已经是最后一条，返回空列表
+        return [];
+      }
     } else {
-      // 重置分页
-      _lastIndexMap[cacheKey] = 0;
+      // 重置分页，从头开始
       startIndex = 0;
     }
 
     List<AudioItem> result = [];
     final Random random = Random(startIndex); // 使用startIndex作为随机种子确保一致性
 
-    for (int i = 0; i < count && startIndex + i < _totalMockItems; i++) {
-      final baseItem = baseItems[i % baseItems.length];
+    for (int i = 0; i < count && startIndex + i < baseItems.length; i++) {
+      final baseItem = baseItems[startIndex + i];
 
-      // 创建唯一的ID和数据
+      // 创建唯一的ID和数据，保持原有的cid
       final uniqueId = '${baseItem.id}_page_${startIndex + i}';
       final modifiedItem = AudioItem(
         id: uniqueId,
@@ -87,9 +92,6 @@ class AudioListMock {
 
       result.add(modifiedItem);
     }
-
-    // 更新最后索引
-    _lastIndexMap[cacheKey] = startIndex + result.length;
 
     return result;
   }

@@ -4,7 +4,7 @@ import '../layouts/main_layout.dart';
 import '../pages/home_page.dart';
 import '../pages/profile_page.dart';
 import '../services/audio_manager.dart';
-import '../services/audio_data_pool.dart';
+import '../services/audio_playlist.dart';
 import '../services/audio_history_manager.dart';
 
 class SplashPage extends StatefulWidget {
@@ -45,12 +45,6 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeServices() async {
     try {
-      // 先初始化音频历史管理器（确保数据库可用）
-      await AudioHistoryManager.instance.initialize();
-
-      // 再初始化音频数据池（从历史数据库加载数据）
-      await AudioDataPool.instance.initialize();
-
       // 初始化音频服务
       await AudioManager.instance.init();
 
@@ -95,7 +89,7 @@ class _SplashPageState extends State<SplashPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '正在初始化服务...',
+                    'Initializing services...',
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ],

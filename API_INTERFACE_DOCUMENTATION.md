@@ -1548,7 +1548,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "playback_position_ms": "int",  // 上次播放进度位置(毫秒)
   "last_played_at": "int",        // 最后播放时间戳
   "preview_start_ms": "int",      // 可预览开始时间点(毫秒)
-  "preview_duration_ms": "int"    // 可预览时长(毫秒)
+  "preview_duration_ms": "int",    // 可预览时长(毫秒)
   "is_liked": "bool"              // 是否赞过
 }
 ```

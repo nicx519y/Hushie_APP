@@ -14,6 +14,7 @@ class AudioItem {
   final String? duration;
   final DateTime? createdAt;
   final List<String>? tags;
+  final bool isLiked;
 
   // 播放进度相关字段
   final Duration? playbackPosition; // 上次播放的进度位置
@@ -41,6 +42,7 @@ class AudioItem {
     this.lastPlayedAt, // 最后播放时间
     this.previewStart, // 可预览开始时间点 单位：毫秒
     this.previewDuration, // 可预览时长 单位：毫秒
+    this.isLiked = false, // 是否点赞
   });
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
@@ -74,6 +76,7 @@ class AudioItem {
       previewDuration: map['preview_duration_ms'] != null
           ? Duration(milliseconds: map['preview_duration_ms'])
           : null,
+      isLiked: map['is_liked'] ?? false,
     );
   }
 
@@ -96,11 +99,13 @@ class AudioItem {
       'last_played_at': lastPlayedAt?.millisecondsSinceEpoch,
       'preview_start_ms': previewStart?.inMilliseconds,
       'preview_duration_ms': previewDuration?.inMilliseconds,
+      'is_liked': isLiked,
     };
   }
 
   AudioItem copyWith({
     String? id,
+    String? cid,
     ImageModel? cover,
     String? title,
     String? desc,
@@ -117,6 +122,7 @@ class AudioItem {
     DateTime? lastPlayedAt,
     Duration? previewStart,
     Duration? previewDuration,
+    bool? isLiked,
   }) {
     return AudioItem(
       id: id ?? this.id,
@@ -136,6 +142,7 @@ class AudioItem {
       lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
       previewStart: previewStart ?? this.previewStart,
       previewDuration: previewDuration ?? this.previewDuration,
+      isLiked: isLiked ?? this.isLiked,
     );
   }
 

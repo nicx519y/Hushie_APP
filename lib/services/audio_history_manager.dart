@@ -1,6 +1,5 @@
 import 'dart:async';
-import '../models/audio_history.dart';
-import '../models/audio_model.dart';
+import '../models/audio_item.dart';
 import 'audio_history_database.dart';
 
 /// 音频播放历史管理器
@@ -10,7 +9,7 @@ class AudioHistoryManager {
   static AudioHistoryManager get instance => _instance;
 
   final AudioHistoryDatabase _database = AudioHistoryDatabase.instance;
-  late Timer? _progressUpdateTimer;
+  Timer? _progressUpdateTimer; // 移除 late 关键字
   DateTime? _lastProgressUpdate;
   String? _currentTrackingAudioId;
 
@@ -19,52 +18,44 @@ class AudioHistoryManager {
   /// 初始化历史管理器
   Future<void> initialize() async {
     try {
-      print('正在初始化音频历史管理器...');
-
-      // 初始化数据库
-      await _database.database;
-
-      print('音频历史管理器初始化完成');
+      await _database.initialize();
+      print('AudioHistoryManager 初始化成功');
     } catch (e) {
-      print('音频历史管理器初始化失败: $e');
-
-      // 如果数据库初始化失败，尝试重建数据库
-      try {
-        print('尝试重建数据库...');
-        await _database.rebuildDatabase();
-        print('数据库重建成功');
-      } catch (rebuildError) {
-        print('数据库重建也失败: $rebuildError');
-      }
+      print('AudioHistoryManager 初始化失败: $e');
     }
   }
 
   /// 记录音频开始播放
-  Future<void> recordPlayStart(AudioModel audioModel) async {
+  Future<void> recordPlayStart(AudioItem audioItem) async {
     try {
       // 创建或更新历史记录，进度设为0
-      final history = AudioHistory(
-        id: audioModel.id,
-        title: audioModel.title,
-        artist: audioModel.artist,
-        artistAvatar: audioModel.artistAvatar,
-        description: audioModel.description,
-        audioUrl: audioModel.audioUrl,
-        coverUrl: audioModel.coverUrl,
-        duration: audioModel.duration,
-        likesCount: audioModel.likesCount,
+      final history = AudioItem(
+        id: audioItem.id,
+        cover: audioItem.cover,
+        bgImage: audioItem.bgImage,
+        title: audioItem.title,
+        desc: audioItem.desc,
+        author: audioItem.author,
+        avatar: audioItem.avatar,
+        playTimes: audioItem.playTimes,
+        likesCount: audioItem.likesCount,
+        audioUrl: audioItem.audioUrl,
+        duration: audioItem.duration,
+        createdAt: audioItem.createdAt,
+        tags: audioItem.tags,
         playbackPosition: Duration.zero, // 开始播放，进度为0
         lastPlayedAt: DateTime.now(),
-        createdAt: DateTime.now(),
+        previewStart: audioItem.previewStart,
+        previewDuration: audioItem.previewDuration,
       );
 
       // 存储到数据库
       await _database.addOrUpdateHistory(history);
 
       // 启动进度追踪
-      _startProgressTracking(audioModel.id);
+      _startProgressTracking(audioItem.id);
 
-      print('记录播放开始: ${audioModel.title}');
+      print('记录播放开始: ${audioItem.title}');
     } catch (e) {
       print('记录播放开始失败: $e');
     }
@@ -172,8 +163,11 @@ class AudioHistoryManager {
       print('停止追踪音频播放进度: $_currentTrackingAudioId');
     }
 
-    _progressUpdateTimer?.cancel();
-    _progressUpdateTimer = null;
+    // 安全地取消定时器
+    if (_progressUpdateTimer != null) {
+      _progressUpdateTimer!.cancel();
+      _progressUpdateTimer = null;
+    }
     _currentTrackingAudioId = null;
   }
 
@@ -183,7 +177,7 @@ class AudioHistoryManager {
   }
 
   /// 获取音频的播放历史
-  Future<AudioHistory?> getAudioHistory(String audioId) async {
+  Future<AudioItem?> getAudioHistory(String audioId) async {
     try {
       return await _database.getHistoryById(audioId);
     } catch (e) {
@@ -193,7 +187,7 @@ class AudioHistoryManager {
   }
 
   /// 获取最近播放的音频列表
-  Future<List<AudioHistory>> getRecentHistory({int limit = 10}) async {
+  Future<List<AudioItem>> getRecentHistory({int limit = 10}) async {
     try {
       return await _database.getRecentHistory(limit: limit);
     } catch (e) {
@@ -203,7 +197,7 @@ class AudioHistoryManager {
   }
 
   /// 获取所有播放历史
-  Future<List<AudioHistory>> getAllHistory() async {
+  Future<List<AudioItem>> getAllHistory() async {
     try {
       return await _database.getAllHistory();
     } catch (e) {
@@ -213,7 +207,7 @@ class AudioHistoryManager {
   }
 
   /// 搜索播放历史
-  Future<List<AudioHistory>> searchHistory(String keyword) async {
+  Future<List<AudioItem>> searchHistory(String keyword) async {
     try {
       return await _database.searchHistory(keyword);
     } catch (e) {
@@ -274,6 +268,34 @@ class AudioHistoryManager {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds.remainder(60);
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  /// 解析时长字符串为Duration
+  Duration _parseDuration(String durationStr) {
+    try {
+      // 支持格式: "3:24", "1:23:45", "120" (秒)
+      final parts = durationStr.split(':');
+
+      if (parts.length == 1) {
+        // 只有秒数
+        return Duration(seconds: int.parse(parts[0]));
+      } else if (parts.length == 2) {
+        // 分钟:秒钟
+        final minutes = int.parse(parts[0]);
+        final seconds = int.parse(parts[1]);
+        return Duration(minutes: minutes, seconds: seconds);
+      } else if (parts.length == 3) {
+        // 小时:分钟:秒钟
+        final hours = int.parse(parts[0]);
+        final minutes = int.parse(parts[1]);
+        final seconds = int.parse(parts[2]);
+        return Duration(hours: hours, minutes: minutes, seconds: seconds);
+      }
+    } catch (e) {
+      print('解析时长失败: $durationStr, 错误: $e');
+    }
+
+    return Duration.zero;
   }
 
   /// 打印调试信息

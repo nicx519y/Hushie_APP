@@ -8,10 +8,10 @@ class TabManager {
   static const String _cacheKey = 'home_tabs_cache';
   static const Duration _cacheExpiry = Duration(hours: 1);
 
-  // 默认的"为你推荐"tab
+  // 默认的"For You"tab
   static const TabItemModel _defaultForYouTab = TabItemModel(
     id: 'for_you',
-    label: '为你推荐',
+    label: 'For You',
   );
 
   /// 获取所有tabs
@@ -20,7 +20,7 @@ class TabManager {
       // 1. 尝试从缓存获取
       final cachedTabs = await _getCachedTabs();
       if (cachedTabs.isNotEmpty) {
-        return cachedTabs;
+        return _combineWithDefaultTab(cachedTabs);
       }
 
       // 2. 从服务器获取
@@ -28,14 +28,14 @@ class TabManager {
       if (serverTabs.isNotEmpty) {
         // 保存到缓存
         await _saveTabsToCache(serverTabs);
-        return serverTabs;
+        return _combineWithDefaultTab(serverTabs);
       }
 
       // 3. 使用默认tabs
-      return _getDefaultTabs();
+      return _combineWithDefaultTab(_getDefaultTabs());
     } catch (e) {
       print('获取tabs失败: $e');
-      return _getDefaultTabs();
+      return _combineWithDefaultTab(_getDefaultTabs());
     }
   }
 
@@ -50,14 +50,14 @@ class TabManager {
       if (serverTabs.isNotEmpty) {
         // 保存到缓存
         await _saveTabsToCache(serverTabs);
-        return serverTabs;
+        return _combineWithDefaultTab(serverTabs);
       }
 
       // 如果服务器没有数据，使用默认tabs
-      return _getDefaultTabs();
+      return _combineWithDefaultTab(_getDefaultTabs());
     } catch (e) {
       print('刷新tabs失败: $e');
-      return _getDefaultTabs();
+      return _combineWithDefaultTab(_getDefaultTabs());
     }
   }
 
@@ -130,8 +130,13 @@ class TabManager {
   List<TabItemModel> _combineWithDefaultTab(List<TabItemModel> dynamicTabs) {
     final allTabs = <TabItemModel>[_defaultForYouTab];
 
-    // 添加动态tabs
-    allTabs.addAll(dynamicTabs);
+    // 添加动态tabs，过滤掉可能重复的"for_you" tab
+    for (final tab in dynamicTabs) {
+      if (tab.id != 'for_you') {
+        allTabs.add(tab);
+      }
+    }
+
     return allTabs;
   }
 

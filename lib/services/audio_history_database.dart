@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import '../models/audio_history.dart';
+import '../models/audio_item.dart';
 
 /// 音频播放历史本地数据库服务
 class AudioHistoryDatabase {
@@ -12,13 +12,18 @@ class AudioHistoryDatabase {
   static Database? _database;
   static const String _tableName = 'audio_history';
   static const String _dbName = 'audio_history.db';
-  static const int _dbVersion = 2;
+  static const String _dbVersion = '3';
 
   // 配置项
   static int maxHistoryCount = 50; // 最大存储条数
   static int progressUpdateInterval = 30; // 进度更新间隔（秒）
 
   AudioHistoryDatabase._internal();
+
+  /// 初始化数据库
+  Future<void> initialize() async {
+    await database;
+  }
 
   /// 获取数据库实例
   Future<Database> get database async {
@@ -34,7 +39,7 @@ class AudioHistoryDatabase {
 
     return await openDatabase(
       path,
-      version: _dbVersion,
+      version: int.parse(_dbVersion),
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -51,6 +56,7 @@ class AudioHistoryDatabase {
         description TEXT,
         audio_url TEXT NOT NULL,
         cover_url TEXT,
+        bg_image_url TEXT,
         duration_ms INTEGER NOT NULL,
         likes_count INTEGER DEFAULT 0,
         playback_position_ms INTEGER DEFAULT 0,
@@ -76,10 +82,16 @@ class AudioHistoryDatabase {
       await db.execute('ALTER TABLE $_tableName ADD COLUMN artist_avatar TEXT');
       print('已添加 artist_avatar 字段');
     }
+
+    if (oldVersion < 3) {
+      // 添加 bg_image_url 字段
+      await db.execute('ALTER TABLE $_tableName ADD COLUMN bg_image_url TEXT');
+      print('已添加 bg_image_url 字段');
+    }
   }
 
   /// 添加或更新播放历史
-  Future<void> addOrUpdateHistory(AudioHistory history) async {
+  Future<void> addOrUpdateHistory(AudioItem history) async {
     final db = await database;
 
     try {
@@ -167,7 +179,7 @@ class AudioHistoryDatabase {
   }
 
   /// 获取指定音频的播放历史
-  Future<AudioHistory?> getHistoryById(String audioId) async {
+  Future<AudioItem?> getHistoryById(String audioId) async {
     final db = await database;
 
     try {
@@ -178,7 +190,7 @@ class AudioHistoryDatabase {
       );
 
       if (result.isNotEmpty) {
-        return AudioHistory.fromMap(result.first);
+        return AudioItem.fromMap(result.first);
       }
       return null;
     } catch (e) {
@@ -188,7 +200,7 @@ class AudioHistoryDatabase {
   }
 
   /// 获取所有播放历史（按最后播放时间倒序）
-  Future<List<AudioHistory>> getAllHistory({int? limit}) async {
+  Future<List<AudioItem>> getAllHistory({int? limit}) async {
     final db = await database;
 
     try {
@@ -198,7 +210,7 @@ class AudioHistoryDatabase {
         limit: limit,
       );
 
-      return result.map((map) => AudioHistory.fromMap(map)).toList();
+      return result.map((map) => AudioItem.fromMap(map)).toList();
     } catch (e) {
       print('获取播放历史列表失败: $e');
       return [];
@@ -206,7 +218,7 @@ class AudioHistoryDatabase {
   }
 
   /// 获取最近播放的音频历史
-  Future<List<AudioHistory>> getRecentHistory({int limit = 10}) async {
+  Future<List<AudioItem>> getRecentHistory({int limit = 10}) async {
     return getAllHistory(limit: limit);
   }
 
@@ -328,7 +340,7 @@ class AudioHistoryDatabase {
   }
 
   /// 搜索播放历史
-  Future<List<AudioHistory>> searchHistory(String keyword) async {
+  Future<List<AudioItem>> searchHistory(String keyword) async {
     final db = await database;
 
     try {
@@ -339,7 +351,7 @@ class AudioHistoryDatabase {
         orderBy: 'last_played_at DESC',
       );
 
-      return result.map((map) => AudioHistory.fromMap(map)).toList();
+      return result.map((map) => AudioItem.fromMap(map)).toList();
     } catch (e) {
       print('搜索播放历史失败: $e');
       return [];
@@ -401,11 +413,22 @@ class AudioHistoryDatabase {
 
       print('最近5条记录:');
       for (final history in recentHistory) {
-        print('  - ${history.title} (${history.formattedProgress})');
+        final progress =
+            history.playbackPosition != null && history.duration != null
+            ? '${_formatDuration(history.playbackPosition!)} / ${history.duration}'
+            : '无进度信息';
+        print('  - ${history.title} ($progress)');
       }
       print('============================');
     } catch (e) {
       print('打印调试信息失败: $e');
     }
+  }
+
+  /// 格式化时长为字符串
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds.remainder(60);
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }

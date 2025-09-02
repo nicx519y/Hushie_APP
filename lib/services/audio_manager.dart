@@ -1,24 +1,22 @@
-import 'package:audio_service/audio_service.dart';
+import 'dart:async';
 import 'package:rxdart/rxdart.dart';
+import 'package:audio_service/audio_service.dart';
+import '../models/audio_item.dart';
 import 'audio_service.dart';
-import '../models/audio_model.dart';
-import 'audio_data_pool.dart';
+import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
+import 'api/audio_list_service.dart';
 
 class AudioManager {
-  static AudioManager? _instance;
-  static AudioManager get instance => _instance ??= AudioManager._internal();
+  static final AudioManager _instance = AudioManager._internal();
+  static AudioManager get instance => _instance;
 
   AudioPlayerService? _audioService;
-  bool _isInitialized = false;
-  bool _isInitializing = false;
-
-  // 使用BehaviorSubject来管理状态流
   final BehaviorSubject<bool> _isPlayingSubject = BehaviorSubject<bool>.seeded(
     false,
   );
-  final BehaviorSubject<AudioModel?> _currentAudioSubject =
-      BehaviorSubject<AudioModel?>.seeded(null);
+  final BehaviorSubject<AudioItem?> _currentAudioSubject =
+      BehaviorSubject<AudioItem?>.seeded(null);
   final BehaviorSubject<Duration> _positionSubject =
       BehaviorSubject<Duration>.seeded(Duration.zero);
   final BehaviorSubject<Duration> _durationSubject =
@@ -31,9 +29,8 @@ class AudioManager {
 
   // 初始化音频服务（延迟初始化）
   Future<void> _ensureInitialized() async {
-    if (_isInitialized || _isInitializing) return;
+    if (_audioService != null) return;
 
-    _isInitializing = true;
     try {
       _audioService = await AudioService.init(
         builder: () => AudioPlayerService(),
@@ -48,13 +45,9 @@ class AudioManager {
 
       // 初始化成功后，设置流监听
       _setupStreamListeners();
-      _isInitialized = true;
     } catch (e) {
       print('AudioService初始化失败: $e');
       _audioService = null;
-      _isInitialized = false;
-    } finally {
-      _isInitializing = false;
     }
   }
 
@@ -65,16 +58,52 @@ class AudioManager {
     // 监听播放状态
     _audioService!.isPlayingStream.listen((isPlaying) {
       _isPlayingSubject.add(isPlaying);
+
+      if (isPlaying) {
+        print('播放状态: 开始播放');
+        final currentAudio = _currentAudioSubject.value;
+        if (currentAudio != null) {
+          print('记录播放开始: ${currentAudio.title}');
+          AudioHistoryManager.instance.recordPlayStart(currentAudio);
+        }
+      } else {
+        print('播放状态: 停止播放');
+        final currentAudio = _currentAudioSubject.value;
+        if (currentAudio != null) {
+          print('记录播放结束: ${currentAudio.title}');
+          AudioHistoryManager.instance.recordPlayStop(
+            currentAudio.id,
+            _positionSubject.value,
+            _durationSubject.value,
+          );
+        }
+      }
     });
 
     // 监听当前音频
     _audioService!.currentAudioStream.listen((audio) {
       _currentAudioSubject.add(audio);
+
+      // 管理播放列表
+      if (audio != null) {
+        final isInPlaylist =
+            AudioPlaylist.instance.getAudioItemById(audio.id) != null;
+
+        if (!isInPlaylist) {
+          AudioPlaylist.instance.addAudio(audio);
+        }
+
+        print('音频改变，管理播放列表: ${audio.title}');
+        _managePlaylist(audio.id);
+      }
     });
 
     // 监听播放位置
     _audioService!.positionStream.listen((position) {
       _positionSubject.add(position);
+
+      // 检查是否播放完成，如果完成则自动播放下一首
+      _checkPlaybackCompletion(position);
     });
 
     // 监听播放时长
@@ -88,11 +117,83 @@ class AudioManager {
     });
   }
 
+  /// 检查播放是否完成并自动播放下一首
+  void _checkPlaybackCompletion(Duration position) {
+    final currentAudio = _currentAudioSubject.value;
+    final totalDuration = _durationSubject.value;
+    final isPlaying = _isPlayingSubject.value;
+
+    if (currentAudio != null &&
+        totalDuration.inMilliseconds > 0 &&
+        position.inMilliseconds >=
+            totalDuration.inMilliseconds * 0.98 && // 98%算作播放完成
+        !isPlaying) {
+      // 确保当前不在播放状态
+
+      _playNextAudio(currentAudio.id);
+    }
+  }
+
+  /// 播放下一首音频
+  Future<void> _playNextAudio(String currentAudioId) async {
+    try {
+      final playlist = AudioPlaylist.instance;
+
+      final nextAudio = playlist.getNextAudio(currentAudioId);
+
+      if (nextAudio != null) {
+        final nextAudioItem = playlist.getAudioItemById(nextAudio.id);
+        if (nextAudioItem != null) {
+          print('自动播放下一首: ${nextAudio.title}');
+          await playAudio(nextAudioItem);
+        }
+      } else {
+        print('没有找到下一首音频');
+      }
+    } catch (e) {
+      print('自动播放下一首失败: $e');
+    }
+  }
+
   // 兼容性方法：保持原有的init接口，但改为延迟初始化
   Future<void> init() async {
-    // 不在这里强制初始化，而是标记为可以初始化
+    // 先初始化音频历史管理器（确保数据库可用）
+    await AudioHistoryManager.instance.initialize();
+    // 初始化AudioPlaylist
+    await AudioPlaylist.instance.initialize();
+    print('AudioManager: AudioPlaylist 初始化完成');
+
+    // 从播放历史列表中获取最后一条播放记录
+    final lastHistory = await AudioHistoryManager.instance.getRecentHistory(
+      limit: 1,
+    );
+    print('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
+    if (lastHistory.isNotEmpty) {
+      AudioPlaylist.instance.addAudio(lastHistory.first);
+    }
+
+    // 播放最后的音频并暂停
+    await _loadLastAudio();
+
+    // 不在这里强制初始化AudioService，而是标记为可以初始化
     // 实际初始化将在第一次使用时进行
     return;
+  }
+
+  /// 播放最后的音频并暂停
+  Future<void> _loadLastAudio() async {
+    try {
+      final lastAudio = AudioPlaylist.instance.getLastLoadedAudio();
+      if (lastAudio != null) {
+        final audioItem = AudioPlaylist.instance.getAudioItemById(lastAudio.id);
+        if (audioItem != null) {
+          await _ensureInitialized();
+          await _audioService!.loadAudio(audioItem);
+        }
+      }
+    } catch (e) {
+      print('播放最后音频失败: $e');
+    }
   }
 
   // 获取音频服务实例
@@ -101,12 +202,10 @@ class AudioManager {
   }
 
   // 播放音频
-  Future<void> playAudio(AudioModel audio) async {
+  Future<void> playAudio(AudioItem audio) async {
     try {
       await _ensureInitialized();
       if (_audioService != null) {
-        // 记录播放开始
-        await AudioHistoryManager.instance.recordPlayStart(audio);
         await _audioService!.playAudio(audio);
       } else {
         print('音频服务未初始化，无法播放音频');
@@ -114,32 +213,67 @@ class AudioManager {
       }
     } catch (e) {
       print('播放音频失败: $e');
-      // 确保在出错时清理状态
-      _currentAudioSubject.add(null);
       rethrow;
     }
   }
 
-  // 通过 ID 播放音频（从数据池获取）
-  Future<bool> playAudioById(String audioId) async {
+  /// 管理播放列表（清理和补充）
+  Future<void> _managePlaylist(String currentAudioId) async {
     try {
-      // 从数据池获取音频模型
-      final audioModel = AudioDataPool.instance.getAudioModelById(audioId);
+      final playlist = AudioPlaylist.instance;
 
-      if (audioModel == null) {
-        print('音频数据池中未找到 ID: $audioId 的音频');
-        return false;
+      // 1. 清理当前音频之前的数据
+      playlist.clearBeforeCurrent(currentAudioId);
+
+      // 2. 设置当前播放索引
+      playlist.setCurrentIndex(currentAudioId);
+
+      print("管理播放列表：当前ID: $currentAudioId");
+      print("管理播放列表：是否最后一条：${playlist.isLastAudio(currentAudioId)}");
+      print("管理播放列表：下一首ID: ${playlist.getNextAudio(currentAudioId)?.id}");
+
+      // 3. 检查是否是最后一条，如果是则补充播放列表
+      if (playlist.isLastAudio(currentAudioId)) {
+        print('_managePlaylist: isLastAudio: true');
+        await _supplementPlaylist();
+      }
+    } catch (e) {
+      print('管理播放列表失败: $e');
+    }
+  }
+
+  /// 补充播放列表
+  Future<void> _supplementPlaylist() async {
+    try {
+      final playlist = AudioPlaylist.instance;
+      final currentAudio = playlist.getCurrentAudio();
+
+      if (currentAudio == null) {
+        print('补充播放列表: 当前没有可用的音频，无法补充播放列表');
+        print('播放列表状态: ${playlist.getPlaylistStats()}');
+        return;
       }
 
-      // 播放音频
-      await playAudio(audioModel);
-      print('开始播放音频: ${audioModel.title} (ID: $audioId)');
-      return true;
+      print('补充播放列表: 当前ID: $currentAudio.id');
+
+      // 从API获取更多音频数据
+      final response = await AudioListService.getAudioList(
+        tag: null,
+        cid: currentAudio.id,
+        count: 50,
+      );
+
+      if (response.errNo == 0 &&
+          response.data != null &&
+          response.data!.items.isNotEmpty) {
+        // 添加新音频到播放列表
+        playlist.addAudioList(response.data!.items);
+        print('成功补充播放列表: ${response.data!.items.length} 首音频');
+      } else {
+        print('补充播放列表失败: 没有更多数据 (errNo: ${response.errNo})');
+      }
     } catch (e) {
-      print('通过 ID 播放音频失败: $e');
-      // 确保在错误时停止当前播放
-      await stop();
-      return false;
+      print('补充播放列表失败: $e');
     }
   }
 
@@ -159,18 +293,6 @@ class AudioManager {
   Future<void> pause() async {
     await _ensureInitialized();
     if (_audioService != null) {
-      // 暂停时记录播放停止（包含当前进度和停止追踪）
-      final currentAudio = _currentAudioSubject.value;
-      if (currentAudio != null) {
-        final currentPosition = _positionSubject.value;
-        final totalDuration = _durationSubject.value;
-        await AudioHistoryManager.instance.recordPlayStop(
-          currentAudio.id,
-          currentPosition,
-          totalDuration,
-        );
-      }
-
       await _audioService!.pause();
     }
   }
@@ -179,18 +301,6 @@ class AudioManager {
   Future<void> stop() async {
     await _ensureInitialized();
     if (_audioService != null) {
-      // 记录播放停止（包含完成状态判断和停止进度追踪）
-      final currentAudio = _currentAudioSubject.value;
-      if (currentAudio != null) {
-        final currentPosition = _positionSubject.value;
-        final totalDuration = _durationSubject.value;
-        await AudioHistoryManager.instance.recordPlayStop(
-          currentAudio.id,
-          currentPosition,
-          totalDuration,
-        );
-      }
-
       await _audioService!.stop();
     }
   }
@@ -233,7 +343,7 @@ class AudioManager {
   }
 
   // 获取当前音频流 - 修复版本
-  Stream<AudioModel?> get currentAudioStream {
+  Stream<AudioItem?> get currentAudioStream {
     return _currentAudioSubject.stream;
   }
 
@@ -257,7 +367,7 @@ class AudioManager {
     return _isPlayingSubject.value;
   }
 
-  AudioModel? get currentAudio {
+  AudioItem? get currentAudio {
     return _currentAudioSubject.value;
   }
 
@@ -275,6 +385,18 @@ class AudioManager {
 
   // 清理资源
   Future<void> dispose() async {
+    // 在销毁前记录最后的播放停止
+    final currentAudio = _currentAudioSubject.value;
+    if (currentAudio != null) {
+      final currentPosition = _positionSubject.value;
+      final totalDuration = _durationSubject.value;
+      await AudioHistoryManager.instance.recordPlayStop(
+        currentAudio.id,
+        currentPosition,
+        totalDuration,
+      );
+    }
+
     if (_audioService != null) {
       await _audioService!.dispose();
     }
@@ -287,8 +409,5 @@ class AudioManager {
     await _speedSubject.close();
 
     _audioService = null;
-    _isInitialized = false;
-    _isInitializing = false;
-    _instance = null;
   }
 }

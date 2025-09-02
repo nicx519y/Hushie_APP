@@ -8,6 +8,11 @@ class ImageModel {
 
   /// 根据逻辑像素宽度获取最合适的图片尺寸信息
   ImageResolution getBestResolution(double logicalWidth) {
+    // 安全检查
+    if (urls.x1.url.isEmpty) {
+      throw Exception('ImageModel: x1 分辨率的 URL 为空');
+    }
+
     // 获取设备像素密度
     final devicePixelRatio =
         WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
@@ -54,10 +59,26 @@ class ImageModel {
 
   /// 从JSON创建实例
   factory ImageModel.fromJson(Map<String, dynamic> json) {
-    return ImageModel(
-      id: json['id'] ?? '',
-      urls: ImageResolutions.fromJson(json['urls'] ?? {}),
-    );
+    // 检查 urls 字段是否存在且有效
+    final urlsData = json['urls'];
+    ImageResolutions urls;
+
+    if (urlsData != null &&
+        urlsData is Map<String, dynamic> &&
+        urlsData.isNotEmpty) {
+      urls = ImageResolutions.fromJson(urlsData);
+    } else {
+      // 如果 urls 数据无效，创建一个默认的 ImageResolutions
+      urls = ImageResolutions(
+        x1: ImageResolution(
+          url: 'assets/images/logo.png', // 使用现有的 logo 图片作为默认封面
+          width: 400,
+          height: 600,
+        ),
+      );
+    }
+
+    return ImageModel(id: json['id'] ?? '', urls: urls);
   }
 
   /// 复制实例并修改指定字段
@@ -81,8 +102,23 @@ class ImageResolutions {
 
   /// 从JSON创建实例
   factory ImageResolutions.fromJson(Map<String, dynamic> json) {
+    // 检查 x1 字段是否存在且有效
+    final x1Data = json['x1'];
+    ImageResolution x1;
+
+    if (x1Data != null && x1Data is Map<String, dynamic> && x1Data.isNotEmpty) {
+      x1 = ImageResolution.fromJson(x1Data);
+    } else {
+      // 如果 x1 数据无效，创建一个默认的 ImageResolution
+      x1 = ImageResolution(
+        url: 'assets/images/logo.png',
+        width: 400,
+        height: 600,
+      );
+    }
+
     return ImageResolutions(
-      x1: ImageResolution.fromJson(json['x1'] ?? {}),
+      x1: x1,
       x2: json['x2'] != null ? ImageResolution.fromJson(json['x2']) : null,
       x3: json['x3'] != null ? ImageResolution.fromJson(json['x3']) : null,
     );
@@ -121,10 +157,23 @@ class ImageResolution {
 
   /// 从JSON创建实例
   factory ImageResolution.fromJson(Map<String, dynamic> json) {
+    final url = json['url'] ?? '';
+
+    // 验证 URL 格式
+    if (url.isNotEmpty) {
+      try {
+        // 尝试解析 URL，如果失败则抛出异常
+        Uri.parse(url);
+      } catch (e) {
+        print('警告: 无效的图片URL格式: $url');
+        // 不抛出异常，而是使用空字符串，让调用者处理
+      }
+    }
+
     return ImageResolution(
-      url: json['url'] ?? '',
-      width: json['width'] ?? 0,
-      height: json['height'] ?? 0,
+      url: url.isNotEmpty ? url : 'assets/images/logo.png',
+      width: json['width'] ?? 400,
+      height: json['height'] ?? 600,
     );
   }
 

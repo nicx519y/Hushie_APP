@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'circular_play_button.dart';
 import '../services/audio_manager.dart';
-import '../models/audio_model.dart';
+import '../models/audio_item.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   final int currentIndex;
@@ -24,7 +24,7 @@ class CustomBottomNavigationBar extends StatefulWidget {
 class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   late AudioManager _audioManager;
   bool _isPlaying = false;
-  AudioModel? _currentAudio;
+  AudioItem? _currentAudio;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
 
@@ -168,11 +168,23 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
           _currentPosition.inMilliseconds / _totalDuration.inMilliseconds;
     }
 
+    // 安全地获取封面图片URL
+    String? coverImageUrl;
+    try {
+      if (_currentAudio?.cover != null) {
+        final bestResolution = _currentAudio!.cover.getBestResolution(70.0);
+        coverImageUrl = bestResolution.url;
+      }
+    } catch (e) {
+      print('获取封面图片失败: $e');
+      coverImageUrl = null;
+    }
+
     return Transform.translate(
       offset: const Offset(0, -11), // 向上偏移10像素
       child: CircularPlayButton(
         size: 70,
-        coverImageUrl: _currentAudio?.coverUrl.getBestResolution(70.0).url,
+        coverImageUrl: coverImageUrl,
         isPlaying: _isPlaying,
         progress: progress,
         onTap: () async {

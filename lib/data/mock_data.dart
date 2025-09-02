@@ -4,6 +4,7 @@ class MockData {
   static final List<Map<String, dynamic>> _audioItems = [
     {
       'id': '1',
+      'cid': '1', // 添加 cid 字段
       'cover': {
         'id': 'cover_1',
         'urls': {
@@ -61,6 +62,7 @@ class MockData {
     },
     {
       'id': '2',
+      'cid': '2', // 添加 cid 字段
       'cover': {
         'id': 'cover_2',
         'urls': {
@@ -112,6 +114,7 @@ class MockData {
     },
     {
       'id': '3',
+      'cid': '3', // 添加 cid 字段
       'cover': {
         'id': 'cover_3',
         'urls': {
@@ -143,6 +146,7 @@ class MockData {
     },
     {
       'id': '4',
+      'cid': '4', // 添加 cid 字段
       'cover': {
         'id': 'cover_4',
         'urls': {
@@ -194,6 +198,7 @@ class MockData {
     },
     {
       'id': '5',
+      'cid': '5', // 添加 cid 字段
       'cover': {
         'id': 'cover_5',
         'urls': {
@@ -230,6 +235,7 @@ class MockData {
     },
     {
       'id': '6',
+      'cid': '6', // 添加 cid 字段
       'cover': {
         'id': 'cover_6',
         'urls': {
@@ -281,6 +287,7 @@ class MockData {
     },
     {
       'id': '7',
+      'cid': '7', // 添加 cid 字段
       'cover': {
         'id': 'cover_7',
         'urls': {
@@ -317,6 +324,7 @@ class MockData {
     },
     {
       'id': '8',
+      'cid': '8', // 添加 cid 字段
       'cover': {
         'id': 'cover_8',
         'urls': {

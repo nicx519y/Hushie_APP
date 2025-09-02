@@ -1,7 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
-import '../models/audio_model.dart';
+import '../models/audio_item.dart';
 
 class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -10,8 +10,8 @@ class AudioPlayerService extends BaseAudioHandler {
   final BehaviorSubject<bool> _isPlayingSubject = BehaviorSubject<bool>.seeded(
     false,
   );
-  final BehaviorSubject<AudioModel?> _currentAudioSubject =
-      BehaviorSubject<AudioModel?>.seeded(null);
+  final BehaviorSubject<AudioItem?> _currentAudioSubject =
+      BehaviorSubject<AudioItem?>.seeded(null);
   final BehaviorSubject<Duration> _positionSubject =
       BehaviorSubject<Duration>.seeded(Duration.zero);
   final BehaviorSubject<Duration> _durationSubject =
@@ -22,14 +22,14 @@ class AudioPlayerService extends BaseAudioHandler {
 
   // 公开的流
   Stream<bool> get isPlayingStream => _isPlayingSubject.stream;
-  Stream<AudioModel?> get currentAudioStream => _currentAudioSubject.stream;
+  Stream<AudioItem?> get currentAudioStream => _currentAudioSubject.stream;
   Stream<Duration> get positionStream => _positionSubject.stream;
   Stream<Duration> get durationStream => _durationSubject.stream;
   Stream<double> get speedStream => _speedSubject.stream;
 
   // 当前状态的getter
   bool get isPlaying => _isPlayingSubject.value;
-  AudioModel? get currentAudio => _currentAudioSubject.value;
+  AudioItem? get currentAudio => _currentAudioSubject.value;
   Duration get position => _positionSubject.value;
   Duration get duration => _durationSubject.value;
   double get speed => _speedSubject.value;
@@ -71,34 +71,91 @@ class AudioPlayerService extends BaseAudioHandler {
     });
   }
 
+  Future<void> loadAudio(AudioItem audio) async {
+    try {
+      // 先完全停止并重置播放器状态
+      await _stopAndReset();
+      _currentAudioSubject.add(audio);
+
+      // 验证音频URL
+      final audioUrl = audio.audioUrl;
+
+      if (audioUrl == null || audioUrl.isEmpty) {
+        throw Exception('音频URL为空');
+      }
+
+      print('loadAudio url: $audioUrl');
+
+      // 安全地获取封面URL
+      String? coverUrlString;
+      try {
+        final bestResolution = audio.cover.getBestResolution(80);
+        coverUrlString = bestResolution.url;
+        print('loadAudio cover url: $coverUrlString');
+      } catch (e) {
+        print('获取封面URL失败: $e，使用默认封面');
+        coverUrlString = null;
+      }
+
+      // 设置MediaItem用于通知栏显示
+      final mediaItemData = MediaItem(
+        id: audio.id,
+        album: "Hushie",
+        title: audio.title,
+        artist: audio.author,
+        duration: audio.duration != null
+            ? _parseDuration(audio.duration!)
+            : Duration.zero,
+        artUri: coverUrlString != null ? Uri.parse(coverUrlString) : null,
+        extras: audio.toMap(),
+      );
+
+      mediaItem.add(mediaItemData);
+
+      // 加载音频文件
+      await _audioPlayer.setUrl(audioUrl);
+    } catch (e) {
+      print('装载音频时出错: $e');
+      rethrow; // 重新抛出异常，让调用者处理
+    }
+  }
+
+  /// 解析时长字符串为Duration
+  Duration _parseDuration(String durationStr) {
+    try {
+      // 支持格式: "3:24", "1:23:45", "120" (秒)
+      final parts = durationStr.split(':');
+
+      if (parts.length == 1) {
+        // 只有秒数
+        return Duration(seconds: int.parse(parts[0]));
+      } else if (parts.length == 2) {
+        // 分钟:秒钟
+        final minutes = int.parse(parts[0]);
+        final seconds = int.parse(parts[1]);
+        return Duration(minutes: minutes, seconds: seconds);
+      } else if (parts.length == 3) {
+        // 小时:分钟:秒钟
+        final hours = int.parse(parts[0]);
+        final minutes = int.parse(parts[1]);
+        final seconds = int.parse(parts[2]);
+        return Duration(hours: hours, minutes: minutes, seconds: seconds);
+      }
+    } catch (e) {
+      print('解析时长失败: $durationStr, 错误: $e');
+    }
+
+    return Duration.zero;
+  }
+
   // 加载并播放音频
-  Future<void> playAudio(AudioModel audio) async {
+  Future<void> playAudio(AudioItem audio) async {
     try {
       print('开始播放音频: ${audio.title} (ID: ${audio.id})');
 
-      // 先完全停止并重置播放器状态
-      await _stopAndReset();
+      await loadAudio(audio);
 
-      _currentAudioSubject.add(audio);
-
-      // 设置MediaItem用于通知栏显示
-      mediaItem.add(
-        MediaItem(
-          id: audio.id,
-          album: "Hushie",
-          title: audio.title,
-          artist: audio.artist,
-          duration: audio.duration,
-          artUri: Uri.parse(audio.coverUrl.getBestResolution(80).url),
-          extras: audio.toJson(),
-        ),
-      );
-
-      print('正在加载音频文件: ${audio.audioUrl}');
-      // 加载音频文件
-      await _audioPlayer.setUrl(audio.audioUrl);
-
-      print('开始播放音频');
+      print('开始播放音频: ${audio.title} (URL: ${audio.audioUrl})');
       // 开始播放
       await _audioPlayer.play();
       print('音频播放开始成功');
@@ -106,6 +163,36 @@ class AudioPlayerService extends BaseAudioHandler {
       print('播放音频时出错: $e');
       await stop();
     }
+  }
+
+  /// 清理和验证URL
+  String? _cleanAndValidateUrl(String url) {
+    if (url.isEmpty) return null;
+
+    // 移除首尾空白字符
+    String cleaned = url.trim();
+
+    // 检查是否包含无效字符
+    if (cleaned.contains(' ')) {
+      // 如果包含空格，尝试编码
+      cleaned = cleaned.replaceAll(' ', '%20');
+    }
+
+    // 检查是否以有效的协议开头
+    if (cleaned.startsWith('http://') ||
+        cleaned.startsWith('https://') ||
+        cleaned.startsWith('file://') ||
+        cleaned.startsWith('content://')) {
+      return cleaned;
+    }
+
+    // 如果没有协议，检查是否是有效的域名或路径
+    if (cleaned.contains('.') || cleaned.startsWith('/')) {
+      return cleaned;
+    }
+
+    // 如果都不符合，返回null表示无效
+    return null;
   }
 
   // 私有方法：停止并重置播放器

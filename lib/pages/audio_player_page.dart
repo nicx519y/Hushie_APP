@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../components/audio_progress_bar.dart';
+import 'package:flutter/services.dart';
+import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
-import '../models/audio_model.dart';
+import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
@@ -50,9 +51,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
-  bool _showControls = true;
   late AudioManager _audioManager;
-  AudioModel? _currentAudio;
+  AudioItem? _currentAudio;
+  bool _isLiked = false;
 
   @override
   void initState() {
@@ -68,6 +69,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       if (mounted) {
         setState(() {
           _currentAudio = audio;
+          _isLiked = _currentAudio?.isLiked ?? false;
         });
       }
     });
@@ -122,27 +124,29 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     }
   }
 
+  void _onLikeButtonPressed() {}
+
   void _onSeek(Duration position) {
     _audioManager.seek(position);
   }
 
-  void _toggleControls() {
-    setState(() {
-      _showControls = !_showControls;
-    });
-  }
+  // void _toggleControls() {
+  //   setState(() {
+  //     _showControls = !_showControls;
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        onTap: _toggleControls,
+        // onTap: _toggleControls,
         child: Stack(
           children: [
             _buildAudioBackground(),
             _buildStatusBar(),
-            if (_showControls) _buildControlBar(),
+            _buildControlBar(),
           ],
         ),
       ),
@@ -256,7 +260,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               _buildAudioTitle(),
               const SizedBox(height: 8),
               _buildArtistInfo(),
-              const SizedBox(height: 18),
+              const SizedBox(height: 10),
               _buildAudioDescription(),
             ],
           ),
@@ -275,27 +279,29 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       title,
       style: const TextStyle(
         color: Colors.white,
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
 
   // 构建艺术家信息
   Widget _buildArtistInfo() {
-    final artist = _currentAudio?.artist ?? 'Unknown Artist';
-
-    return Row(
+    return Column(
       children: [
-        const Icon(CustomIcons.user, color: Colors.white, size: 12),
-        const SizedBox(width: 6),
-        Text(
-          artist,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
+        Row(
+          children: [
+            const Icon(CustomIcons.user, color: Colors.white, size: 12),
+            const SizedBox(width: 6),
+            Text(
+              _currentAudio?.author ?? '',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.white,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -303,17 +309,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建音频描述
   Widget _buildAudioDescription() {
-    final description =
-        _currentAudio?.description ?? 'No description available';
+    final desc = _currentAudio?.desc ?? 'No description available';
 
     return Text(
-      description,
+      desc,
       style: const TextStyle(
+        fontSize: 12,
+        height: 1.4,
         color: Colors.white,
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w300,
       ),
-      maxLines: 2,
+      textAlign: TextAlign.left,
+      maxLines: 3,
       overflow: TextOverflow.ellipsis,
     );
   }
@@ -334,10 +341,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             ),
             minimumSize: const Size(40, 40),
           ),
-          onPressed: () {
-            // TODO: 实现点赞功能
-          },
-          icon: Icon(CustomIcons.likes, color: Colors.white, size: 14),
+          onPressed: _onLikeButtonPressed,
+          icon: Icon(
+            CustomIcons.likes,
+            color: _isLiked ? Colors.pink : Colors.white,
+            size: 14,
+          ),
         ),
         const SizedBox(height: 4),
         Text(

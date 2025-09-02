@@ -239,27 +239,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _onAudioTap(AudioItem item) {
     // 先开始播放音频，然后跳转到播放页面
-    _playAudioById(item.id);
+    _playAudio(item);
 
     // 使用播放器页面的标准打开方式（包含上滑动画）
     AudioPlayerPage.show(context);
   }
 
-  Future<void> _playAudioById(String audioId) async {
+  Future<void> _playAudio(AudioItem item) async {
     try {
       // 通过音频管理器播放指定 ID 的音频
-      final success = await AudioManager.instance.playAudioById(audioId);
-
-      if (!success) {
-        // 播放失败，显示错误提示
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('播放失败：音频不存在或加载错误'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+      await AudioManager.instance.playAudio(item);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('播放失败：音频不存在或加载错误'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       print('播放音频失败: $e');
