@@ -1,9 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../models/audio_item.dart';
 import '../services/api_service.dart';
 import 'audio_card.dart';
+
+/// PagedAudioGrid - 支持无限滚动和虚拟化的音频网格组件
+///
+/// 功能特性：
+/// - 自动下滑无限加载
+/// - 上拉刷新数据
+/// - 瀑布流布局
+/// - 错误处理和重试
+/// - 支持外部数据获取方法
+///
+/// 使用示例：
+/// ```dart
+/// // 定义三个数据获取方法
+/// Future<List<AudioItem>> initData({String? tag}) async {
+///   // 初始化数据逻辑
+///   return await ApiService.getAudioList(tag: tag, cid: null, count: 20);
+/// }
+///
+/// Future<List<AudioItem>> refreshData({String? tag}) async {
+///   // 刷新数据逻辑（上拉刷新）
+///   return await ApiService.getAudioList(tag: tag, cid: null, count: 20);
+/// }
+///
+/// Future<List<AudioItem>> loadMoreData({
+///   String? tag,
+///   String? pageKey,
+///   int? count,
+/// }) async {
+///   // 加载更多数据逻辑（下滑加载）
+///   return await ApiService.getAudioList(tag: tag, cid: pageKey, count: count);
+/// }
+///
+/// // 在Widget中使用
+/// PagedAudioGrid(
+///   tag: 'music',
+///   initDataFetcher: initData,
+///   refreshDataFetcher: refreshData,
+///   loadMoreDataFetcher: loadMoreData,
+///   onItemTap: (item) => print('点击了: ${item.title}'),
+/// )
+/// ```
+// 数据获取函数类型定义
+typedef InitDataFetcher = Future<List<AudioItem>> Function({String? tag});
+typedef RefreshDataFetcher = Future<List<AudioItem>> Function({String? tag});
+typedef LoadMoreDataFetcher =
+    Future<List<AudioItem>> Function({
+      String? tag,
+      String? pageKey,
+      int? count,
+    });
 
 class PagedAudioGrid extends StatefulWidget {
   final String? tag;
@@ -11,21 +60,33 @@ class PagedAudioGrid extends StatefulWidget {
   final Function(AudioItem)? onPlayTap;
   final Function(AudioItem)? onLikeTap;
 
+  // 外部传入的数据获取方法
+  final InitDataFetcher? initDataFetcher; // 初始化数据
+  final RefreshDataFetcher? refreshDataFetcher; // 上拉刷新数据
+  final LoadMoreDataFetcher? loadMoreDataFetcher; // 下拉加载更多数据
+
   const PagedAudioGrid({
     super.key,
     this.tag,
     this.onItemTap,
     this.onPlayTap,
     this.onLikeTap,
+    this.initDataFetcher,
+    this.refreshDataFetcher,
+    this.loadMoreDataFetcher,
   });
 
   @override
   State<PagedAudioGrid> createState() => _PagedAudioGridState();
 }
 
-class _PagedAudioGridState extends State<PagedAudioGrid> {
+class _PagedAudioGridState extends State<PagedAudioGrid>
+    with AutomaticKeepAliveClientMixin {
   static const int _pageSize = 20;
   late final PagingController<String?, AudioItem> _pagingController;
+
+  @override
+  bool get wantKeepAlive => true; // 保持组件状态，防止UI被回收
 
   @override
   void initState() {
@@ -47,25 +108,60 @@ class _PagedAudioGridState extends State<PagedAudioGrid> {
 
   Future<void> _fetchPage(String? pageKey) async {
     try {
-      final response = await ApiService.getAudioList(
-        tag: widget.tag,
-        cid: pageKey, // 使用cid作为分页参数
-        count: _pageSize,
-      );
+      List<AudioItem> newItems;
 
-      if (response.errNo == 0 && response.data != null) {
-        final newItems = response.data!.items;
-        final isLastPage = newItems.length < _pageSize;
-
-        if (isLastPage) {
-          _pagingController.appendLastPage(newItems);
+      if (pageKey == null) {
+        // 初始化数据（第一页）
+        if (widget.initDataFetcher != null) {
+          newItems = await widget.initDataFetcher!(tag: widget.tag);
         } else {
-          // 使用最后一个item的ID作为下一页的key
-          final nextPageKey = newItems.isNotEmpty ? newItems.last.id : null;
-          _pagingController.appendPage(newItems, nextPageKey);
+          // 使用默认的API服务
+          final response = await ApiService.getAudioList(
+            tag: widget.tag,
+            cid: null,
+            count: _pageSize,
+          );
+
+          if (response.errNo == 0 && response.data != null) {
+            newItems = response.data!.items;
+          } else {
+            _pagingController.error = '加载失败: 错误码 ${response.errNo}';
+            return;
+          }
         }
       } else {
-        _pagingController.error = '加载失败: 错误码 ${response.errNo}';
+        // 加载更多数据（分页）
+        if (widget.loadMoreDataFetcher != null) {
+          newItems = await widget.loadMoreDataFetcher!(
+            tag: widget.tag,
+            pageKey: pageKey,
+            count: _pageSize,
+          );
+        } else {
+          // 使用默认的API服务
+          final response = await ApiService.getAudioList(
+            tag: widget.tag,
+            cid: pageKey,
+            count: _pageSize,
+          );
+
+          if (response.errNo == 0 && response.data != null) {
+            newItems = response.data!.items;
+          } else {
+            _pagingController.error = '加载失败: 错误码 ${response.errNo}';
+            return;
+          }
+        }
+      }
+
+      final isLastPage = newItems.length < _pageSize;
+
+      if (isLastPage) {
+        _pagingController.appendLastPage(newItems);
+      } else {
+        // 使用最后一个item的ID作为下一页的key
+        final nextPageKey = newItems.isNotEmpty ? newItems.last.id : null;
+        _pagingController.appendPage(newItems, nextPageKey);
       }
     } catch (error) {
       _pagingController.error = error;
@@ -74,8 +170,28 @@ class _PagedAudioGridState extends State<PagedAudioGrid> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // 必须调用，用于AutomaticKeepAliveClientMixin
+
     return RefreshIndicator(
-      onRefresh: () => Future.sync(() => _pagingController.refresh()),
+      onRefresh: () async {
+        if (widget.refreshDataFetcher != null) {
+          // 使用外部传入的刷新方法
+          try {
+            final newItems = await widget.refreshDataFetcher!(tag: widget.tag);
+            _pagingController.refresh();
+            // 注意：这里需要特殊处理，因为refresh会重新调用_fetchPage
+            // 但我们已经有了数据，可以直接设置
+            if (newItems.isNotEmpty) {
+              _pagingController.appendPage(newItems, null);
+            }
+          } catch (error) {
+            _pagingController.error = error;
+          }
+        } else {
+          // 使用默认的刷新方法
+          _pagingController.refresh();
+        }
+      },
       child: LayoutBuilder(
         builder: (context, constraints) {
           // 确保有足够的宽度约束
