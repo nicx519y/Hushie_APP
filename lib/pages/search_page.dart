@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:hushie_app/models/api_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../components/search_box.dart';
 import '../components/audio_list.dart';
 import '../models/audio_item.dart';
 import '../models/image_model.dart';
+import '../services/api/audio_search_service.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -23,6 +25,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
+
     _loadSearchHistory();
     // 监听搜索框文本变化
     _searchController.addListener(() {
@@ -94,7 +97,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // 执行搜索
-  void _performSearch(String keyword) {
+  Future<void> _performSearch(String keyword) async {
     if (keyword.trim().isEmpty) return;
 
     setState(() {
@@ -105,102 +108,20 @@ class _SearchPageState extends State<SearchPage> {
     // 保存搜索历史
     _saveSearchHistory(keyword.trim());
 
-    // 模拟搜索API调用
-    Future.delayed(const Duration(milliseconds: 500), () {
-      // 这里应该是实际的API调用
-      // 现在使用模拟数据
-      final mockResults = _generateMockSearchResults(keyword);
+    try {
+      ApiResponse<SimpleResponse<AudioItem>> searchResults =
+          await AudioSearchService.getAudioSearchList(
+            searchQuery: keyword,
+            count: 30,
+          );
 
       setState(() {
-        _searchResults = mockResults;
+        _searchResults = searchResults.data?.items ?? [];
         _isSearching = false;
       });
-    });
-  }
-
-  // 生成模拟搜索结果
-  List<AudioItem> _generateMockSearchResults(String keyword) {
-    // 模拟搜索结果数据
-    return [
-      AudioItem(
-        id: '1',
-        cover: ImageModel(
-          id: 'search_1',
-          urls: ImageResolutions(
-            x1: ImageResolution(
-              url: 'https://picsum.photos/400/600?random=401',
-              width: 400,
-              height: 600,
-            ),
-            x2: ImageResolution(
-              url: 'https://picsum.photos/800/1200?random=401',
-              width: 800,
-              height: 1200,
-            ),
-          ),
-        ),
-        title: '搜索结果: $keyword - 音乐作品1',
-        desc: '这是一个关于 $keyword 的音乐作品，包含了丰富的音乐元素',
-        author: '艺术家A',
-        avatar: '',
-        playTimes: 13000,
-        likesCount: 2293,
-        previewStart: Duration(milliseconds: 30000), // 从30秒开始预览
-        previewDuration: Duration(milliseconds: 15000), // 预览15秒
-      ),
-      AudioItem(
-        id: '2',
-        cover: ImageModel(
-          id: 'search_2',
-          urls: ImageResolutions(
-            x1: ImageResolution(
-              url: 'https://picsum.photos/400/500?random=402',
-              width: 400,
-              height: 500,
-            ),
-            x2: ImageResolution(
-              url: 'https://picsum.photos/800/1000?random=402',
-              width: 800,
-              height: 1000,
-            ),
-          ),
-        ),
-        title: '$keyword 相关的音乐创作',
-        desc: '基于 $keyword 主题创作的电子音乐，融合了多种风格',
-        author: '艺术家B',
-        avatar: '',
-        playTimes: 8900,
-        likesCount: 1567,
-        previewStart: Duration(milliseconds: 25000), // 从25秒开始预览
-        previewDuration: Duration(milliseconds: 18000), // 预览18秒
-      ),
-      AudioItem(
-        id: '3',
-        cover: ImageModel(
-          id: 'search_3',
-          urls: ImageResolutions(
-            x1: ImageResolution(
-              url: 'https://picsum.photos/400/700?random=403',
-              width: 400,
-              height: 700,
-            ),
-            x2: ImageResolution(
-              url: 'https://picsum.photos/800/1400?random=403',
-              width: 800,
-              height: 1400,
-            ),
-          ),
-        ),
-        title: '$keyword 音乐合集',
-        desc: '精选的 $keyword 相关音乐作品，涵盖多种流派',
-        author: '艺术家C',
-        avatar: '',
-        playTimes: 21000,
-        likesCount: 3421,
-        previewStart: Duration(milliseconds: 20000), // 从20秒开始预览
-        previewDuration: Duration(milliseconds: 12000), // 预览12秒
-      ),
-    ];
+    } catch (e) {
+      debugPrint('Search failed: $e');
+    }
   }
 
   // 点击搜索历史项

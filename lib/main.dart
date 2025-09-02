@@ -5,6 +5,7 @@ import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/splash_page.dart';
 import 'config/api_config.dart';
+import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ void main() async {
 
   // 初始化 API 配置（同步操作，快速）
   ApiConfig.initialize(
+    initialMode: ApiMode.real,
     debugMode: true, // 在开发环境启用调试模式
   );
 

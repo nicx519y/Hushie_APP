@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
+import '../services/api/audio_like_service.dart';
 import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
 
@@ -55,6 +56,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   AudioItem? _currentAudio;
   bool _isLiked = false;
 
+  // 点赞相关状态管理
+  bool _isLikeRequesting = false; // 是否正在请求点赞
+  bool _localIsLiked = false; // 本地点赞状态
+  int _localLikesCount = 0; // 本地点赞数
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +76,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         setState(() {
           _currentAudio = audio;
           _isLiked = _currentAudio?.isLiked ?? false;
+          // 初始化本地状态
+          _localIsLiked = _isLiked;
+          _localLikesCount = _currentAudio?.likesCount ?? 0;
         });
       }
     });
@@ -124,7 +133,65 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     }
   }
 
-  void _onLikeButtonPressed() {}
+  void _onLikeButtonPressed() async {
+    // 如果正在请求中，直接返回
+    if (_isLikeRequesting) return;
+
+    // 如果当前音频为空，直接返回
+    if (_currentAudio == null) return;
+
+    // 设置请求状态
+    setState(() {
+      _isLikeRequesting = true;
+    });
+
+    // 先更新本地状态（乐观更新）
+    final newIsLiked = !_localIsLiked;
+    final newLikesCount = newIsLiked
+        ? _localLikesCount + 1
+        : _localLikesCount - 1;
+
+    setState(() {
+      _localIsLiked = newIsLiked;
+      _localLikesCount = newLikesCount;
+    });
+
+    try {
+      // 调用API
+      final response = await AudioLikeService.likeAudio(
+        cid: _currentAudio!.id,
+        action: newIsLiked ? 'like' : 'unlike',
+      );
+
+      if (response.errNo == 0) {
+        // API调用成功，本地状态已经正确，不需要回滚
+        print('点赞操作成功: ${newIsLiked ? '点赞' : '取消点赞'}');
+      } else {
+        // API调用失败，回滚本地状态
+        print('点赞操作失败: errNo=${response.errNo}');
+        setState(() {
+          _localIsLiked = !newIsLiked;
+          _localLikesCount = newIsLiked
+              ? _localLikesCount - 1
+              : _localLikesCount + 1;
+        });
+      }
+    } catch (e) {
+      // 网络异常，回滚本地状态
+      print('点赞操作异常: $e');
+      setState(() {
+        _localIsLiked = !newIsLiked;
+        _localLikesCount = newIsLiked
+            ? _localLikesCount - 1
+            : _localLikesCount + 1;
+      });
+    } finally {
+      // 重置请求状态
+      setState(() {
+        _isLikeRequesting = false;
+      });
+    }
+  }
 
   void _onSeek(Duration position) {
     _audioManager.seek(position);
@@ -158,14 +225,19 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bgImage =
         _currentAudio?.bgImage?.getBestResolution(screenWidth).url ??
-        'https://picsum.photos/800/1200?random=1';
+        'assets/images/logo.png';
 
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: NetworkImage(bgImage),
+            image: bgImage.startsWith('http')
+                ? NetworkImage(bgImage)
+                : AssetImage(bgImage) as ImageProvider,
             fit: BoxFit.cover,
+            onError: (exception, stackTrace) {
+              print('背景图片加载失败: $exception，使用默认图片');
+            },
           ),
         ),
         child: Container(
@@ -277,6 +349,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     return Text(
       title,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 16,
@@ -327,8 +401,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建点赞按钮
   Widget _buildLikeButton() {
-    final likesCount = _currentAudio?.likesCount ?? 0;
-
     return Column(
       children: [
         IconButton(
@@ -341,16 +413,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             ),
             minimumSize: const Size(40, 40),
           ),
-          onPressed: _onLikeButtonPressed,
-          icon: Icon(
-            CustomIcons.likes,
-            color: _isLiked ? Colors.pink : Colors.white,
-            size: 14,
-          ),
+          onPressed: _isLikeRequesting ? null : _onLikeButtonPressed, // 请求中禁用按钮
+          icon: _isLikeRequesting
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Icon(
+                  CustomIcons.likes,
+                  color: _localIsLiked ? Colors.pink : Colors.white,
+                  size: 14,
+                ),
         ),
         const SizedBox(height: 4),
         Text(
-          '$likesCount',
+          '${_localLikesCount}',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 12,

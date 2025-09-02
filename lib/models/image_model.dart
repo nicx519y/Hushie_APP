@@ -8,9 +8,14 @@ class ImageModel {
 
   /// 根据逻辑像素宽度获取最合适的图片尺寸信息
   ImageResolution getBestResolution(double logicalWidth) {
-    // 安全检查
+    // 安全检查 - 如果 x1 URL 为空，返回默认值而不是抛出异常
     if (urls.x1.url.isEmpty) {
-      throw Exception('ImageModel: x1 分辨率的 URL 为空');
+      print('ImageModel: x1 分辨率的 URL 为空，使用默认图片');
+      return ImageResolution(
+        url: 'assets/images/logo.png',
+        width: 400,
+        height: 600,
+      );
     }
 
     // 获取设备像素密度

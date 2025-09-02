@@ -16,7 +16,7 @@ enum ApiMode {
 
 class ApiService {
   // 可以通过环境变量或配置文件设置
-  static ApiMode _currentMode = ApiMode.mock;
+  static ApiMode _currentMode = ApiMode.real;
 
   // 设置 API 模式
   static void setApiMode(ApiMode mode) {

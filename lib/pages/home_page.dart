@@ -76,7 +76,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _initDefaultTabs() {
     setState(() {
       _tabItems = [
-        const TabItemModel(id: 'for_you', label: '为你推荐'),
+        const TabItemModel(id: 'for_you', label: 'For You'),
         const TabItemModel(id: 'mf', label: 'M/F'),
         const TabItemModel(id: 'fm', label: 'F/M'),
         const TabItemModel(id: 'asmr', label: 'ASMR'),
@@ -144,11 +144,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final tabId = tag ?? 'for_you';
 
       // 优先使用缓存数据
-      final cachedData = _listService.getTabData(tabId);
-      if (cachedData.isNotEmpty) {
-        print('使用缓存数据: ${cachedData.length} 条');
-        return cachedData;
-      }
+      _listService.refreshTabData(tabId);
+      // final cachedData = _listService.getTabData(tabId);
+      // if (cachedData.isNotEmpty) {
+      //   print('使用缓存数据: ${cachedData.length} 条');
+      //   return cachedData;
+      // }
 
       // 如果没有缓存数据，则获取新数据
       print('缓存为空，获取新数据');
@@ -249,24 +250,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       // 通过音频管理器播放指定 ID 的音频
       await AudioManager.instance.playAudio(item);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('播放失败：音频不存在或加载错误'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
     } catch (e) {
       print('播放音频失败: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('播放失败：发生未知错误'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
     }
   }
 

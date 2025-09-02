@@ -2,7 +2,7 @@ import '../services/api_service.dart';
 
 class ApiConfig {
   // API 基础配置
-  static const String baseUrl = 'https://your-api-domain.com/api/v1';
+  static const String baseUrl = 'https://api.hushie.ai/api/v1';
   static const Duration defaultTimeout = Duration(seconds: 10);
 
   // 分页配置
@@ -10,7 +10,7 @@ class ApiConfig {
   static const int maxPageSize = 50;
 
   // Mock 数据配置
-  static const bool enableMockMode = true; // 可以通过环境变量控制
+  static const bool enableMockMode = false; // 可以通过环境变量控制
   static const int mockNetworkDelayMs = 1000; // Mock 网络延迟
   static const double mockErrorRate = 0.05; // Mock 错误概率 (5%)
 
