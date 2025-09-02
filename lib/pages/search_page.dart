@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hushie_app/models/api_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import '../components/search_box.dart';
 import '../components/audio_list.dart';
 import '../models/audio_item.dart';
-import '../models/image_model.dart';
 import '../services/api/audio_search_service.dart';
+import '../services/audio_manager.dart';
+import '../pages/audio_player_page.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -15,6 +17,9 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  // 配置常量
+  static const int _debounceDelay = 800; // 防抖延迟时间（毫秒），可配置
+
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   List<String> _searchHistory = [];
@@ -27,17 +32,18 @@ class _SearchPageState extends State<SearchPage> {
   bool _hasMoreData = true;
   String? _lastCid;
 
+  // 新增的实时搜索相关状态
+  Timer? _debounceTimer;
+  String? _currentSearchQuery; // 当前正在搜索的查询
+  String? _lastRenderedQuery; // 最后渲染结果的查询
+
   @override
   void initState() {
     super.initState();
 
     _loadSearchHistory();
-    // 监听搜索框文本变化
-    _searchController.addListener(() {
-      setState(() {
-        // 触发重建以更新清除按钮的显示状态
-      });
-    });
+    // 监听搜索框文本变化，实现实时搜索
+    _searchController.addListener(_onSearchTextChanged);
     // 延迟一帧后自动获得焦点，确保页面完全构建
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
@@ -46,6 +52,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -105,6 +112,12 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _performSearch(String keyword, {bool isLoadMore = false}) async {
     if (keyword.trim().isEmpty) return;
 
+    // 如果不是加载更多，检查查询是否已过期
+    if (!isLoadMore && keyword != _currentSearchQuery) {
+      debugPrint('搜索查询已过期，跳过: $keyword');
+      return;
+    }
+
     if (!isLoadMore) {
       setState(() {
         _isSearching = true;
@@ -126,6 +139,15 @@ class _SearchPageState extends State<SearchPage> {
             cid: isLoadMore ? _lastCid : null,
             count: 30,
           );
+
+      // 再次检查查询是否已过期（防止异步请求返回时查询已改变）
+      if (!isLoadMore && keyword != _currentSearchQuery) {
+        debugPrint('搜索结果查询已过期，不渲染: $keyword');
+        setState(() {
+          _isSearching = false;
+        });
+        return;
+      }
 
       if (searchResults.errNo == 0 && searchResults.data != null) {
         final newItems = searchResults.data!.items;
@@ -157,6 +179,12 @@ class _SearchPageState extends State<SearchPage> {
         });
       }
     } catch (e) {
+      // 检查查询是否已过期
+      if (!isLoadMore && keyword != _currentSearchQuery) {
+        debugPrint('搜索异常时查询已过期，不处理: $keyword');
+        return;
+      }
+
       debugPrint('Search failed: $e');
       setState(() {
         if (isLoadMore) {
@@ -170,22 +198,66 @@ class _SearchPageState extends State<SearchPage> {
 
   // 下拉刷新
   Future<void> _onRefresh() async {
-    if (_searchController.text.isNotEmpty) {
-      await _performSearch(_searchController.text);
+    final currentText = _searchController.text;
+    if (currentText.isNotEmpty) {
+      _currentSearchQuery = currentText;
+      _lastRenderedQuery = currentText;
+      await _performSearch(currentText);
     }
   }
 
   // 加载更多
   Future<void> _onLoadMore() async {
-    if (_searchController.text.isNotEmpty && _hasMoreData && !_isLoadingMore) {
-      await _performSearch(_searchController.text, isLoadMore: true);
+    final currentText = _searchController.text;
+    if (currentText.isNotEmpty && _hasMoreData && !_isLoadingMore) {
+      await _performSearch(currentText, isLoadMore: true);
+    }
+  }
+
+  // 播放音频
+  Future<void> _playAudio(AudioItem audio) async {
+    try {
+      await AudioManager.instance.playAudio(audio);
+    } catch (e) {
+      debugPrint('播放音频失败: $e');
     }
   }
 
   // 点击搜索历史项
   void _onHistoryItemTap(String keyword) {
     _searchController.text = keyword;
+    // 手动触发搜索，设置查询状态
+    _currentSearchQuery = keyword;
+    _lastRenderedQuery = keyword;
+    _debounceTimer?.cancel();
     _performSearch(keyword);
+  }
+
+  // 实时搜索文本变化监听
+  void _onSearchTextChanged() {
+    // 如果当前不在搜索状态，则立即设置为搜索状态
+    setState(() {
+      _isSearching = true;
+    });
+    _searchResults = [];
+
+    final currentText = _searchController.text;
+    if (currentText.isNotEmpty && currentText != _lastRenderedQuery) {
+      _lastRenderedQuery = currentText;
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(Duration(milliseconds: _debounceDelay), () {
+        _currentSearchQuery = currentText;
+        _performSearch(_currentSearchQuery!);
+      });
+    } else if (currentText.isEmpty) {
+      _lastRenderedQuery = null;
+      _currentSearchQuery = null;
+      _debounceTimer?.cancel();
+      setState(() {
+        _isSearching = false;
+        _searchResults = [];
+      });
+    }
   }
 
   @override
@@ -224,9 +296,16 @@ class _SearchPageState extends State<SearchPage> {
                   IconButton(
                     onPressed: () {
                       _searchController.clear();
+                      _debounceTimer?.cancel();
+                      _currentSearchQuery = null;
+                      _lastRenderedQuery = null;
                       setState(() {
                         _hasSearched = false;
                         _searchResults = [];
+                        _isSearching = false;
+                        _isLoadingMore = false;
+                        _hasMoreData = true;
+                        _lastCid = null;
                       });
                       // 重新获得焦点
                       _searchFocusNode.requestFocus();
@@ -371,6 +450,14 @@ class _SearchPageState extends State<SearchPage> {
       onLoadMore: _onLoadMore,
       hasMoreData: _hasMoreData,
       isLoadingMore: _isLoadingMore,
+      onItemTap: (audio) {
+        // 保存当前搜索查询到历史
+        _saveSearchHistory(_searchController.text);
+        // 播放音频
+        _playAudio(audio);
+        // 进入播放页面
+        AudioPlayerPage.show(context);
+      },
     );
   }
 }

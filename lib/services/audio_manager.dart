@@ -217,6 +217,13 @@ class AudioManager {
     }
   }
 
+  Future<void> play() async {
+    await _ensureInitialized();
+    if (_audioService != null) {
+      await _audioService!.play();
+    }
+  }
+
   /// 管理播放列表（清理和补充）
   Future<void> _managePlaylist(String currentAudioId) async {
     try {

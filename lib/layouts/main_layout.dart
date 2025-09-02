@@ -42,9 +42,6 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
-  // 处理播放按钮点击
-  void _onPlayButtonTap() {}
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,7 +78,6 @@ class _MainLayoutState extends State<MainLayout> {
                   child: CustomBottomNavigationBar(
                     currentIndex: _currentIndex,
                     onTap: _onBottomNavTap,
-                    onPlayButtonTap: _onPlayButtonTap,
                   ),
                 ),
               ],

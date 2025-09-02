@@ -3,6 +3,7 @@ import 'package:flutter_svg/svg.dart';
 import 'circular_play_button.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_item.dart';
+import '../pages/audio_player_page.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   final int currentIndex;
@@ -75,6 +76,19 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
 
   static const Color activeColor = Color(0xFF333333);
   static const Color inactiveColor = Color(0xFF999999);
+
+  void _onPlayButtonTap() async {
+    if (widget.onPlayButtonTap != null) {
+      widget.onPlayButtonTap!();
+    } else {
+      if (_isPlaying) {
+        await _audioManager.pause();
+      } else {
+        AudioPlayerPage.show(context);
+        await _audioManager.play();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -187,14 +201,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
         coverImageUrl: coverImageUrl,
         isPlaying: _isPlaying,
         progress: progress,
-        onTap: () async {
-          if (widget.onPlayButtonTap != null) {
-            widget.onPlayButtonTap!();
-          } else {
-            // 默认行为：播放/暂停当前音频
-            await _audioManager.togglePlayPause();
-          }
-        },
+        onTap: _onPlayButtonTap,
         progressColor: const Color(0xFFFF2D93),
         backgroundColor: const Color(0xFF666666),
         strokeWidth: 3.0,
