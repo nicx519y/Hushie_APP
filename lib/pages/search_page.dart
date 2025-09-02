@@ -22,6 +22,11 @@ class _SearchPageState extends State<SearchPage> {
   bool _isSearching = false;
   bool _hasSearched = false;
 
+  // 新增的分页相关状态
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  String? _lastCid;
+
   @override
   void initState() {
     super.initState();
@@ -97,30 +102,83 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // 执行搜索
-  Future<void> _performSearch(String keyword) async {
+  Future<void> _performSearch(String keyword, {bool isLoadMore = false}) async {
     if (keyword.trim().isEmpty) return;
 
-    setState(() {
-      _isSearching = true;
-      _hasSearched = true;
-    });
-
-    // 保存搜索历史
-    _saveSearchHistory(keyword.trim());
+    if (!isLoadMore) {
+      setState(() {
+        _isSearching = true;
+        _hasSearched = true;
+        _searchResults = [];
+        _lastCid = null;
+        _hasMoreData = true;
+      });
+    } else {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
 
     try {
       ApiResponse<SimpleResponse<AudioItem>> searchResults =
           await AudioSearchService.getAudioSearchList(
             searchQuery: keyword,
+            cid: isLoadMore ? _lastCid : null,
             count: 30,
           );
 
-      setState(() {
-        _searchResults = searchResults.data?.items ?? [];
-        _isSearching = false;
-      });
+      if (searchResults.errNo == 0 && searchResults.data != null) {
+        final newItems = searchResults.data!.items;
+
+        setState(() {
+          if (isLoadMore) {
+            _searchResults.addAll(newItems);
+            _isLoadingMore = false;
+          } else {
+            _searchResults = newItems;
+            _isSearching = false;
+          }
+
+          // 更新分页状态
+          if (newItems.isNotEmpty) {
+            _lastCid = newItems.last.id;
+            _hasMoreData = newItems.length >= 30; // 如果返回的数据少于请求数量，说明没有更多数据
+          } else {
+            _hasMoreData = false;
+          }
+        });
+      } else {
+        setState(() {
+          if (isLoadMore) {
+            _isLoadingMore = false;
+          } else {
+            _isSearching = false;
+          }
+        });
+      }
     } catch (e) {
       debugPrint('Search failed: $e');
+      setState(() {
+        if (isLoadMore) {
+          _isLoadingMore = false;
+        } else {
+          _isSearching = false;
+        }
+      });
+    }
+  }
+
+  // 下拉刷新
+  Future<void> _onRefresh() async {
+    if (_searchController.text.isNotEmpty) {
+      await _performSearch(_searchController.text);
+    }
+  }
+
+  // 加载更多
+  Future<void> _onLoadMore() async {
+    if (_searchController.text.isNotEmpty && _hasMoreData && !_isLoadingMore) {
+      await _performSearch(_searchController.text, isLoadMore: true);
     }
   }
 
@@ -274,7 +332,7 @@ class _SearchPageState extends State<SearchPage> {
 
   // 构建搜索结果界面
   Widget _buildSearchResults() {
-    if (_isSearching) {
+    if (_isSearching && _searchResults.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -309,6 +367,10 @@ class _SearchPageState extends State<SearchPage> {
     return AudioList(
       audios: _searchResults,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      onRefresh: _onRefresh,
+      onLoadMore: _onLoadMore,
+      hasMoreData: _hasMoreData,
+      isLoadingMore: _isLoadingMore,
     );
   }
 }

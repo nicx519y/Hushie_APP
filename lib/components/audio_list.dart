@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_stats.dart';
 
-class AudioList extends StatelessWidget {
+class AudioList extends StatefulWidget {
   final List<AudioItem> audios;
   final EdgeInsetsGeometry? padding;
   final ScrollPhysics? physics;
   final bool shrinkWrap;
   final Widget? emptyWidget;
+
+  // 新增的刷新相关参数
+  final Future<void> Function()? onRefresh;
+  final Future<void> Function()? onLoadMore;
+  final bool hasMoreData;
+  final bool isLoadingMore;
+  final Widget? loadingMoreWidget;
 
   const AudioList({
     super.key,
@@ -16,12 +23,47 @@ class AudioList extends StatelessWidget {
     this.physics,
     this.shrinkWrap = false,
     this.emptyWidget,
+    this.onRefresh,
+    this.onLoadMore,
+    this.hasMoreData = false,
+    this.isLoadingMore = false,
+    this.loadingMoreWidget,
   });
 
   @override
+  State<AudioList> createState() => _AudioListState();
+}
+
+class _AudioListState extends State<AudioList> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (widget.onLoadMore != null &&
+        widget.hasMoreData &&
+        !widget.isLoadingMore &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200) {
+      // 当滚动到距离底部200像素时触发加载更多
+      widget.onLoadMore!();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (audios.isEmpty) {
-      return emptyWidget ??
+    if (widget.audios.isEmpty) {
+      return widget.emptyWidget ??
           const Center(
             child: Text(
               '暂无数据',
@@ -30,14 +72,48 @@ class AudioList extends StatelessWidget {
           );
     }
 
-    return ListView.builder(
-      padding: padding,
-      physics: physics,
-      shrinkWrap: shrinkWrap,
-      itemCount: audios.length,
-      itemBuilder: (context, index) {
-        return _buildAudioItem(audios[index]);
-      },
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh ?? () async {},
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: widget.padding,
+        physics: widget.physics,
+        shrinkWrap: widget.shrinkWrap,
+        itemCount: widget.audios.length + (widget.hasMoreData ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == widget.audios.length) {
+            // 加载更多指示器
+            return _buildLoadMoreIndicator();
+          }
+          return _buildAudioItem(widget.audios[index]);
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreIndicator() {
+    if (widget.loadingMoreWidget != null) {
+      return widget.loadingMoreWidget!;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: widget.isLoadingMore
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 8),
+                  Text('加载中...', style: TextStyle(color: Colors.grey)),
+                ],
+              )
+            : const Text('上拉加载更多', style: TextStyle(color: Colors.grey)),
+      ),
     );
   }
 
@@ -92,7 +168,7 @@ class AudioList extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     height: 1.5,
-                    color: const Color(0xFF333333),
+                    color: Color(0xFF333333),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -101,7 +177,7 @@ class AudioList extends StatelessWidget {
                 // 描述
                 Text(
                   audio.desc,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF666666),
                     height: 1.2,

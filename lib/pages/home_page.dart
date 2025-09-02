@@ -113,8 +113,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
     }
 
-    // 预加载新tab的数据
-    _preloadTabData(tabIndex);
+    // 移除预加载逻辑，让 _onPageChanged 统一处理
+    // _preloadTabData(tabIndex);
 
     // 延迟重置标志，确保动画完成后再允许新的调用
     Future.delayed(const Duration(milliseconds: 350), () {
@@ -143,13 +143,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       // 使用HomePageListService获取数据
       final tabId = tag ?? 'for_you';
 
-      // 优先使用缓存数据
-      _listService.refreshTabData(tabId);
-      // final cachedData = _listService.getTabData(tabId);
-      // if (cachedData.isNotEmpty) {
-      //   print('使用缓存数据: ${cachedData.length} 条');
-      //   return cachedData;
-      // }
+      // 检查缓存数据
+      final cachedData = _listService.getTabData(tabId);
+      if (cachedData.isNotEmpty) {
+        print('使用缓存数据: ${cachedData.length} 条');
+        return cachedData;
+      }
 
       // 如果没有缓存数据，则获取新数据
       print('缓存为空，获取新数据');
@@ -206,7 +205,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _tabController.animateTo(pageIndex);
     }
 
-    // 预加载新页面的数据
+    // 预加载新页面的数据（统一的数据加载入口）
     _preloadTabData(pageIndex);
   }
 
