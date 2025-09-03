@@ -101,7 +101,7 @@ class AudioCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               Text(
                                 NumberFormatter.countNumFilter(
-                                  item['play_times'],
+                                  item['play_times'] ?? 0,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -137,7 +137,7 @@ class AudioCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Text(
                                 NumberFormatter.countNumFilter(
-                                  item['likes_count'],
+                                  item['likes_count'] ?? 0,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -167,7 +167,7 @@ class AudioCard extends StatelessWidget {
                 children: [
                   // 标题
                   Text(
-                    item['title'],
+                    item['title'] ?? '',
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
@@ -180,7 +180,7 @@ class AudioCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   // 描述
                   Text(
-                    item['desc'],
+                    item['desc'] ?? '',
                     style: const TextStyle(
                       color: Color(0xff666666),
                       fontSize: 12,
@@ -203,7 +203,7 @@ class AudioCard extends StatelessWidget {
                       // 作者名
                       Expanded(
                         child: Text(
-                          item['author'],
+                          item['author'] ?? '',
                           style: const TextStyle(
                             fontSize: 12,
                             height: 1.4,

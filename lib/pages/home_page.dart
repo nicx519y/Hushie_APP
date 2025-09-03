@@ -30,9 +30,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void initState() {
+    print('🏠 [HOME_PAGE] HomePage initState开始');
     super.initState();
+    print('🏠 [HOME_PAGE] 开始初始化tabs');
     _initTabs();
+    print('🏠 [HOME_PAGE] 开始初始化列表服务');
     _initListService();
+    print('🏠 [HOME_PAGE] HomePage initState完成');
   }
 
   @override

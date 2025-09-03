@@ -5,37 +5,80 @@ import 'package:device_info_plus/device_info_plus.dart';
 class DeviceInfoService {
   static final DeviceInfoPlugin _deviceInfoPlugin = DeviceInfoPlugin();
 
-  /// 获取设备ID
+  // 缓存设备ID，避免重复获取
+  static String? _cachedDeviceId;
+  static bool _isInitializing = false;
+
+  /// 获取设备ID（带缓存）
   static Future<String> getDeviceId() async {
+    // 如果已有缓存，直接返回
+    if (_cachedDeviceId != null) {
+      return _cachedDeviceId!;
+    }
+
+    // 防止重复初始化
+    if (_isInitializing) {
+      // 等待初始化完成
+      while (_isInitializing) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (_cachedDeviceId != null) {
+          return _cachedDeviceId!;
+        }
+      }
+    }
+
+    _isInitializing = true;
+
     try {
+      String deviceId;
+
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
-        return androidInfo.id;
+        deviceId = androidInfo.id;
       } else if (Platform.isIOS) {
         final iosInfo = await _deviceInfoPlugin.iosInfo;
-        return iosInfo.identifierForVendor ?? 'unknown_ios_device';
+        deviceId = iosInfo.identifierForVendor ?? 'unknown_ios_device';
       } else if (Platform.isWindows) {
         final windowsInfo = await _deviceInfoPlugin.windowsInfo;
-        return windowsInfo.deviceId;
+        deviceId = windowsInfo.deviceId;
       } else if (Platform.isMacOS) {
         final macOsInfo = await _deviceInfoPlugin.macOsInfo;
-        return macOsInfo.systemGUID ?? 'unknown_macos_device';
+        deviceId = macOsInfo.systemGUID ?? 'unknown_macos_device';
       } else if (Platform.isLinux) {
         final linuxInfo = await _deviceInfoPlugin.linuxInfo;
-        return linuxInfo.machineId ?? 'unknown_linux_device';
+        deviceId = linuxInfo.machineId ?? 'unknown_linux_device';
       } else {
-        return 'unknown_device';
+        deviceId = 'unknown_device';
       }
+
+      // 缓存设备ID
+      _cachedDeviceId = deviceId;
+      print('设备ID获取成功: $deviceId');
+      return deviceId;
     } catch (e) {
       print('获取设备ID失败: $e');
-      return 'unknown_device';
+      // 设置默认值，避免重复失败
+      _cachedDeviceId = 'unknown_device';
+      return _cachedDeviceId!;
+    } finally {
+      _isInitializing = false;
     }
   }
 
-  /// 获取设备信息
+  /// 清除缓存（用于测试或重置）
+  static void clearCache() {
+    _cachedDeviceId = null;
+    _isInitializing = false;
+  }
+
+  /// 获取设备信息（带缓存）
   static Future<Map<String, String>> getDeviceInfo() async {
     try {
       final Map<String, String> deviceInfo = {};
+
+      // 先获取设备ID（使用缓存）
+      final deviceId = await getDeviceId();
+      deviceInfo['device_id'] = deviceId;
 
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
@@ -43,35 +86,30 @@ class DeviceInfoService {
         deviceInfo['version'] = androidInfo.version.release;
         deviceInfo['brand'] = androidInfo.brand;
         deviceInfo['model'] = androidInfo.model;
-        deviceInfo['device_id'] = androidInfo.id;
       } else if (Platform.isIOS) {
         final iosInfo = await _deviceInfoPlugin.iosInfo;
         deviceInfo['platform'] = 'iOS';
         deviceInfo['version'] = iosInfo.systemVersion;
         deviceInfo['brand'] = 'Apple';
         deviceInfo['model'] = iosInfo.model;
-        deviceInfo['device_id'] = iosInfo.identifierForVendor ?? 'unknown';
       } else if (Platform.isWindows) {
         final windowsInfo = await _deviceInfoPlugin.windowsInfo;
         deviceInfo['platform'] = 'Windows';
         deviceInfo['version'] = windowsInfo.buildNumber.toString();
         deviceInfo['brand'] = 'Microsoft';
         deviceInfo['model'] = 'PC';
-        deviceInfo['device_id'] = windowsInfo.deviceId;
       } else if (Platform.isMacOS) {
         final macOsInfo = await _deviceInfoPlugin.macOsInfo;
         deviceInfo['platform'] = 'macOS';
         deviceInfo['version'] = macOsInfo.osRelease;
         deviceInfo['brand'] = 'Apple';
         deviceInfo['model'] = macOsInfo.model;
-        deviceInfo['device_id'] = macOsInfo.systemGUID ?? 'unknown';
       } else if (Platform.isLinux) {
         final linuxInfo = await _deviceInfoPlugin.linuxInfo;
         deviceInfo['platform'] = 'Linux';
         deviceInfo['version'] = linuxInfo.version ?? 'Unknown';
         deviceInfo['brand'] = 'Linux';
         deviceInfo['model'] = 'PC';
-        deviceInfo['device_id'] = linuxInfo.machineId ?? 'unknown';
       }
 
       return deviceInfo;

@@ -16,33 +16,27 @@ class AuthService {
 
   /// 获取当前访问Token
   static Future<String?> getAccessToken() async {
-    // 先检查内存中的Token
-    if (_currentToken != null) {
-      // 如果Token即将过期，尝试刷新
-      if (_currentToken!.isExpiringSoon) {
-        final refreshed = await _refreshTokenIfNeeded();
-        if (!refreshed) {
-          return null;
-        }
-      }
+    if (_currentToken != null &&
+        _currentToken!.accessToken.isNotEmpty &&
+        !_currentToken!.isExpiringSoon) {
       return _currentToken!.accessToken;
     }
-
-    // 从本地存储加载Token
     await _loadTokenFromStorage();
 
-    if (_currentToken != null) {
-      // 检查是否需要刷新
-      if (_currentToken!.isExpired) {
-        final refreshed = await _refreshTokenIfNeeded();
-        if (!refreshed) {
-          return null;
-        }
-      }
-      return _currentToken!.accessToken;
+    if (_currentToken == null) {
+      return null;
     }
 
-    return null;
+    if (_currentToken!.isExpiringSoon) {
+      final refreshed = await _refreshTokenIfNeeded();
+      if (!refreshed) {
+        return null;
+      } else {
+        return _currentToken!.accessToken;
+      }
+    }
+
+    return _currentToken!.accessToken;
   }
 
   /// 获取当前用户信息
@@ -98,10 +92,7 @@ class AuthService {
       // 调用服务器登出接口
       await GoogleAuthService.logout();
 
-      // 调用Google登出
-      await GoogleAuthService.signOut();
-
-      // 清除本地存储
+      // 清除本地数据
       await _clearTokenFromStorage();
       await _clearUserFromStorage();
 
@@ -109,6 +100,11 @@ class AuthService {
       _currentUser = null;
     } catch (e) {
       print('登出失败: $e');
+      // 即使服务器登出失败，也要清除本地数据
+      await _clearTokenFromStorage();
+      await _clearUserFromStorage();
+      _currentToken = null;
+      _currentUser = null;
     }
   }
 
@@ -128,10 +124,25 @@ class AuthService {
 
   /// 检查是否已登录
   static Future<bool> isSignedIn() async {
-    final token = await getAccessToken();
-    if (token == null) return false;
+    print('🔐 [AUTH] 开始检查登录状态');
+    try {
+      final token = await getAccessToken();
+      print(
+        '🔐 [AUTH] getAccessToken完成: ${token != null ? "有token" : "无token"}',
+      );
+      if (token == null) {
+        print('🔐 [AUTH] 无token，返回false');
+        return false;
+      }
 
-    return await validateCurrentToken();
+      print('🔐 [AUTH] 开始验证token');
+      final isValid = await validateCurrentToken();
+      print('🔐 [AUTH] token验证完成: $isValid');
+      return isValid;
+    } catch (e) {
+      print('🔐 [AUTH] isSignedIn异常: $e');
+      return false;
+    }
   }
 
   /// 强制刷新Token

@@ -123,6 +123,8 @@ class GoogleAuthService {
         authType: authorizationCode != null ? 'authorization_code' : 'id_token',
       );
 
+      print('Google登录成功: ${googleAuthResponse}');
+
       return ApiResponse.success(data: googleAuthResponse, errNo: 0);
     } catch (e) {
       print('Google登录失败: $e');

@@ -24,25 +24,38 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _initializeApp() async {
+    print('🔄 [SPLASH] 开始初始化应用');
+
     // 先显示启动页2秒，让用户看到启动画面
+    print('🔄 [SPLASH] 等待2秒显示启动画面');
     await Future.delayed(const Duration(seconds: 2));
+    print('🔄 [SPLASH] 启动画面显示完成');
 
     // 然后异步初始化服务，不阻塞UI
+    print('🔄 [SPLASH] 开始异步初始化服务');
     _initializeServices();
 
     // 延迟跳转，给服务初始化一些时间
+    print('🔄 [SPLASH] 等待500ms后跳转');
     await Future.delayed(const Duration(milliseconds: 500));
+    print('🔄 [SPLASH] 延迟完成，准备跳转');
 
     // 跳转到主页（无动画）
     if (mounted) {
+      print('🔄 [SPLASH] 开始跳转到MainApp');
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const MainApp(),
+          pageBuilder: (context, animation, secondaryAnimation) {
+            print('🔄 [SPLASH] MainApp页面构建开始');
+            return const MainApp();
+          },
           transitionDuration: Duration.zero, // 无过渡动画
           reverseTransitionDuration: Duration.zero,
         ),
       );
+      print('🔄 [SPLASH] 跳转完成');
+    } else {
+      print('🔄 [SPLASH] 组件已卸载，取消跳转');
     }
   }
 
@@ -125,10 +138,13 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MainLayout(
+    print('🏠 [MAIN_APP] MainApp构建开始');
+    final result = MainLayout(
       pages: const [HomePage(), ProfilePage()],
       pageTitles: const ['Home', 'Profile'],
       initialIndex: 0,
     );
+    print('🏠 [MAIN_APP] MainApp构建完成');
+    return result;
   }
 }

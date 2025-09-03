@@ -40,11 +40,14 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   void initState() {
+    print('👤 [PROFILE_PAGE] ProfilePage initState开始');
     super.initState();
+    print('👤 [PROFILE_PAGE] 初始化tabItems');
     _tabItems = [
       const TabItemModel(id: 'history', label: 'History'),
       const TabItemModel(id: 'like', label: 'Like'),
     ];
+    print('👤 [PROFILE_PAGE] 设置TabController');
     _tabController = TabController(length: _tabItems.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
@@ -55,7 +58,9 @@ class _ProfilePageState extends State<ProfilePage>
     });
 
     // 异步初始化登录状态
+    print('👤 [PROFILE_PAGE] 开始异步初始化认证状态');
     _initializeAuthState();
+    print('👤 [PROFILE_PAGE] ProfilePage initState完成');
   }
 
   /// 异步初始化认证状态
@@ -252,19 +257,6 @@ class _ProfilePageState extends State<ProfilePage>
                   },
                 ),
               ),
-              // 刷新按钮
-              if (currentTabIndex == 0) // History tab 刷新按钮
-                IconButton(
-                  onPressed: _loadHistoryData,
-                  icon: const Icon(Icons.refresh, size: 20),
-                  tooltip: '刷新历史',
-                ),
-              if (currentTabIndex == 1) // Like tab 刷新按钮
-                IconButton(
-                  onPressed: () => _loadLikedAudios(refresh: true),
-                  icon: const Icon(Icons.refresh, size: 20),
-                  tooltip: '刷新喜欢',
-                ),
             ],
           ),
 

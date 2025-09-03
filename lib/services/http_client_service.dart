@@ -2,19 +2,57 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
+import '../config/api_config.dart';
 import 'device_info_service.dart';
 import 'auth_service.dart';
-import '../config/api_config.dart';
 
 /// HTTP客户端服务
-/// 自动处理公共请求头：device_id、accessToken、签名验证等
 class HttpClientService {
-  static const Duration _defaultTimeout = Duration(seconds: 30);
+  static const Duration _defaultTimeout = Duration(seconds: 10);
 
-  // 从配置获取API签名相关参数
-  static String get _appId => ApiConfig.appId;
+  // 缓存设备ID，避免重复获取
+  static String? _cachedDeviceId;
+  static bool _isDeviceIdInitializing = false;
+
+  /// 获取应用密钥
   static String get _appSecret => ApiConfig.getAppSecret();
-  static String get _apiVersion => ApiConfig.apiVersion;
+
+  /// 获取设备ID（带缓存）
+  static Future<String> _getCachedDeviceId() async {
+    if (_cachedDeviceId != null) {
+      return _cachedDeviceId!;
+    }
+
+    if (_isDeviceIdInitializing) {
+      // 等待初始化完成
+      while (_isDeviceIdInitializing) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (_cachedDeviceId != null) {
+          return _cachedDeviceId!;
+        }
+      }
+    }
+
+    _isDeviceIdInitializing = true;
+
+    try {
+      final deviceId = await DeviceInfoService.getDeviceId();
+      _cachedDeviceId = deviceId;
+      return deviceId;
+    } catch (e) {
+      print('获取设备ID失败: $e');
+      _cachedDeviceId = 'unknown_device';
+      return _cachedDeviceId!;
+    } finally {
+      _isDeviceIdInitializing = false;
+    }
+  }
+
+  /// 清除设备ID缓存
+  static void clearDeviceIdCache() {
+    _cachedDeviceId = null;
+    _isDeviceIdInitializing = false;
+  }
 
   /// 发送GET请求
   static Future<http.Response> get(
@@ -22,7 +60,11 @@ class HttpClientService {
     Map<String, String>? headers,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildHeaders(headers, 'GET', uri.path);
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'GET',
+      path: uri.path,
+      customHeaders: headers,
+    );
 
     return http
         .get(uri, headers: requestHeaders)
@@ -36,10 +78,19 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildHeaders(headers, 'POST', uri.path, body);
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'POST',
+      path: uri.path,
+      customHeaders: headers,
+      body: body,
+    );
 
     return http
-        .post(uri, headers: requestHeaders, body: body)
+        .post(
+          uri,
+          headers: requestHeaders,
+          body: body is String ? body : json.encode(body),
+        )
         .timeout(timeout ?? _defaultTimeout);
   }
 
@@ -50,10 +101,19 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildHeaders(headers, 'PUT', uri.path, body);
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'PUT',
+      path: uri.path,
+      customHeaders: headers,
+      body: body,
+    );
 
     return http
-        .put(uri, headers: requestHeaders, body: body)
+        .put(
+          uri,
+          headers: requestHeaders,
+          body: body is String ? body : json.encode(body),
+        )
         .timeout(timeout ?? _defaultTimeout);
   }
 
@@ -64,15 +124,19 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildHeaders(
-      headers,
-      'DELETE',
-      uri.path,
-      body,
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'DELETE',
+      path: uri.path,
+      customHeaders: headers,
+      body: body,
     );
 
     return http
-        .delete(uri, headers: requestHeaders, body: body)
+        .delete(
+          uri,
+          headers: requestHeaders,
+          body: body is String ? body : json.encode(body),
+        )
         .timeout(timeout ?? _defaultTimeout);
   }
 
@@ -83,49 +147,42 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildHeaders(
-      headers,
-      'PATCH',
-      uri.path,
-      body,
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'PATCH',
+      path: uri.path,
+      customHeaders: headers,
+      body: body,
     );
 
     return http
-        .patch(uri, headers: requestHeaders, body: body)
+        .patch(
+          uri,
+          headers: requestHeaders,
+          body: body is String ? body : json.encode(body),
+        )
         .timeout(timeout ?? _defaultTimeout);
   }
 
-  /// 构建请求头 - 包含完整的安全验签参数
-  static Future<Map<String, String>> _buildHeaders(
+  /// 构建请求头
+  static Future<Map<String, String>> _buildRequestHeaders({
+    required String method,
+    required String path,
     Map<String, String>? customHeaders,
-    String method,
-    String path, [
     Object? body,
-  ]) async {
-    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    final nonce = _generateNonce();
+  }) async {
+    final headers = <String, String>{};
 
-    // 从配置获取基础请求头
-    final Map<String, String> headers = Map.from(ApiConfig.getDefaultHeaders());
-
-    // 添加安全验签相关头
-    headers.addAll({
-      // 时间戳和随机数 - 防重放攻击
-      'X-Timestamp': timestamp,
-      'X-Nonce': nonce,
-
-      // 请求ID - 用于链路追踪
-      'X-Request-ID': _generateRequestId(),
-    });
+    // 添加基础请求头
+    headers.addAll(ApiConfig.getDefaultHeaders());
 
     // 添加自定义请求头
     if (customHeaders != null) {
       headers.addAll(customHeaders);
     }
 
-    // 自动添加设备ID
+    // 自动添加设备ID（使用缓存）
     try {
-      final deviceId = await DeviceInfoService.getDeviceId();
+      final deviceId = await _getCachedDeviceId();
       headers['X-Device-ID'] = deviceId;
     } catch (e) {
       print('获取设备ID失败: $e');
@@ -149,8 +206,8 @@ class HttpClientService {
       path: path,
       headers: headers,
       body: body,
-      timestamp: timestamp,
-      nonce: nonce,
+      timestamp: _generateTimestamp(),
+      nonce: _generateNonce(),
     );
     headers['X-Signature'] = signature;
 
@@ -227,11 +284,9 @@ class HttpClientService {
     ).join();
   }
 
-  /// 生成请求ID - 用于链路追踪
-  static String _generateRequestId() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = Random().nextInt(999999).toString().padLeft(6, '0');
-    return 'req_${timestamp}_$random';
+  /// 生成时间戳
+  static String _generateTimestamp() {
+    return DateTime.now().millisecondsSinceEpoch.toString();
   }
 
   /// 发送JSON POST请求的便捷方法
@@ -242,11 +297,11 @@ class HttpClientService {
     Duration? timeout,
   }) async {
     final jsonBody = body != null ? json.encode(body) : null;
-    final requestHeaders = await _buildHeaders(
-      headers,
-      'POST',
-      uri.path,
-      jsonBody,
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'POST',
+      path: uri.path,
+      customHeaders: headers,
+      body: jsonBody,
     );
 
     return http
@@ -262,11 +317,11 @@ class HttpClientService {
     Duration? timeout,
   }) async {
     final jsonBody = body != null ? json.encode(body) : null;
-    final requestHeaders = await _buildHeaders(
-      headers,
-      'PUT',
-      uri.path,
-      jsonBody,
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'PUT',
+      path: uri.path,
+      customHeaders: headers,
+      body: jsonBody,
     );
 
     return http
@@ -282,11 +337,11 @@ class HttpClientService {
     Duration? timeout,
   }) async {
     final jsonBody = body != null ? json.encode(body) : null;
-    final requestHeaders = await _buildHeaders(
-      headers,
-      'PATCH',
-      uri.path,
-      jsonBody,
+    final requestHeaders = await _buildRequestHeaders(
+      method: 'PATCH',
+      path: uri.path,
+      customHeaders: headers,
+      body: jsonBody,
     );
 
     return http

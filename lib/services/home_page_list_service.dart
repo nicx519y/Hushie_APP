@@ -6,10 +6,10 @@ import 'api_service.dart';
 /// 首页列表数据管理服务
 ///
 /// 功能特性：
-/// - 针对tabs以及每个tab的列表，本地存储每个tab的最新获取的200条数据
+/// - 每次请求都从服务器获取最新数据，不使用缓存
 /// - 提供fetchNextPageData方法，自动管理分页和lastCid
-/// - 服务初始化时从本地存储恢复数据状态
-/// - 支持数据缓存和离线访问
+/// - 服务初始化时清除所有缓存数据
+/// - 支持实时数据获取，确保数据新鲜度
 class HomePageListService {
   static const String _storageKey = 'home_page_list_data';
   static const int _maxItemsPerTab = 20;
@@ -35,19 +35,28 @@ class HomePageListService {
 
     try {
       _prefs = await SharedPreferences.getInstance();
-      await _loadDataFromStorage();
+
+      // 清除之前的缓存数据
+      print('清除之前的缓存数据');
+      _tabDataCache.clear();
+      _tabLastCidCache.clear();
+
+      // 清除本地存储
+      await _prefs?.remove(_storageKey);
+
       _isInitialized = true;
-      print('HomePageListService 初始化完成');
+      print('HomePageListService 初始化完成，缓存已清除');
     } catch (error) {
       print('HomePageListService 初始化失败: $error');
       rethrow;
     }
   }
 
-  /// 获取指定tab的数据列表
+  /// 获取指定tab的数据列表（不使用缓存）
   List<AudioItem> getTabData(String tabId) {
     _ensureInitialized();
-    return _tabDataCache[tabId] ?? [];
+    // 不使用缓存，返回空列表
+    return [];
   }
 
   /// 获取指定tab的lastCid
@@ -86,33 +95,12 @@ class HomePageListService {
           final newLastCid = newItems.last.id;
           _tabLastCidCache[tabId] = newLastCid;
 
-          // 更新数据缓存
-          if (forceRefresh || _tabDataCache[tabId] == null) {
-            // 强制刷新或首次加载，直接替换
-            _tabDataCache[tabId] = List.from(newItems);
-          } else {
-            // 追加新数据，保持最大数量限制
-            final currentData = _tabDataCache[tabId]!;
-            final combinedData = [...currentData, ...newItems];
-
-            // 只保留最新的50条数据
-            if (combinedData.length > _maxItemsPerTab) {
-              _tabDataCache[tabId] = combinedData.sublist(
-                combinedData.length - _maxItemsPerTab,
-              );
-            } else {
-              _tabDataCache[tabId] = combinedData;
-            }
-          }
-
-          // 保存到本地存储
-          await _saveDataToStorage();
-
+          // 不使用缓存，每次都返回新数据
           print('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: $newLastCid');
-          return _tabDataCache[tabId]!;
+          return newItems;
         } else {
           print('Tab $tabId 没有更多数据');
-          return _tabDataCache[tabId] ?? [];
+          return [];
         }
       } else {
         throw Exception('获取数据失败: 错误码 ${response.errNo}');
@@ -155,26 +143,17 @@ class HomePageListService {
   Future<void> preloadTabData(String tabId) async {
     _ensureInitialized();
 
-    if (_tabDataCache[tabId]?.isEmpty ?? true) {
-      print('预加载 Tab $tabId 的数据');
-      await fetchNextPageData(tabId);
-    }
+    // 不使用缓存，每次都获取新数据
+    print('预加载 Tab $tabId 的数据');
+    await fetchNextPageData(tabId);
   }
 
   /// 获取所有tab的缓存状态信息
   Map<String, Map<String, dynamic>> getAllTabsStatus() {
     _ensureInitialized();
 
-    final status = <String, Map<String, dynamic>>{};
-    _tabDataCache.forEach((tabId, data) {
-      status[tabId] = {
-        'itemCount': data.length,
-        'lastCid': _tabLastCidCache[tabId],
-        'hasData': data.isNotEmpty,
-      };
-    });
-
-    return status;
+    // 由于不使用缓存，返回空状态
+    return {};
   }
 
   /// 从本地存储加载数据
@@ -244,13 +223,11 @@ class HomePageListService {
   Map<String, dynamic> getServiceStatus() {
     return {
       'isInitialized': _isInitialized,
-      'tabsCount': _tabDataCache.length,
-      'totalItems': _tabDataCache.values.fold(
-        0,
-        (sum, items) => sum + items.length,
-      ),
+      'tabsCount': 0, // 不使用缓存，所以tab数量为0
+      'totalItems': 0, // 不使用缓存，所以总项目数为0
       'storageKey': _storageKey,
       'maxItemsPerTab': _maxItemsPerTab,
+      'cacheEnabled': false, // 标记缓存已禁用
     };
   }
 }
@@ -281,21 +258,21 @@ class HomePageListService {
 ///   }
 ///   
 ///   Future<void> _initializeData() async {
-///     // 预加载当前tab的数据
+///     // 预加载当前tab的数据（每次都是新数据）
 ///     await _listService.preloadTabData('for_you');
 ///   }
 ///   
-///   // 获取下一页数据
+///   // 获取下一页数据（每次都是新数据）
 ///   Future<List<AudioItem>> _fetchNextPage(String tabId) async {
 ///     return await _listService.fetchNextPageData(tabId);
 ///   }
 ///   
-///   // 刷新数据
+///   // 刷新数据（每次都是新数据）
 ///   Future<List<AudioItem>> _refreshData(String tabId) async {
 ///     return await _listService.refreshTabData(tabId);
 ///   }
 ///   
-///   // 获取缓存数据
+///   // 获取缓存数据（现在总是返回空列表）
 ///   List<AudioItem> _getCachedData(String tabId) {
 ///     return _listService.getTabData(tabId);
 ///   }

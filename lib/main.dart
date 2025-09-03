@@ -8,7 +8,9 @@ import 'config/api_config.dart';
 import 'services/api_service.dart';
 
 void main() async {
+  print('🚀 [MAIN] 应用启动开始');
   WidgetsFlutterBinding.ensureInitialized();
+  print('🚀 [MAIN] Flutter绑定初始化完成');
 
   // 配置系统UI样式
   SystemChrome.setSystemUIOverlayStyle(
@@ -20,18 +22,24 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark, // 深色导航栏图标
     ),
   );
+  print('🚀 [MAIN] 系统UI样式配置完成');
 
   // 启用Edge-to-Edge模式
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  print('🚀 [MAIN] Edge-to-Edge模式启用完成');
 
   // 初始化 API 配置（同步操作，快速）
+  print('🚀 [MAIN] 开始初始化API配置');
   ApiConfig.initialize(
     initialMode: ApiMode.real, // 暂时使用Mock模式来测试
     debugMode: true, // 在开发环境启用调试模式
   );
+  print('🚀 [MAIN] API配置初始化完成');
 
   // 立即启动应用，服务初始化在启动页中处理
+  print('🚀 [MAIN] 开始运行应用');
   runApp(const MyApp());
+  print('🚀 [MAIN] 应用运行完成');
 }
 
 class MyApp extends StatelessWidget {

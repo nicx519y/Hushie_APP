@@ -44,6 +44,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    print('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
     return Scaffold(
       backgroundColor: Colors.white,
       extendBodyBehindAppBar: true, // 让body延伸到状态栏后面
