@@ -1,4 +1,4 @@
-package com.example.hushie_app
+package com.stdash.hushie_app
 
 import android.os.Bundle
 import com.ryanheise.audioservice.AudioServiceActivity
@@ -9,4 +9,4 @@ class MainActivity : AudioServiceActivity() {
         setTheme(androidx.appcompat.R.style.Theme_AppCompat_NoActionBar)
         super.onCreate(savedInstanceState)
     }
-}
+} 

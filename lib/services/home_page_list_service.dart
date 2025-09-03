@@ -12,7 +12,7 @@ import 'api_service.dart';
 /// - 支持数据缓存和离线访问
 class HomePageListService {
   static const String _storageKey = 'home_page_list_data';
-  static const int _maxItemsPerTab = 50;
+  static const int _maxItemsPerTab = 20;
 
   // 单例模式
   static final HomePageListService _instance = HomePageListService._internal();

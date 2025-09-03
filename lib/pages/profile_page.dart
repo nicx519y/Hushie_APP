@@ -7,7 +7,9 @@ import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
+import 'login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,7 +22,7 @@ class _ProfilePageState extends State<ProfilePage>
     with TickerProviderStateMixin {
   // 模拟登录状态
   bool isLoggedIn = false;
-  String userName = 'Queen X';
+  String userName = '';
 
   // 标签页状态
   late List<TabItemModel> _tabItems;
@@ -51,20 +53,32 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     });
+
+    // 异步初始化登录状态
+    _initializeAuthState();
+  }
+
+  /// 异步初始化认证状态
+  Future<void> _initializeAuthState() async {
+    try {
+      isLoggedIn = await AuthService.isSignedIn();
+      if (isLoggedIn) {
+        final user = await AuthService.getCurrentUser();
+        if (mounted) {
+          setState(() {
+            userName = user?.displayName ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      print('初始化认证状态失败: $e');
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  void _initMockData() async {
-    // 从 AudioHistoryManager 获取历史数据
-    await _loadHistoryData();
-
-    // 从服务器获取喜欢的音频数据
-    await _loadLikedAudios();
   }
 
   // 加载历史数据
@@ -173,7 +187,7 @@ class _ProfilePageState extends State<ProfilePage>
                       minimumSize: const Size(40, 40),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    onPressed: () => {},
+                    onPressed: () {},
                     icon: Icon(CustomIcons.setup, size: 20),
                   ),
                 ],
@@ -186,9 +200,9 @@ class _ProfilePageState extends State<ProfilePage>
                 isLoggedIn: isLoggedIn,
                 userName: userName,
                 onLoginTap: () {
-                  setState(() {
-                    isLoggedIn = false;
-                  });
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                  );
                 },
               ),
 
@@ -338,29 +352,37 @@ class _ProfilePageState extends State<ProfilePage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    'Log in to access data.',
-                    style: TextStyle(fontSize: 16, color: Color(0xFFC1C1C1)),
+                    'Log in / Sign up to access data.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF999999),
+                      height: 1,
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Color(0xFFC1C1C1)),
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          isLoggedIn = true;
-                        });
-                      },
-                      child: const Text(
-                        'Sign up / Log in',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Color(0xFF333333),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
                       ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      side: const BorderSide(color: Color(0xFF333333)),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Log in / Sign up',
+                      style: TextStyle(fontSize: 16, color: Color(0xFF333333)),
                     ),
                   ),
 

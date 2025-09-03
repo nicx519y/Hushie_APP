@@ -14,7 +14,7 @@ class AudioSearchService {
   static Future<ApiResponse<SimpleResponse<AudioItem>>> getAudioSearchList({
     required String searchQuery,
     String? cid,
-    int count = 10,
+    int count = 20,
   }) async {
     if (ApiService.currentMode == ApiMode.mock) {
       return AudioSearchMock.getMockAudioSearchList(
@@ -36,7 +36,7 @@ class AudioSearchService {
   _getRealAudioSearchList({
     required String searchQuery,
     String? cid,
-    int count = 10,
+    int count = 20,
   }) async {
     try {
       final queryParams = <String, String>{

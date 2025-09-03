@@ -167,9 +167,11 @@ class AudioManager {
     final lastHistory = await AudioHistoryManager.instance.getRecentHistory(
       limit: 1,
     );
-    print('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
     if (lastHistory.isNotEmpty) {
+      print('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
       AudioPlaylist.instance.addAudio(lastHistory.first);
+    } else {
+      print('AudioManager: 没有播放历史记录');
     }
 
     // 播放最后的音频并暂停
@@ -267,7 +269,6 @@ class AudioManager {
       final response = await AudioListService.getAudioList(
         tag: null,
         cid: currentAudio.id,
-        count: 50,
       );
 
       if (response.errNo == 0 &&

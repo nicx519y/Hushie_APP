@@ -14,7 +14,7 @@ class AudioListService {
   static Future<ApiResponse<SimpleResponse<AudioItem>>> getAudioList({
     String? tag,
     String? cid,
-    int count = 10,
+    int count = 20,
   }) async {
     if (ApiService.currentMode == ApiMode.mock) {
       return AudioListMock.getMockAudioList(tag: tag, cid: cid, count: count);
@@ -27,7 +27,7 @@ class AudioListService {
   static Future<ApiResponse<SimpleResponse<AudioItem>>> _getRealAudioList({
     String? tag,
     String? cid,
-    int count = 10,
+    int count = 20,
   }) async {
     try {
       final queryParams = <String, String>{'count': count.toString()};

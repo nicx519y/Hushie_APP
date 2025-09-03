@@ -24,13 +24,16 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _initializeApp() async {
-    // 并行执行：服务初始化 和 2秒延迟
-    await Future.wait([
-      _initializeServices(),
-      Future.delayed(const Duration(seconds: 2)),
-    ]);
+    // 先显示启动页2秒，让用户看到启动画面
+    await Future.delayed(const Duration(seconds: 2));
 
-    // 都完成后跳转到主页（无动画）
+    // 然后异步初始化服务，不阻塞UI
+    _initializeServices();
+
+    // 延迟跳转，给服务初始化一些时间
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // 跳转到主页（无动画）
     if (mounted) {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
@@ -45,18 +48,33 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeServices() async {
     try {
-      // 初始化音频服务
-      await AudioManager.instance.init();
-
-      setState(() {
-        _servicesInitialized = true;
-      });
+      // 异步初始化音频服务，不阻塞UI
+      unawaited(
+        AudioManager.instance
+            .init()
+            .then((_) {
+              if (mounted) {
+                setState(() {
+                  _servicesInitialized = true;
+                });
+              }
+            })
+            .catchError((e) {
+              print('服务初始化失败: $e');
+              if (mounted) {
+                setState(() {
+                  _servicesInitialized = true;
+                });
+              }
+            }),
+      );
     } catch (e) {
       print('服务初始化失败: $e');
-      // 即使服务初始化失败，也继续跳转
-      setState(() {
-        _servicesInitialized = true;
-      });
+      if (mounted) {
+        setState(() {
+          _servicesInitialized = true;
+        });
+      }
     }
   }
 
@@ -108,8 +126,8 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MainLayout(
-      pages: [HomePage(), ProfilePage()],
-      pageTitles: ['Home', 'Profile'],
+      pages: const [HomePage(), ProfilePage()],
+      pageTitles: const ['Home', 'Profile'],
       initialIndex: 0,
     );
   }

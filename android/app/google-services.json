@@ -1,33 +1,41 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "hushie-ai-dev",
-    "storage_bucket": "hushie-ai-dev.appspot.com"
+    "project_number": "464599900807",
+    "project_id": "hushie-ai-test",
+    "storage_bucket": "hushie-ai-test.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
+        "mobilesdk_app_id": "1:464599900807:android:c9e4fbf4e5f0f1365a4e22",
         "android_client_info": {
-          "package_name": "com.example.hushie_app"
+          "package_name": "com.stdash.hushie_app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+          "client_id": "464599900807-gcqc3c7ndk3qj0pdv3mv5bphj8ag7pm1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.stdash.hushie_app",
+            "certificate_hash": "2c7dc744e4d8eda88c5f8612966e3450d6b60d29"
+          }
+        },
+        {
+          "client_id": "464599900807-jtkjnpb7ovn9m7r1gph7re0pd0q89cia.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          "current_key": "AIzaSyAtmVb_kvRIlhpcgBBdTGhspAkhkH6ZDLs"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+              "client_id": "464599900807-jtkjnpb7ovn9m7r1gph7re0pd0q89cia.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

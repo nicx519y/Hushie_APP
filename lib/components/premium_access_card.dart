@@ -11,8 +11,8 @@ class PremiumAccessCard extends StatelessWidget {
 
   const PremiumAccessCard({
     super.key,
-    this.title = 'Premium Access',
-    this.subtitle = 'Unlimited access to full track',
+    this.title = 'Hushie Pro',
+    this.subtitle = 'Full Access to All Creations',
     this.buttonText = 'Subscribe',
     this.onSubscribe,
     this.primaryColor = const Color(0xFFFFF4D6),
@@ -96,7 +96,7 @@ class PremiumAccessCard extends StatelessWidget {
                         onTap: onSubscribe,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
+                            horizontal: 16,
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(

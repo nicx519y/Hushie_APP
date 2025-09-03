@@ -13,8 +13,9 @@ class GoogleAuthService {
   // 创建GoogleSignIn实例，配置服务器端认证
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    // 如果需要服务器端认证，应该配置 serverClientId
-    // serverClientId: 'your-server-client-id.googleusercontent.com',
+    // 配置Web客户端ID，用于获取serverAuthCode
+    serverClientId:
+        '464599900807-jtkjnpb7ovn9m7r1gph7re0pd0q89cia.apps.googleusercontent.com',
   );
 
   /// Google账号登录 - 完整的OAuth 2.0流程
@@ -82,12 +83,16 @@ class GoogleAuthService {
 
       if (googleUser == null) {
         // 用户取消登录
+        print('google 登录失败. googleUser is null.');
         return ApiResponse.error(errNo: -2);
       }
+      print('Google用户信息: ${googleUser}');
 
       // 获取认证信息
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+
+      print('Google认证信息: ${googleAuth}');
 
       // 在标准OAuth 2.0流程中，这里应该获取授权码
       // 但Google Sign-In Flutter插件直接返回tokens
@@ -97,8 +102,15 @@ class GoogleAuthService {
       final String? idToken = googleAuth.idToken;
 
       if (authorizationCode == null && idToken == null) {
+        print(
+          'google 授权码或者idToken为null. authorizationCode: ${authorizationCode}, idToken: ${idToken}',
+        );
         return ApiResponse.error(errNo: -3);
       }
+
+      print(
+        'google 授权码或者idToken不为null. authorizationCode: ${authorizationCode}, idToken: ${idToken}',
+      );
 
       // 构建响应数据，优先使用授权码
       final googleAuthResponse = GoogleAuthResponse(

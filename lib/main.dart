@@ -26,7 +26,7 @@ void main() async {
 
   // 初始化 API 配置（同步操作，快速）
   ApiConfig.initialize(
-    initialMode: ApiMode.real,
+    initialMode: ApiMode.real, // 暂时使用Mock模式来测试
     debugMode: true, // 在开发环境启用调试模式
   );
 
@@ -59,15 +59,15 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+// class MainApp extends StatelessWidget {
+//   const MainApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MainLayout(
-      pages: const [HomePage(), ProfilePage()],
-      pageTitles: const ['Home', 'Profile'],
-      initialIndex: 0,
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return MainLayout(
+//       pages: const [HomePage(), ProfilePage()],
+//       pageTitles: const ['Home', 'Profile'],
+//       initialIndex: 0,
+//     );
+//   }
+// }

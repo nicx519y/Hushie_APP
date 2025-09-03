@@ -31,7 +31,7 @@ class ApiService {
   static Future<ApiResponse<SimpleResponse<AudioItem>>> getAudioList({
     String? tag,
     String? cid,
-    int count = 10,
+    int count = 20,
   }) async {
     return AudioListService.getAudioList(tag: tag, cid: cid, count: count);
   }

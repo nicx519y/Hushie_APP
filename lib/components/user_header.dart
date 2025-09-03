@@ -38,7 +38,7 @@ class UserHeader extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w500,
-                height: 1,
+                height: 2,
                 color: Color(0xFF333333),
               ),
             ),
