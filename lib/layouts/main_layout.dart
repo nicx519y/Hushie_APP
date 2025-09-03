@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../components/bottom_navigation_bar.dart';
 
+// 全局路由观察者
+final RouteObserver<ModalRoute<void>> globalRouteObserver =
+    RouteObserver<ModalRoute<void>>();
+
 class MainLayout extends StatefulWidget {
   final List<Widget> pages;
   final List<String> pageTitles;
@@ -45,6 +49,18 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     print('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
+    return Navigator(
+      observers: [globalRouteObserver],
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => _buildMainContent(),
+          settings: settings,
+        );
+      },
+    );
+  }
+
+  Widget _buildMainContent() {
     return Scaffold(
       backgroundColor: Colors.white,
       extendBodyBehindAppBar: true, // 让body延伸到状态栏后面

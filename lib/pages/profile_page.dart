@@ -9,6 +9,7 @@ import '../services/audio_history_manager.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
+import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
 import 'login_page.dart';
 import 'setting_page.dart';
 
@@ -20,7 +21,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RouteAware {
   // 模拟登录状态
   bool isLoggedIn = false;
   String userName = '';
@@ -39,10 +40,16 @@ class _ProfilePageState extends State<ProfilePage>
   bool _hasMoreLiked = true;
   String? _lastLikedId; // 用于存储最后一个喜欢的音频ID，以便进行分页
 
+  // 防抖相关
+  bool _isRefreshingAuth = false;
+  DateTime? _lastAuthRefreshTime;
+  static const Duration _authRefreshCooldown = Duration(seconds: 2); // 2秒冷却时间
+
   @override
   void initState() {
     print('👤 [PROFILE_PAGE] ProfilePage initState开始');
     super.initState();
+
     print('👤 [PROFILE_PAGE] 初始化tabItems');
     _tabItems = [
       const TabItemModel(id: 'history', label: 'History'),
@@ -83,8 +90,111 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   void dispose() {
+    // 取消路由观察者订阅
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      globalRouteObserver.unsubscribe(this);
+    }
+
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // 注册路由观察者
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      globalRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+
+    // 当从其他页面返回时，重新检查登录状态
+    print('👤 [PROFILE_PAGE] 从其他页面返回，重新检查登录状态');
+    _refreshAuthState();
+  }
+
+  @override
+  void didPushNext() {
+    super.didPushNext();
+
+    // 当跳转到其他页面时，可以做一些清理工作
+    print('👤 [PROFILE_PAGE] 跳转到其他页面');
+  }
+
+  /// 刷新认证状态
+  Future<void> _refreshAuthState() async {
+    // 防抖逻辑：避免频繁调用
+    if (_isRefreshingAuth) {
+      print('👤 [PROFILE_PAGE] 认证状态刷新中，跳过重复调用');
+      return;
+    }
+
+    // 冷却时间检查：避免短时间内重复刷新
+    if (_lastAuthRefreshTime != null) {
+      final timeSinceLastRefresh = DateTime.now().difference(
+        _lastAuthRefreshTime!,
+      );
+      if (timeSinceLastRefresh < _authRefreshCooldown) {
+        print('👤 [PROFILE_PAGE] 认证状态刷新冷却中，跳过调用');
+        return;
+      }
+    }
+
+    try {
+      _isRefreshingAuth = true;
+      _lastAuthRefreshTime = DateTime.now();
+
+      print('👤 [PROFILE_PAGE] 开始刷新认证状态');
+      final newLoginState = await AuthService.isSignedIn();
+      final oldLoginState = isLoggedIn; // 保存旧状态用于比较
+
+      if (mounted) {
+        setState(() {
+          isLoggedIn = newLoginState;
+        });
+
+        // 如果登录状态发生变化，重新获取用户信息
+        if (newLoginState && !oldLoginState) {
+          await _refreshUserInfo();
+        }
+
+        // 如果登录状态变为false，清空用户信息
+        if (!newLoginState && oldLoginState) {
+          setState(() {
+            userName = '';
+          });
+        }
+
+        print(
+          '👤 [PROFILE_PAGE] 认证状态刷新完成: $newLoginState (之前: $oldLoginState)',
+        );
+      }
+    } catch (e) {
+      print('刷新认证状态失败: $e');
+    } finally {
+      _isRefreshingAuth = false;
+    }
+  }
+
+  /// 刷新用户信息
+  Future<void> _refreshUserInfo() async {
+    try {
+      final user = await AuthService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          userName = user?.displayName ?? '';
+        });
+      }
+    } catch (e) {
+      print('刷新用户信息失败: $e');
+    }
   }
 
   // 加载历史数据
@@ -166,6 +276,13 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     }
+  }
+
+  // 手动刷新认证状态（仅用于测试）
+  Future<void> _manualRefreshAuth() async {
+    print('👤 [PROFILE_PAGE] 手动刷新认证状态');
+    await _refreshAuthState();
+    print('👤 [PROFILE_PAGE] 手动刷新认证状态完成');
   }
 
   @override
