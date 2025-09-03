@@ -79,13 +79,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _initDefaultTabs() {
     setState(() {
-      _tabItems = [
-        const TabItemModel(id: 'for_you', label: 'For You'),
-        const TabItemModel(id: 'mf', label: 'M/F'),
-        const TabItemModel(id: 'fm', label: 'F/M'),
-        const TabItemModel(id: 'asmr', label: 'ASMR'),
-        const TabItemModel(id: 'nsfw', label: 'NSFW'),
-      ];
+      _tabItems = [const TabItemModel(id: 'for_you', label: 'For You')];
     });
     _setupControllers();
   }

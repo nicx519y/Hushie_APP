@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'secure_storage_service.dart';
 
 /// 设备信息服务
 class DeviceInfoService {
@@ -9,7 +10,7 @@ class DeviceInfoService {
   static String? _cachedDeviceId;
   static bool _isInitializing = false;
 
-  /// 获取设备ID（带缓存）
+  /// 获取设备ID（带缓存和安全存储）
   static Future<String> getDeviceId() async {
     // 如果已有缓存，直接返回
     if (_cachedDeviceId != null) {
@@ -30,8 +31,18 @@ class DeviceInfoService {
     _isInitializing = true;
 
     try {
-      String deviceId;
+      // 首先尝试从安全存储获取
+      String? deviceId = await SecureStorageService.getDeviceId();
 
+      if (deviceId != null &&
+          deviceId.isNotEmpty &&
+          deviceId != 'unknown_device') {
+        _cachedDeviceId = deviceId;
+        print('从安全存储获取设备ID: $deviceId');
+        return deviceId;
+      }
+
+      // 如果安全存储中没有，则从设备获取
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
         deviceId = androidInfo.id;
@@ -49,6 +60,12 @@ class DeviceInfoService {
         deviceId = linuxInfo.machineId ?? 'unknown_linux_device';
       } else {
         deviceId = 'unknown_device';
+      }
+
+      // 将获取到的设备ID保存到安全存储
+      if (deviceId.isNotEmpty && deviceId != 'unknown_device') {
+        await SecureStorageService.saveDeviceId(deviceId);
+        print('设备ID已保存到安全存储: $deviceId');
       }
 
       // 缓存设备ID
@@ -69,6 +86,28 @@ class DeviceInfoService {
   static void clearCache() {
     _cachedDeviceId = null;
     _isInitializing = false;
+  }
+
+  /// 从安全存储获取设备ID（不触发设备信息获取）
+  static Future<String?> getDeviceIdFromSecureStorage() async {
+    try {
+      return await SecureStorageService.getDeviceId();
+    } catch (e) {
+      print('从安全存储获取设备ID失败: $e');
+      return null;
+    }
+  }
+
+  /// 强制刷新设备ID（重新获取并保存）
+  static Future<String> refreshDeviceId() async {
+    // 清除缓存
+    clearCache();
+
+    // 清除安全存储中的设备ID
+    await SecureStorageService.deleteDeviceId();
+
+    // 重新获取
+    return await getDeviceId();
   }
 
   /// 获取设备信息（带缓存）

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/api_response.dart';
 import 'api/google_auth_service.dart';
 import '../services/mock/google_auth_mock.dart';
+import 'secure_storage_service.dart';
 
 /// 认证服务 - 管理Token生命周期和自动刷新
 class AuthService {
@@ -72,9 +73,9 @@ class AuthService {
 
       final accessToken = tokenResult.data!;
 
-      // 第三步：保存Token和用户信息
-      await _saveTokenToStorage(accessToken);
-      await _saveUserToStorage(googleAuth);
+      // 第三步：保存Token和用户信息到安全存储
+      await _saveTokenToSecureStorage(accessToken);
+      await _saveUserToSecureStorage(googleAuth);
 
       _currentToken = accessToken;
       _currentUser = googleAuth;
@@ -93,52 +94,60 @@ class AuthService {
       await GoogleAuthService.logout();
 
       // 清除本地数据
-      await _clearTokenFromStorage();
-      await _clearUserFromStorage();
+      await _clearTokenFromSecureStorage();
+      await _clearUserFromSecureStorage();
 
       _currentToken = null;
       _currentUser = null;
     } catch (e) {
       print('登出失败: $e');
       // 即使服务器登出失败，也要清除本地数据
-      await _clearTokenFromStorage();
-      await _clearUserFromStorage();
+      await _clearTokenFromSecureStorage();
+      await _clearUserFromSecureStorage();
       _currentToken = null;
       _currentUser = null;
     }
   }
 
-  /// 验证当前Token是否有效
-  static Future<bool> validateCurrentToken() async {
-    final token = await getAccessToken();
-    if (token == null) return false;
-
+  /// 删除账户
+  static Future<void> deleteAccount() async {
     try {
-      final result = await GoogleAuthService.validateToken(accessToken: token);
-      return result.errNo == 0 && result.data?.isValid == true;
+      // 调用服务器删除账户接口
+      await GoogleAuthService.deleteAccount();
+
+      // 清除本地数据
+      await _clearTokenFromSecureStorage();
+      await _clearUserFromSecureStorage();
+
+      _currentToken = null;
+      _currentUser = null;
     } catch (e) {
-      print('Token验证失败: $e');
+      print('删除账户失败: $e');
+      // 即使服务器删除失败，也要清除本地数据
+      await _clearTokenFromSecureStorage();
+      await _clearUserFromSecureStorage();
+      _currentToken = null;
+      _currentUser = null;
+      rethrow; // 重新抛出异常，让调用者处理
+    }
+  }
+
+  /// 验证当前Token是否有效
+  static Future<bool> isTokenValid() async {
+    try {
+      final token = await getAccessToken();
+      return token != null && token.isNotEmpty;
+    } catch (e) {
+      print('验证Token失败: $e');
       return false;
     }
   }
 
   /// 检查是否已登录
   static Future<bool> isSignedIn() async {
-    print('🔐 [AUTH] 开始检查登录状态');
     try {
       final token = await getAccessToken();
-      print(
-        '🔐 [AUTH] getAccessToken完成: ${token != null ? "有token" : "无token"}',
-      );
-      if (token == null) {
-        print('🔐 [AUTH] 无token，返回false');
-        return false;
-      }
-
-      print('🔐 [AUTH] 开始验证token');
-      final isValid = await validateCurrentToken();
-      print('🔐 [AUTH] token验证完成: $isValid');
-      return isValid;
+      return token != null && token.isNotEmpty;
     } catch (e) {
       print('🔐 [AUTH] isSignedIn异常: $e');
       return false;
@@ -184,7 +193,7 @@ class AuthService {
           );
         }
 
-        await _saveTokenToStorage(newToken);
+        await _saveTokenToSecureStorage(newToken);
         _currentToken = newToken;
         return true;
       }
@@ -193,18 +202,17 @@ class AuthService {
     }
 
     // 刷新失败，清除Token
-    await _clearTokenFromStorage();
+    await _clearTokenFromSecureStorage();
     _currentToken = null;
     return false;
   }
 
-  /// 从本地存储加载Token
+  /// 从安全存储加载Token
   static Future<void> _loadTokenFromStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final accessToken = prefs.getString(_accessTokenKey);
-      final refreshToken = prefs.getString(_refreshTokenKey);
-      final expiresAtMs = prefs.getInt(_tokenExpiresAtKey);
+      final accessToken = await SecureStorageService.getAccessToken();
+      final refreshToken = await SecureStorageService.getRefreshToken();
+      final expiresAtMs = await SecureStorageService.getTokenExpiresAt();
 
       if (accessToken != null && refreshToken != null) {
         _currentToken = AccessTokenResponse(
@@ -222,16 +230,16 @@ class AuthService {
     }
   }
 
-  /// 保存Token到本地存储
-  static Future<void> _saveTokenToStorage(AccessTokenResponse token) async {
+  /// 保存Token到安全存储
+  static Future<void> _saveTokenToSecureStorage(
+    AccessTokenResponse token,
+  ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_accessTokenKey, token.accessToken);
-      await prefs.setString(_refreshTokenKey, token.refreshToken);
+      await SecureStorageService.saveAccessToken(token.accessToken);
+      await SecureStorageService.saveRefreshToken(token.refreshToken);
 
       if (token.expiresAt != null) {
-        await prefs.setInt(
-          _tokenExpiresAtKey,
+        await SecureStorageService.saveTokenExpiresAt(
           token.expiresAt!.millisecondsSinceEpoch,
         );
       }
@@ -240,23 +248,21 @@ class AuthService {
     }
   }
 
-  /// 清除Token从本地存储
-  static Future<void> _clearTokenFromStorage() async {
+  /// 清除Token从安全存储
+  static Future<void> _clearTokenFromSecureStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_accessTokenKey);
-      await prefs.remove(_refreshTokenKey);
-      await prefs.remove(_tokenExpiresAtKey);
+      await SecureStorageService.deleteAccessToken();
+      await SecureStorageService.deleteRefreshToken();
+      await SecureStorageService.deleteTokenExpiresAt();
     } catch (e) {
       print('清除Token失败: $e');
     }
   }
 
-  /// 从本地存储加载用户信息
+  /// 从安全存储加载用户信息
   static Future<void> _loadUserFromStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString(_userInfoKey);
+      final userJson = await SecureStorageService.getUserInfo();
 
       if (userJson != null) {
         final userMap = json.decode(userJson) as Map<String, dynamic>;
@@ -267,39 +273,33 @@ class AuthService {
     }
   }
 
-  /// 保存用户信息到本地存储
-  static Future<void> _saveUserToStorage(GoogleAuthResponse user) async {
+  /// 保存用户信息到安全存储
+  static Future<void> _saveUserToSecureStorage(GoogleAuthResponse user) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final userJson = json.encode(user.toMap());
-      await prefs.setString(_userInfoKey, userJson);
+      await SecureStorageService.saveUserInfo(userJson);
     } catch (e) {
       print('保存用户信息失败: $e');
     }
   }
 
-  /// 清除用户信息从本地存储
-  static Future<void> _clearUserFromStorage() async {
+  /// 清除用户信息从安全存储
+  static Future<void> _clearUserFromSecureStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_userInfoKey);
+      await SecureStorageService.deleteUserInfo();
     } catch (e) {
       print('清除用户信息失败: $e');
     }
   }
 
-  /// 获取带有认证头的请求头
-  static Future<Map<String, String>> getAuthHeaders() async {
-    final token = await getAccessToken();
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-
-    if (token != null) {
-      headers['Authorization'] = 'Bearer $token';
+  /// 清除所有认证数据
+  static Future<void> clearAllAuthData() async {
+    try {
+      await SecureStorageService.clearAllAuthData();
+      _currentToken = null;
+      _currentUser = null;
+    } catch (e) {
+      print('清除所有认证数据失败: $e');
     }
-
-    return headers;
   }
 }

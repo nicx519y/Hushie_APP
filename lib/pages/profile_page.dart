@@ -10,6 +10,7 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
 import 'login_page.dart';
+import 'setting_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -192,7 +193,14 @@ class _ProfilePageState extends State<ProfilePage>
                       minimumSize: const Size(40, 40),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingPage(),
+                        ),
+                      );
+                    },
                     icon: Icon(CustomIcons.setup, size: 20),
                   ),
                 ],

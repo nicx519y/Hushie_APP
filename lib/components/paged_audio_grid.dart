@@ -84,6 +84,7 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
     with AutomaticKeepAliveClientMixin {
   static const int _pageSize = 20;
   late final PagingController<String?, AudioItem> _pagingController;
+  bool _isRefreshing = false; // 添加刷新标志
 
   @override
   bool get wantKeepAlive => true; // 保持组件状态，防止UI被回收
@@ -107,6 +108,11 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
   }
 
   Future<void> _fetchPage(String? pageKey) async {
+    // 如果正在刷新，跳过自动获取
+    if (_isRefreshing && pageKey == null) {
+      return;
+    }
+
     try {
       List<AudioItem> newItems;
 
@@ -154,6 +160,11 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
         }
       }
 
+      // 确保 newItems 不为 null
+      if (newItems == null) {
+        newItems = [];
+      }
+
       final isLastPage = newItems.length < _pageSize;
 
       if (isLastPage) {
@@ -174,22 +185,31 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
 
     return RefreshIndicator(
       onRefresh: () async {
-        if (widget.refreshDataFetcher != null) {
-          // 使用外部传入的刷新方法
-          try {
+        _isRefreshing = true; // 开始刷新
+        try {
+          if (widget.refreshDataFetcher != null) {
+            // 使用外部传入的刷新方法
             final newItems = await widget.refreshDataFetcher!(tag: widget.tag);
-            _pagingController.refresh();
-            // 注意：这里需要特殊处理，因为refresh会重新调用_fetchPage
-            // 但我们已经有了数据，可以直接设置
+
+            // 直接设置新数据，避免重复调用 _fetchPage
             if (newItems.isNotEmpty) {
+              // 有数据时，清空现有数据并设置新数据
+              _pagingController.refresh();
               _pagingController.appendPage(newItems, null);
+            } else {
+              // 没有数据时，清空现有数据并设置为空状态
+              _pagingController.refresh();
+              // 重要：设置为最后一页，避免loading状态
+              _pagingController.appendLastPage([]);
             }
-          } catch (error) {
-            _pagingController.error = error;
+          } else {
+            // 使用默认的刷新方法
+            _pagingController.refresh();
           }
-        } else {
-          // 使用默认的刷新方法
-          _pagingController.refresh();
+        } catch (error) {
+          _pagingController.error = error;
+        } finally {
+          _isRefreshing = false; // 结束刷新
         }
       },
       child: LayoutBuilder(
@@ -205,7 +225,10 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
           // 确保有足够的空间至少显示一列
           if (availableWidth < 100) {
             return const Center(
-              child: Text('屏幕宽度不足', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'width is too small',
+                style: TextStyle(color: Colors.grey),
+              ),
             );
           }
 
@@ -247,7 +270,7 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
                     Icon(Icons.music_note, size: 64, color: Colors.grey),
                     SizedBox(height: 16),
                     Text(
-                      '暂无音频数据',
+                      'No audio data',
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
                   ],
