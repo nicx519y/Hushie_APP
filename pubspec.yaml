@@ -77,6 +77,9 @@ dependencies:
   
   # 加密算法（用于API签名）
   crypto: ^3.0.3
+  
+  # WebView支持
+  webview_flutter: ^4.4.2
 
 dev_dependencies:
   flutter_test:

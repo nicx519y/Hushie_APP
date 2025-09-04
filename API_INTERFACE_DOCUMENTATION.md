@@ -1043,9 +1043,195 @@ Content-Type: application/json
   }
 }
 ```
+### 1.5 获取用户播放历史
 
+接口描述：获取用户播放历史列表
+
+请求信息:
+- URL: `GET /user/history-list`
+- 方法: GET
+
+#### 上行参数: 无
+
+#### 请求示例
+
+```http
+GET /home/tabs HTTP/1.1
+Host: api.example.com
+X-API-Version: v1
+X-App-ID: hushie_app_v1
+X-Device-ID: device_123abc456def
+X-Timestamp: 1703123456789
+X-Nonce: Ab3X9kP2mN8QwErT
+X-Signature: a1b2c3d4e5f6789...
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### 响应格式
+
+```json
+{
+  "errNo": 0,
+  "data": {
+    "history": [
+      {
+        "id": "audio_003",
+        "cover": {
+          "urls": {
+            "x1": {
+              "url": "https://example.com/cover3_400x600.jpg",
+              "width": 400,
+              "height": 600
+            },
+            "x2": {
+              "url": "https://example.com/cover3_800x1200.jpg",
+              "width": 800,
+              "height": 1200
+            },
+            "x3": {
+              "url": "https://example.com/cover3_1200x1800.jpg",
+              "width": 1200,
+              "height": 1800
+            }
+          }
+        },
+        "bgImage": {
+          "urls": {
+            "x1": {
+                "url": "https://example.com/cover3_400x600.jpg",
+                "width": 400,
+                "height": 600
+              },
+              "x2": {
+                "url": "https://example.com/cover3_800x1200.jpg",
+                "width": 800,
+                "height": 1200
+            }
+          },
+        },
+        "title": "Favorite Song",
+        "desc": "User's favorite audio track",
+        "author": "Favorite Artist",
+        "avatar": "https://example.com/avatar3.jpg",
+        "play_times": 1200000,
+        "likes_count": 45000,
+        "audio_url": "https://example.com/audio3.mp3",
+        "duration": "180000",
+        "preview_start_ms": 30000,
+        "preview_duration_ms": 15000,
+        "is_liked": true,
+        "play_progress_ms": 3924801,
+        "play_duration_ms": 1204312,
+        "last_play_at_s": 124123123, // Unix 时间戳 单位秒
+      },
+      ...
+    ]
+  }
+}
+```
 
 ---
+
+
+### 1.6 提交用户播放进度
+
+接口描述: 提交用户播放一首音频的进度
+
+请求信息:
+- URL: `POST /user/play`
+- 方法: POST
+
+#### 上行参数:
+
+```json
+{
+  "id": "music_123",
+  "play_duration_ms": 12314,
+  "play_progress_ms": 12414 
+}
+```
+
+#### 请求示例
+
+```http
+GET /home/tabs HTTP/1.1
+Host: api.example.com
+X-API-Version: v1
+X-App-ID: hushie_app_v1
+X-Device-ID: device_123abc456def
+X-Timestamp: 1703123456789
+X-Nonce: Ab3X9kP2mN8QwErT
+X-Signature: a1b2c3d4e5f6789...
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+
+#### 响应格式:
+
+```json
+{
+  "errNo": 0,
+  "data": {
+    "history": [
+      {
+        "id": "audio_003",
+        "cover": {
+          "urls": {
+            "x1": {
+              "url": "https://example.com/cover3_400x600.jpg",
+              "width": 400,
+              "height": 600
+            },
+            "x2": {
+              "url": "https://example.com/cover3_800x1200.jpg",
+              "width": 800,
+              "height": 1200
+            },
+            "x3": {
+              "url": "https://example.com/cover3_1200x1800.jpg",
+              "width": 1200,
+              "height": 1800
+            }
+          }
+        },
+        "bgImage": {
+          "urls": {
+            "x1": {
+                "url": "https://example.com/cover3_400x600.jpg",
+                "width": 400,
+                "height": 600
+              },
+              "x2": {
+                "url": "https://example.com/cover3_800x1200.jpg",
+                "width": 800,
+                "height": 1200
+            }
+          },
+        },
+        "title": "Favorite Song",
+        "desc": "User's favorite audio track",
+        "author": "Favorite Artist",
+        "avatar": "https://example.com/avatar3.jpg",
+        "play_times": 1200000,
+        "likes_count": 45000,
+        "audio_url": "https://example.com/audio3.mp3",
+        "duration": "180000",
+        "preview_start_ms": 30000,
+        "preview_duration_ms": 15000,
+        "is_liked": true,
+        "play_progress_ms": 3924801,
+        "play_duration_ms": 1204312,
+        "last_play_at_s": 124123,
+      },
+      ...
+    ]
+  }
+}
+```
+
+
+
+
 
 ## 2. 首页相关接口
 

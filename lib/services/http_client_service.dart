@@ -175,6 +175,8 @@ class HttpClientService {
     // 添加基础请求头
     headers.addAll(ApiConfig.getDefaultHeaders());
 
+    print("添加请求头");
+
     // 添加自定义请求头
     if (customHeaders != null) {
       headers.addAll(customHeaders);
@@ -189,6 +191,8 @@ class HttpClientService {
       headers['X-Device-ID'] = 'unknown_device';
     }
 
+    // print("X-Device-ID 成功 ${headers['X-Device-ID']}");
+
     // 自动添加用户Token（如果存在）
     try {
       final accessToken = await AuthService.getAccessToken();
@@ -200,16 +204,23 @@ class HttpClientService {
       // 不添加Authorization头
     }
 
-    // 生成API签名
-    final signature = await _generateSignature(
-      method: method,
-      path: path,
-      headers: headers,
-      body: body,
-      timestamp: _generateTimestamp(),
-      nonce: _generateNonce(),
-    );
-    headers['X-Signature'] = signature;
+    // print("Authorization 成功 ${headers['Authorization']}");
+    try {
+      // 生成API签名
+      final signature = await _generateSignature(
+        method: method,
+        path: path,
+        headers: headers,
+        body: body,
+        timestamp: _generateTimestamp(),
+        nonce: _generateNonce(),
+      );
+      headers['X-Signature'] = signature;
+    } catch (e) {
+      print("生成签名失败: $e");
+    }
+
+    // print("X-Signature 成功 ${headers['X-Signature']}");
 
     return headers;
   }

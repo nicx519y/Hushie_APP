@@ -260,6 +260,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         children: [
           // 自定义顶部栏
           CustomAppBar(onSearchTap: _onSearchTap),
+          IconButton(
+            onPressed: () {
+              _initTabs();
+            },
+            icon: const Icon(Icons.refresh),
+          ),
           // Tab 栏
           if (_tabItems.isNotEmpty)
             CustomTabBar(

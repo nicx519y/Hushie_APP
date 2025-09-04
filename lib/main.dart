@@ -34,7 +34,7 @@ void main() async {
     initialMode: ApiMode.real, // 暂时使用Mock模式来测试
     debugMode: true, // 在开发环境启用调试模式
   );
-  print('🚀 [MAIN] API配置初始化完成');
+  print('�� [MAIN] API配置初始化完成');
 
   // 立即启动应用，服务初始化在启动页中处理
   print('🚀 [MAIN] 开始运行应用');
@@ -60,22 +60,29 @@ class MyApp extends StatelessWidget {
             statusBarBrightness: Brightness.light,
           ),
         ),
+        // 全局Checkbox主题配置
+        checkboxTheme: CheckboxThemeData(
+          // 填充颜色配置
+          fillColor: MaterialStateProperty.resolveWith<Color>((
+            Set<MaterialState> states,
+          ) {
+            if (states.contains(MaterialState.selected)) {
+              return const Color(0xFFFF2050); // 选中时的背景色（品牌色）
+            }
+            return Colors.transparent; // 未选中时透明
+          }),
+          // 勾选标记颜色
+          checkColor: MaterialStateProperty.all(Colors.white),
+          // 形状配置
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), // 圆角矩形
+          ),
+          // 聚焦效果
+          splashRadius: 30, // 点击波纹效果半径
+        ),
       ),
       home: const SplashPage(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
-
-// class MainApp extends StatelessWidget {
-//   const MainApp({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return MainLayout(
-//       pages: const [HomePage(), ProfilePage()],
-//       pageTitles: const ['Home', 'Profile'],
-//       initialIndex: 0,
-//     );
-//   }
-// }

@@ -15,6 +15,9 @@ class AudioItem {
   final DateTime? createdAt;
   final List<String>? tags;
   final bool isLiked;
+  final int? lastPlayedAtS; // 最后播放时间 单位：秒
+  final int? playDurationMs; // 播放时长 单位：毫秒
+  final int? playProgressMs; // 播放进度 单位：毫秒
 
   // 播放进度相关字段
   final Duration? playbackPosition; // 上次播放的进度位置
@@ -43,6 +46,9 @@ class AudioItem {
     this.previewStart, // 可预览开始时间点 单位：毫秒
     this.previewDuration, // 可预览时长 单位：毫秒
     this.isLiked = false, // 是否点赞
+    this.lastPlayedAtS, // 最后播放时间 单位：秒
+    this.playDurationMs, // 播放时长 单位：毫秒
+    this.playProgressMs, // 播放进度 单位：毫秒
   });
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
@@ -77,6 +83,9 @@ class AudioItem {
           ? Duration(milliseconds: map['preview_duration_ms'])
           : null,
       isLiked: map['is_liked'] ?? false,
+      lastPlayedAtS: map['last_play_at_s'] ?? 0,
+      playDurationMs: map['play_duration_ms'] ?? 0,
+      playProgressMs: map['play_progress_ms'] ?? 0,
     );
   }
 
@@ -100,6 +109,9 @@ class AudioItem {
       'preview_start_ms': previewStart?.inMilliseconds,
       'preview_duration_ms': previewDuration?.inMilliseconds,
       'is_liked': isLiked,
+      'last_play_at_s': lastPlayedAtS,
+      'play_duration_ms': playDurationMs,
+      'play_progress_ms': playProgressMs,
     };
   }
 
@@ -123,6 +135,9 @@ class AudioItem {
     Duration? previewStart,
     Duration? previewDuration,
     bool? isLiked,
+    int? lastPlayedAtS,
+    int? playDurationMs,
+    int? playProgressMs,
   }) {
     return AudioItem(
       id: id ?? this.id,
@@ -143,6 +158,9 @@ class AudioItem {
       previewStart: previewStart ?? this.previewStart,
       previewDuration: previewDuration ?? this.previewDuration,
       isLiked: isLiked ?? this.isLiked,
+      lastPlayedAtS: lastPlayedAtS ?? this.lastPlayedAtS,
+      playDurationMs: playDurationMs ?? this.playDurationMs,
+      playProgressMs: playProgressMs ?? this.playProgressMs,
     );
   }
 

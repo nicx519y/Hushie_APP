@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/api_response.dart';
 import 'api/google_auth_service.dart';
 import '../services/mock/google_auth_mock.dart';
@@ -26,15 +25,6 @@ class AuthService {
 
     if (_currentToken == null) {
       return null;
-    }
-
-    if (_currentToken!.isExpiringSoon) {
-      final refreshed = await _refreshTokenIfNeeded();
-      if (!refreshed) {
-        return null;
-      } else {
-        return _currentToken!.accessToken;
-      }
     }
 
     return _currentToken!.accessToken;

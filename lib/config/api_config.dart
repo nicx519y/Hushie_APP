@@ -35,6 +35,10 @@ class ApiConfig {
   static const int nonceLength = 16;
   static const int maxTimestampDrift = 300; // 5分钟时间戳漂移容忍度（秒）
 
+  static const String WebviewAboutUsUrl = 'https://hushie.ai/about-us';
+  static const String AccountDeletionAgreement =
+      'https://hushie.ai/account-deletion-agreement';
+
   /// 获取应用密钥（安全方式）
   /// 在实际项目中，这里应该实现更安全的密钥获取方式
   static String getAppSecret() {
@@ -120,6 +124,8 @@ class ApiEndpoints {
   // 用户相关接口
   static const String userProfile = '/user/profile';
   static const String userLikes = '/user/likes';
+  static const String userHistoryList = '/user/history-list';
+  static const String userPlayProgress = '/user/play';
 
   // 认证相关接口
   static const String googleLogin = '/auth/google/login';

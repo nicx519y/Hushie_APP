@@ -22,16 +22,19 @@ class HomeTabsService {
   /// 真实接口 - 获取首页tabs
   static Future<ApiResponse<List<TabItemModel>>> _getRealHomeTabs() async {
     try {
+      print("开始获取 tabs 数据");
+
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.homeTabs));
 
       final response = await HttpClientService.get(
         uri,
         timeout: _defaultTimeout,
       );
+      print("获取 tabs 数据完成 $response");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = json.decode(response.body);
-
+        print("Home tabs service : $jsonData");
         // 使用统一的JSON处理函数
         return ApiResponse.fromJson(jsonData, (dataJson) {
           final List<dynamic> tabsData = dataJson['tabs'] ?? [];
@@ -44,6 +47,7 @@ class HomeTabsService {
         return ApiResponse.error(errNo: response.statusCode);
       }
     } catch (e) {
+      print("tabs 数据获取失败 $e");
       return ApiResponse.error(errNo: -1);
     }
   }

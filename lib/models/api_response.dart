@@ -1,3 +1,5 @@
+import 'audio_item.dart';
+
 class ApiResponse<T> {
   final T? data;
   final int errNo;
@@ -119,5 +121,23 @@ class SimpleResponse<T> {
 
   Map<String, dynamic> toMap() {
     return {'items': items};
+  }
+}
+
+/// 用户播放历史响应模型
+class UserHistoryResponse {
+  final List<AudioItem> history;
+
+  UserHistoryResponse({required this.history});
+
+  factory UserHistoryResponse.fromJson(List<AudioItem> history) {
+    return UserHistoryResponse(
+      history: history
+        ..sort(
+          (a, b) =>
+              (b.lastPlayedAt?.compareTo(a.lastPlayedAt ?? DateTime.now()) ??
+              0),
+        ),
+    );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hushie_app/components/confirm_dialog.dart';
 import '../services/auth_service.dart';
+import '../components/custom_outline_button.dart';
 import 'about_us_page.dart';
 import 'account_page.dart';
 
@@ -12,6 +14,7 @@ class SettingPage extends StatefulWidget {
 
 class _SettingPageState extends State<SettingPage> {
   bool _isLoggedIn = false;
+  bool _isLogoutting = false;
 
   @override
   void initState() {
@@ -26,7 +29,7 @@ class _SettingPageState extends State<SettingPage> {
         _isLoggedIn = token != null && token.isNotEmpty;
       });
     } catch (e) {
-      print('检查登录状态失败: $e');
+      print('Check login status failed: $e');
       setState(() {
         _isLoggedIn = false;
       });
@@ -34,49 +37,36 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _handleLogout() async {
-    try {
-      await AuthService.signOut();
-      setState(() {
-        _isLoggedIn = false;
-      });
+    if (_isLogoutting || !_isLoggedIn) return;
 
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('已成功登出')));
-      }
+    setState(() {
+      _isLogoutting = true;
+    });
+
+    try {
+      ConfirmDialog.showWithLoading(
+        context: context,
+        title: 'Log out of your account?',
+        confirmText: 'Log out',
+        cancelText: 'Cancel',
+        onConfirm: () async {
+          await AuthService.signOut();
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('登出失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
       }
+    } finally {
+      setState(() {
+        _isLogoutting = false;
+      });
     }
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('确认登出'),
-          content: const Text('确定要登出吗？'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _handleLogout();
-              },
-              child: const Text('确定'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -87,7 +77,7 @@ class _SettingPageState extends State<SettingPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -95,13 +85,14 @@ class _SettingPageState extends State<SettingPage> {
           style: TextStyle(
             color: Colors.black,
             fontSize: 18,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Container(
+        padding: const EdgeInsets.all(0),
+        decoration: const BoxDecoration(color: Color(0xFFF8F7F7)),
         child: Column(
           children: [
             // About Us 选项
@@ -117,7 +108,6 @@ class _SettingPageState extends State<SettingPage> {
 
             // Account 选项（仅登录状态显示）
             if (_isLoggedIn) ...[
-              const SizedBox(height: 8),
               _buildSettingItem(
                 title: 'Account',
                 onTap: () {
@@ -131,27 +121,15 @@ class _SettingPageState extends State<SettingPage> {
               ),
             ],
 
-            const Spacer(),
+            const SizedBox(height: 30),
 
             // 登出按钮（仅登录状态显示）
             if (_isLoggedIn)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: _showLogoutDialog,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Log out',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                ),
+              CustomOutlineButton(
+                disabled: _isLogoutting,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                onPressed: _handleLogout,
+                text: 'Log out',
               ),
           ],
         ),
@@ -164,26 +142,25 @@ class _SettingPageState extends State<SettingPage> {
     required VoidCallback onTap,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-      ),
+      height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      decoration: const BoxDecoration(color: Colors.white),
       child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
         title: Text(
           title,
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            color: Color(0xFF333333),
           ),
         ),
         trailing: const Icon(
           Icons.arrow_forward_ios,
-          color: Colors.grey,
+          color: Color(0xFFDFDFDF),
           size: 16,
         ),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
   }
