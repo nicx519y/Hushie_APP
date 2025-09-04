@@ -1,7 +1,30 @@
 import 'dart:convert';
+import 'dart:async';
 import '../models/api_response.dart';
 import 'api/google_auth_service.dart';
 import 'secure_storage_service.dart';
+
+/// 认证状态枚举
+enum AuthStatus {
+  unknown, // 未知状态（初始化中）
+  authenticated, // 已认证
+  unauthenticated, // 未认证
+}
+
+/// 认证状态变化事件
+class AuthStatusChangeEvent {
+  final AuthStatus status;
+  final GoogleAuthResponse? user;
+  final DateTime timestamp;
+
+  AuthStatusChangeEvent({required this.status, this.user, DateTime? timestamp})
+    : timestamp = timestamp ?? DateTime.now();
+
+  @override
+  String toString() {
+    return 'AuthStatusChangeEvent(status: $status, user: ${user?.email}, timestamp: $timestamp)';
+  }
+}
 
 /// 认证服务 - 管理Token生命周期和自动刷新
 class AuthService {
@@ -12,6 +35,31 @@ class AuthService {
 
   static AccessTokenResponse? _currentToken;
   static GoogleAuthResponse? _currentUser;
+  static AuthStatus _currentStatus = AuthStatus.unknown;
+
+  // 认证状态变化事件流
+  static final StreamController<AuthStatusChangeEvent> _authStatusController =
+      StreamController<AuthStatusChangeEvent>.broadcast();
+
+  /// 认证状态变化事件流（供外部订阅）
+  static Stream<AuthStatusChangeEvent> get authStatusChanges =>
+      _authStatusController.stream;
+
+  /// 获取当前认证状态
+  static AuthStatus get currentAuthStatus => _currentStatus;
+
+  /// 通知认证状态变化
+  static void _notifyAuthStatusChange(
+    AuthStatus status, {
+    GoogleAuthResponse? user,
+  }) {
+    if (_currentStatus != status) {
+      _currentStatus = status;
+      final event = AuthStatusChangeEvent(status: status, user: user);
+      _authStatusController.add(event);
+      print('🔐 [AUTH] 认证状态变化: ${event}');
+    }
+  }
 
   /// 获取当前访问Token
   static Future<String?> getAccessToken() async {
@@ -69,9 +117,14 @@ class AuthService {
       _currentToken = accessToken;
       _currentUser = googleAuth;
 
+      // 通知登录状态变化
+      _notifyAuthStatusChange(AuthStatus.authenticated, user: googleAuth);
+
       return googleAuthResult;
     } catch (e) {
       print('Google登录流程失败: $e');
+      // 通知登录失败
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
       return ApiResponse.error(errNo: -1);
     }
   }
@@ -88,6 +141,9 @@ class AuthService {
 
       _currentToken = null;
       _currentUser = null;
+
+      // 通知登出状态变化
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
     } catch (e) {
       print('登出失败: $e');
       // 即使服务器登出失败，也要清除本地数据
@@ -95,6 +151,9 @@ class AuthService {
       await _clearUserFromSecureStorage();
       _currentToken = null;
       _currentUser = null;
+
+      // 通知登出状态变化
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
     }
   }
 
@@ -110,6 +169,9 @@ class AuthService {
 
       _currentToken = null;
       _currentUser = null;
+
+      // 通知账户删除状态变化
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
     } catch (e) {
       print('删除账户失败: $e');
       // 即使服务器删除失败，也要清除本地数据
@@ -117,6 +179,9 @@ class AuthService {
       await _clearUserFromSecureStorage();
       _currentToken = null;
       _currentUser = null;
+
+      // 通知账户删除状态变化
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
       rethrow; // 重新抛出异常，让调用者处理
     }
   }
@@ -136,10 +201,48 @@ class AuthService {
   static Future<bool> isSignedIn() async {
     try {
       final token = await getAccessToken();
-      return token != null && token.isNotEmpty;
+      final isValid = token != null && token.isNotEmpty;
+
+      // 更新认证状态（如果状态未知）
+      if (_currentStatus == AuthStatus.unknown) {
+        _notifyAuthStatusChange(
+          isValid ? AuthStatus.authenticated : AuthStatus.unauthenticated,
+          user: _currentUser,
+        );
+      }
+
+      return isValid;
     } catch (e) {
       print('🔐 [AUTH] isSignedIn异常: $e');
+      // 通知认证状态为未知
+      if (_currentStatus != AuthStatus.unauthenticated) {
+        _notifyAuthStatusChange(AuthStatus.unauthenticated);
+      }
       return false;
+    }
+  }
+
+  /// 初始化认证状态（应用启动时调用）
+  static Future<void> initializeAuthStatus() async {
+    try {
+      print('🔐 [AUTH] 初始化认证状态');
+      await _loadTokenFromStorage();
+      await _loadUserFromStorage();
+
+      final isValid =
+          _currentToken != null &&
+          _currentToken!.accessToken.isNotEmpty &&
+          !_currentToken!.isExpiringSoon;
+
+      _notifyAuthStatusChange(
+        isValid ? AuthStatus.authenticated : AuthStatus.unauthenticated,
+        user: _currentUser,
+      );
+
+      print('🔐 [AUTH] 认证状态初始化完成: ${_currentStatus}');
+    } catch (e) {
+      print('🔐 [AUTH] 初始化认证状态失败: $e');
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
     }
   }
 
@@ -193,6 +296,8 @@ class AuthService {
     // 刷新失败，清除Token
     await _clearTokenFromSecureStorage();
     _currentToken = null;
+    // 通知Token失效
+    _notifyAuthStatusChange(AuthStatus.unauthenticated);
     return false;
   }
 
@@ -285,8 +390,17 @@ class AuthService {
       await SecureStorageService.clearAllAuthData();
       _currentToken = null;
       _currentUser = null;
+
+      // 通知认证数据清除
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
     } catch (e) {
       print('清除所有认证数据失败: $e');
     }
+  }
+
+  /// 关闭事件流（应用退出时调用）
+  static Future<void> dispose() async {
+    await _authStatusController.close();
+    print('🔐 [AUTH] 认证服务事件流已关闭');
   }
 }

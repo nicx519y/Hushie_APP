@@ -7,11 +7,13 @@ import '../components/audio_list.dart';
 import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
+import '../services/user_likes_manager.dart';
 import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
 import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
 import 'login_page.dart';
 import 'setting_page.dart';
+import 'dart:async';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -38,6 +40,9 @@ class _ProfilePageState extends State<ProfilePage>
   bool _isLoadingLiked = false;
   bool _isRefreshingAuth = false;
 
+  // 认证状态订阅
+  StreamSubscription<AuthStatusChangeEvent>? _authSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -55,8 +60,61 @@ class _ProfilePageState extends State<ProfilePage>
       }
     });
 
+    // 订阅认证状态变化事件
+    _subscribeToAuthChanges();
+
     // 异步初始化登录状态
     _initializeAuthState();
+  }
+
+  /// 订阅认证状态变化事件
+  void _subscribeToAuthChanges() {
+    _authSubscription?.cancel(); // 取消之前的订阅
+
+    _authSubscription = AuthService.authStatusChanges.listen((event) {
+      print('👤 [PROFILE] 收到认证状态变化事件: ${event.status}');
+
+      // 认证状态变化时，刷新页面状态
+      _refreshAuthState();
+
+      // 根据状态变化刷新数据
+      switch (event.status) {
+        case AuthStatus.authenticated:
+          // 用户登录，重新加载数据
+          _loadDataAfterLogin();
+          break;
+        case AuthStatus.unauthenticated:
+          // 用户登出，清空页面数据
+          _clearDataAfterLogout();
+          break;
+        case AuthStatus.unknown:
+          // 状态未知，暂不处理
+          break;
+      }
+    });
+
+    print('👤 [PROFILE] 已订阅认证状态变化事件');
+  }
+
+  /// 登录后加载数据
+  Future<void> _loadDataAfterLogin() async {
+    print('👤 [PROFILE] 用户已登录，重新加载页面数据');
+
+    // 并行加载历史和喜欢数据
+    await Future.wait([_loadHistoryData(), _loadLikedAudios()]);
+  }
+
+  /// 登出后清空页面数据
+  void _clearDataAfterLogout() {
+    print('👤 [PROFILE] 用户已登出，清空页面数据');
+
+    if (mounted) {
+      setState(() {
+        historyAudios.clear();
+        likedAudios.clear();
+        userName = '';
+      });
+    }
   }
 
   /// 异步初始化认证状态
@@ -70,6 +128,9 @@ class _ProfilePageState extends State<ProfilePage>
             userName = user?.displayName ?? '';
           });
         }
+
+        // 登录状态下加载数据
+        await _loadDataAfterLogin();
       }
     } catch (e) {
       print('初始化认证状态失败: $e');
@@ -78,6 +139,10 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   void dispose() {
+    // 取消认证状态订阅
+    _authSubscription?.cancel();
+    _authSubscription = null;
+
     // 取消路由观察者订阅
     final route = ModalRoute.of(context);
     if (route != null) {
@@ -86,29 +151,6 @@ class _ProfilePageState extends State<ProfilePage>
 
     _tabController.dispose();
     super.dispose();
-  }
-
-  // 注册路由观察者 用于监听登录状态
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 注册路由观察者
-    final route = ModalRoute.of(context);
-    if (route != null) {
-      globalRouteObserver.subscribe(this, route);
-    }
-  }
-
-  // 当从其他页面返回时，重新检查登录状态
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    _refreshAuthState();
-  }
-
-  @override
-  void didPushNext() {
-    super.didPushNext();
   }
 
   /// 刷新认证状态
@@ -164,51 +206,105 @@ class _ProfilePageState extends State<ProfilePage>
 
   // 加载历史数据
   Future<void> _loadHistoryData() async {
-    if (_isLoadingHistory) return;
+    if (_isLoadingHistory || !isLoggedIn) return;
 
     setState(() {
       _isLoadingHistory = true;
     });
 
     try {
-      // 从 AudioHistoryManager 获取最近的历史记录
+      // 使用 AudioHistoryManager 获取历史记录
       final historyList = await AudioHistoryManager.instance.getAudioHistory();
 
-      setState(() {
-        historyAudios = historyList;
-      });
+      if (mounted) {
+        setState(() {
+          historyAudios = historyList;
+        });
+      }
     } catch (e) {
       print('加载历史数据失败: $e');
     } finally {
-      setState(() {
-        _isLoadingHistory = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingHistory = false;
+        });
+      }
     }
   }
 
-  Future<void> _loadMoreLikedAudios() async {
-    if (_isLoadingLiked) return;
+  // 加载喜欢数据
+  Future<void> _loadLikedAudios() async {
+    if (_isLoadingLiked || !isLoggedIn) return;
 
     setState(() {
       _isLoadingLiked = true;
     });
 
     try {
-      final response = await UserLikesService.getUserLikedAudios();
-      setState(() {
-        likedAudios.addAll(response);
-      });
+      // 使用 UserLikesManager 获取喜欢列表
+      final likesList = await UserLikesManager.instance.getLikedAudios();
+
+      if (mounted) {
+        setState(() {
+          likedAudios = likesList;
+        });
+      }
+    } catch (e) {
+      print('加载喜欢数据失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLiked = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMoreLikedAudios() async {
+    if (_isLoadingLiked || !isLoggedIn) return;
+
+    setState(() {
+      _isLoadingLiked = true;
+    });
+
+    try {
+      // 获取更多喜欢数据（这里可以实现分页逻辑）
+      final moreLikedAudios = await UserLikesManager.instance.getLikedAudios(
+        forceRefresh: true,
+      );
+
+      if (mounted) {
+        setState(() {
+          likedAudios = moreLikedAudios; // 替换而不是添加，因为是完整列表
+        });
+      }
     } catch (e) {
       print('加载更多喜欢数据失败: $e');
     } finally {
-      setState(() {
-        _isLoadingLiked = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingLiked = false;
+        });
+      }
     }
   }
 
   Future<void> _refreshLikedAudios() async {
-    if (_isLoadingHistory) return;
+    if (!isLoggedIn) return;
+
+    try {
+      // 刷新喜欢列表
+      final refreshedLikedAudios = await UserLikesManager.instance
+          .refreshLikedAudios();
+
+      if (mounted) {
+        setState(() {
+          likedAudios = refreshedLikedAudios;
+        });
+      }
+    } catch (e) {
+      print('刷新喜欢数据失败: $e');
+    }
   }
 
   @override

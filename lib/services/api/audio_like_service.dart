@@ -24,7 +24,7 @@ class AudioLikeService {
 
       final response = await HttpClientService.postJson(
         uri,
-        body: {'audio_id': audioId, 'is_liked': isLiked},
+        body: {'cid': audioId, 'action': isLiked ? 'like' : 'unlike'},
         timeout: _defaultTimeout,
       );
 

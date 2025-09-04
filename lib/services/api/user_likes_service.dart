@@ -8,16 +8,23 @@ class UserLikesService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 获取用户喜欢的音频列表
-  static Future<List<AudioItem>> getUserLikedAudios({int count = 20}) async {
-    return _getRealUserLikedAudios(count: count);
+  static Future<List<AudioItem>> getUserLikedAudios({
+    String? cid,
+    int count = 20,
+  }) async {
+    return _getRealUserLikedAudios(cid: cid, count: count);
   }
 
   /// 真实接口 - 获取用户喜欢的音频列表
   static Future<List<AudioItem>> _getRealUserLikedAudios({
+    String? cid,
     int count = 20,
   }) async {
     try {
-      final queryParams = <String, String>{'count': count.toString()};
+      final queryParams = <String, String>{
+        'count': count.toString(),
+        'cid': cid ?? '',
+      };
 
       final uri = Uri.parse(
         ApiConfig.getFullUrl(ApiEndpoints.userLikes),
