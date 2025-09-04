@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'image_model.dart';
 
 class AudioItem {
@@ -53,7 +55,7 @@ class AudioItem {
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
     return AudioItem(
-      id: map['id']?.toString() ?? '',
+      id: map['id'].toString(),
       cover: ImageModel.fromJson(map['cover'] ?? {}),
       title: map['title'] ?? '',
       desc: map['desc'] ?? '',
@@ -116,7 +118,7 @@ class AudioItem {
   }
 
   AudioItem copyWith({
-    String? id,
+    Int32? id,
     String? cid,
     ImageModel? cover,
     String? title,
@@ -140,7 +142,7 @@ class AudioItem {
     int? playProgressMs,
   }) {
     return AudioItem(
-      id: id ?? this.id,
+      id: id as String,
       cover: cover ?? this.cover,
       title: title ?? this.title,
       desc: desc ?? this.desc,

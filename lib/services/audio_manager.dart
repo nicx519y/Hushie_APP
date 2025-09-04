@@ -64,7 +64,10 @@ class AudioManager {
         final currentAudio = _currentAudioSubject.value;
         if (currentAudio != null) {
           print('记录播放开始: ${currentAudio.title}');
-          AudioHistoryManager.instance.recordPlayStart(currentAudio);
+          AudioHistoryManager.instance.recordPlayStart(
+            currentAudio,
+            _positionSubject.value.inMilliseconds,
+          );
         }
       } else {
         print('播放状态: 停止播放');
@@ -73,8 +76,8 @@ class AudioManager {
           print('记录播放结束: ${currentAudio.title}');
           AudioHistoryManager.instance.recordPlayStop(
             currentAudio.id,
-            _positionSubject.value,
-            _durationSubject.value,
+            _positionSubject.value.inMilliseconds,
+            _durationSubject.value.inMilliseconds,
           );
         }
       }
@@ -164,12 +167,10 @@ class AudioManager {
     print('AudioManager: AudioPlaylist 初始化完成');
 
     // 从播放历史列表中获取最后一条播放记录
-    final lastHistory = await AudioHistoryManager.instance.getRecentHistory(
-      limit: 1,
-    );
+    final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
     if (lastHistory.isNotEmpty) {
-      print('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
-      AudioPlaylist.instance.addAudio(lastHistory.first);
+      print('AudioManager: 最后一条播放记录: ${lastHistory.last.title}');
+      AudioPlaylist.instance.addAudio(lastHistory.last);
     } else {
       print('AudioManager: 没有播放历史记录');
     }
@@ -400,8 +401,8 @@ class AudioManager {
       final totalDuration = _durationSubject.value;
       await AudioHistoryManager.instance.recordPlayStop(
         currentAudio.id,
-        currentPosition,
-        totalDuration,
+        currentPosition.inMilliseconds,
+        totalDuration.inMilliseconds,
       );
     }
 

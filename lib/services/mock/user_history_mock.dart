@@ -8,8 +8,7 @@ class UserHistoryMock {
   static const int _totalMockHistoryItems = 20; // 模拟历史记录数量
 
   /// 获取Mock用户播放历史数据
-  static Future<ApiResponse<UserHistoryResponse>>
-  getMockUserHistoryList() async {
+  static Future<UserHistoryResponse> getMockUserHistoryList() async {
     try {
       // 模拟网络延迟
       await MockData.simulateNetworkDelay(Random().nextInt(800) + 200);
@@ -21,9 +20,9 @@ class UserHistoryMock {
       final historyItems = _generateHistoryItems(baseItems);
 
       final historyResponse = UserHistoryResponse(history: historyItems);
-      return ApiResponse.success(data: historyResponse, errNo: 0);
+      return historyResponse;
     } catch (e) {
-      return ApiResponse.error(errNo: 500);
+      throw Exception('获取用户播放历史列表失败: $e');
     }
   }
 

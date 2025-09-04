@@ -11,7 +11,7 @@ class UserHistoryService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 获取用户播放历史列表
-  static Future<ApiResponse<UserHistoryResponse>> getUserHistoryList() async {
+  static Future<UserHistoryResponse> getUserHistoryList() async {
     if (ApiService.currentMode == ApiMode.mock) {
       return UserHistoryMock.getMockUserHistoryList();
     } else {
@@ -41,8 +41,7 @@ class UserHistoryService {
   }
 
   /// 真实接口 - 获取用户播放历史列表
-  static Future<ApiResponse<UserHistoryResponse>>
-  _getRealUserHistoryList() async {
+  static Future<UserHistoryResponse> _getRealUserHistoryList() async {
     try {
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.userHistoryList));
 
@@ -54,22 +53,19 @@ class UserHistoryService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = json.decode(response.body);
 
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) => UserHistoryResponse.fromJson(
-            (dataJson['history'] as List<dynamic>?)
-                    ?.map(
-                      (item) => AudioItem.fromMap(item as Map<String, dynamic>),
-                    )
-                    .toList() ??
-                [],
-          ),
+        return UserHistoryResponse.fromJson(
+          (jsonData['history'] as List<dynamic>?)
+                  ?.map(
+                    (item) => AudioItem.fromMap(item as Map<String, dynamic>),
+                  )
+                  .toList() ??
+              [],
         );
       } else {
-        return ApiResponse.error(errNo: response.statusCode);
+        throw Exception('获取用户播放历史列表失败: ${response.statusCode}');
       }
     } catch (e) {
-      return ApiResponse.error(errNo: -1);
+      throw Exception('获取用户播放历史列表失败: $e');
     }
   }
 
@@ -96,7 +92,9 @@ class UserHistoryService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 &&
+          response.body.isNotEmpty &&
+          json.decode(response.body)['errNo'] == 0) {
         final Map<String, dynamic> jsonData = json.decode(response.body);
         return ApiResponse.fromJson(
           jsonData,

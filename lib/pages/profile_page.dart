@@ -36,26 +36,16 @@ class _ProfilePageState extends State<ProfilePage>
   List<AudioItem> likedAudios = [];
   bool _isLoadingHistory = false;
   bool _isLoadingLiked = false;
-  int _likedPage = 1;
-  bool _hasMoreLiked = true;
-  String? _lastLikedId; // 用于存储最后一个喜欢的音频ID，以便进行分页
-
-  // 防抖相关
   bool _isRefreshingAuth = false;
-  DateTime? _lastAuthRefreshTime;
-  static const Duration _authRefreshCooldown = Duration(seconds: 2); // 2秒冷却时间
 
   @override
   void initState() {
-    print('👤 [PROFILE_PAGE] ProfilePage initState开始');
     super.initState();
 
-    print('👤 [PROFILE_PAGE] 初始化tabItems');
     _tabItems = [
       const TabItemModel(id: 'history', label: 'History'),
       const TabItemModel(id: 'like', label: 'Like'),
     ];
-    print('👤 [PROFILE_PAGE] 设置TabController');
     _tabController = TabController(length: _tabItems.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
@@ -66,9 +56,7 @@ class _ProfilePageState extends State<ProfilePage>
     });
 
     // 异步初始化登录状态
-    print('👤 [PROFILE_PAGE] 开始异步初始化认证状态');
     _initializeAuthState();
-    print('👤 [PROFILE_PAGE] ProfilePage initState完成');
   }
 
   /// 异步初始化认证状态
@@ -100,10 +88,10 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
+  // 注册路由观察者 用于监听登录状态
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     // 注册路由观察者
     final route = ModalRoute.of(context);
     if (route != null) {
@@ -111,47 +99,28 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
+  // 当从其他页面返回时，重新检查登录状态
   @override
   void didPopNext() {
     super.didPopNext();
-
-    // 当从其他页面返回时，重新检查登录状态
-    print('👤 [PROFILE_PAGE] 从其他页面返回，重新检查登录状态');
     _refreshAuthState();
   }
 
   @override
   void didPushNext() {
     super.didPushNext();
-
-    // 当跳转到其他页面时，可以做一些清理工作
-    print('👤 [PROFILE_PAGE] 跳转到其他页面');
   }
 
   /// 刷新认证状态
   Future<void> _refreshAuthState() async {
     // 防抖逻辑：避免频繁调用
     if (_isRefreshingAuth) {
-      print('👤 [PROFILE_PAGE] 认证状态刷新中，跳过重复调用');
       return;
     }
 
-    // 冷却时间检查：避免短时间内重复刷新
-    if (_lastAuthRefreshTime != null) {
-      final timeSinceLastRefresh = DateTime.now().difference(
-        _lastAuthRefreshTime!,
-      );
-      if (timeSinceLastRefresh < _authRefreshCooldown) {
-        print('👤 [PROFILE_PAGE] 认证状态刷新冷却中，跳过调用');
-        return;
-      }
-    }
+    _isRefreshingAuth = true;
 
     try {
-      _isRefreshingAuth = true;
-      _lastAuthRefreshTime = DateTime.now();
-
-      print('👤 [PROFILE_PAGE] 开始刷新认证状态');
       final newLoginState = await AuthService.isSignedIn();
       final oldLoginState = isLoggedIn; // 保存旧状态用于比较
 
@@ -171,10 +140,6 @@ class _ProfilePageState extends State<ProfilePage>
             userName = '';
           });
         }
-
-        print(
-          '👤 [PROFILE_PAGE] 认证状态刷新完成: $newLoginState (之前: $oldLoginState)',
-        );
       }
     } catch (e) {
       print('刷新认证状态失败: $e');
@@ -199,90 +164,34 @@ class _ProfilePageState extends State<ProfilePage>
 
   // 加载历史数据
   Future<void> _loadHistoryData() async {
+    if (_isLoadingHistory) return;
+
     setState(() {
       _isLoadingHistory = true;
     });
 
     try {
       // 从 AudioHistoryManager 获取最近的历史记录
-      final historyList = await AudioHistoryManager.instance.getRecentHistory(
-        limit: 20,
-      );
+      final historyList = await AudioHistoryManager.instance.getAudioHistory();
 
       setState(() {
         historyAudios = historyList;
-        _isLoadingHistory = false;
       });
     } catch (e) {
       print('加载历史数据失败: $e');
+    } finally {
       setState(() {
         _isLoadingHistory = false;
       });
     }
   }
 
-  // 加载喜欢的音频数据
-  Future<void> _loadLikedAudios({bool refresh = false}) async {
-    if (refresh) {
-      setState(() {
-        _likedPage = 1;
-        likedAudios.clear();
-        _hasMoreLiked = true;
-        _lastLikedId = null; // 刷新时重置最后一个ID
-      });
-    }
-
-    if (!_hasMoreLiked || _isLoadingLiked) return;
-
-    setState(() {
-      _isLoadingLiked = true;
-    });
-
-    try {
-      final response = await ApiService.getUserLikedAudios(
-        cid: _likedPage == 1 ? null : _lastLikedId,
-        count: 20,
-      );
-
-      if (mounted) {
-        setState(() {
-          _isLoadingLiked = false;
-
-          if (response.errNo == 0 && response.data != null) {
-            if (refresh || _likedPage == 1) {
-              likedAudios = response.data!.items;
-            } else {
-              likedAudios.addAll(response.data!.items);
-            }
-
-            // 更新分页信息
-            if (response.data!.items.isNotEmpty) {
-              _lastLikedId = response.data!.items.last.id;
-              _hasMoreLiked = response.data!.items.length >= 20;
-            } else {
-              _hasMoreLiked = false;
-            }
-            _likedPage++;
-          } else {
-            print('获取喜欢音频失败: 错误码 ${response.errNo}');
-          }
-        });
-      }
-    } catch (e) {
-      print('加载喜欢音频失败: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingLiked = false;
-        });
-      }
-    }
+  Future<void> _loadMoreLikedAudios() async {
+    if (_isLoadingLiked) return;
   }
 
-  // 手动刷新认证状态（仅用于测试）
-  Future<void> _manualRefreshAuth() async {
-    print('👤 [PROFILE_PAGE] 手动刷新认证状态');
-    await _refreshAuthState();
-    print('👤 [PROFILE_PAGE] 手动刷新认证状态完成');
+  Future<void> _refreshLikedAudios() async {
+    if (_isLoadingHistory) return;
   }
 
   @override
@@ -399,30 +308,10 @@ class _ProfilePageState extends State<ProfilePage>
                     ? _buildEmptyWidget('No history')
                     : AudioList(
                         padding: const EdgeInsets.only(bottom: 120),
-                        audios: historyAudios
-                            .map(
-                              (history) => AudioItem(
-                                id: history.id,
-                                cover: history.cover,
-                                bgImage: history.bgImage,
-                                title: history.title,
-                                desc: history.desc,
-                                author: history.author,
-                                avatar: history.avatar,
-                                playTimes: history.playTimes,
-                                likesCount: history.likesCount,
-                                audioUrl: history.audioUrl,
-                                duration: history.duration,
-                                createdAt: history.createdAt,
-                                tags: history.tags,
-                                playbackPosition: history.playbackPosition,
-                                lastPlayedAt: history.lastPlayedAt,
-                                previewStart: history.previewStart,
-                                previewDuration: history.previewDuration,
-                              ),
-                            )
-                            .toList(),
+                        audios: historyAudios,
                         emptyWidget: _buildEmptyWidget('No history'),
+                        onRefresh: _loadHistoryData,
+                        hasMoreData: false,
                       ),
                 // Like 标签页
                 _isLoadingLiked && likedAudios.isEmpty
@@ -433,6 +322,9 @@ class _ProfilePageState extends State<ProfilePage>
                         audios: likedAudios,
                         padding: const EdgeInsets.only(bottom: 120),
                         emptyWidget: _buildEmptyWidget('No liked content'),
+                        onRefresh: _refreshLikedAudios,
+                        hasMoreData: true,
+                        onLoadMore: _loadMoreLikedAudios,
                       ),
               ],
             ),

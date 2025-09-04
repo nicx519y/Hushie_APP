@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../models/audio_item.dart';
-import 'audio_history_database.dart';
+import '../services/api/user_history_service.dart';
+import 'auth_service.dart';
 
 /// 音频播放历史管理器
 /// 整合本地数据库存储和内存数据池，提供统一的历史管理接口
@@ -8,49 +9,39 @@ class AudioHistoryManager {
   static final AudioHistoryManager _instance = AudioHistoryManager._internal();
   static AudioHistoryManager get instance => _instance;
 
-  final AudioHistoryDatabase _database = AudioHistoryDatabase.instance;
   Timer? _progressUpdateTimer; // 移除 late 关键字
   DateTime? _lastProgressUpdate;
   String? _currentTrackingAudioId;
+  List<AudioItem> _historyCache = []; // 播放历史
+
+  static const int progressUpdateIntervalS = 30; // 30秒更新一次
 
   AudioHistoryManager._internal();
 
   /// 初始化历史管理器
   Future<void> initialize() async {
-    try {
-      await _database.initialize();
-      print('AudioHistoryManager 初始化成功');
-    } catch (e) {
-      print('AudioHistoryManager 初始化失败: $e');
-    }
+    await getAudioHistory(); // 初始化历史记录
   }
 
   /// 记录音频开始播放
-  Future<void> recordPlayStart(AudioItem audioItem) async {
+  Future<void> recordPlayStart(AudioItem audioItem, int progressMs) async {
+    final bool isLogin = await AuthService.isSignedIn();
+
+    if (!isLogin) {
+      throw Exception('User not login');
+    }
+
     try {
-      // 创建或更新历史记录，进度设为0
-      final history = AudioItem(
-        id: audioItem.id,
-        cover: audioItem.cover,
-        bgImage: audioItem.bgImage,
-        title: audioItem.title,
-        desc: audioItem.desc,
-        author: audioItem.author,
-        avatar: audioItem.avatar,
-        playTimes: audioItem.playTimes,
-        likesCount: audioItem.likesCount,
-        audioUrl: audioItem.audioUrl,
-        duration: audioItem.duration,
-        createdAt: audioItem.createdAt,
-        tags: audioItem.tags,
-        playbackPosition: Duration.zero, // 开始播放，进度为0
-        lastPlayedAt: DateTime.now(),
-        previewStart: audioItem.previewStart,
-        previewDuration: audioItem.previewDuration,
+      // 存储到数据库
+      final response = await UserHistoryService.submitPlayProgress(
+        audioId: audioItem.id,
+        playDurationMs: 0,
+        playProgressMs: progressMs,
       );
 
-      // 存储到数据库
-      await _database.addOrUpdateHistory(history);
+      if (response.errNo == 0) {
+        _historyCache = response.data?.history ?? [];
+      }
 
       // 启动进度追踪
       _startProgressTracking(audioItem.id);
@@ -64,23 +55,24 @@ class AudioHistoryManager {
   /// 记录音频停止播放
   Future<void> recordPlayStop(
     String audioId,
-    Duration currentPosition,
-    Duration totalDuration,
+    int playProgressMs,
+    int playDurationMs,
   ) async {
+    final bool isLogin = await AuthService.isSignedIn();
+
+    if (!isLogin) {
+      throw Exception('User not login');
+    }
+
     try {
       // 停止进度追踪
       _stopProgressTracking();
 
-      // 如果播放完成（播放进度 >= 95%），将进度设为0
-      final isCompleted =
-          currentPosition.inMilliseconds >= totalDuration.inMilliseconds * 0.95;
-      final finalPosition = isCompleted ? Duration.zero : currentPosition;
-
       // 更新数据库中的播放进度
-      await _database.updatePlaybackProgress(audioId, finalPosition);
-
-      print(
-        '记录播放停止: $audioId, 进度: ${_formatDuration(finalPosition)} ${isCompleted ? '(已完成)' : ''}',
+      await UserHistoryService.submitPlayProgress(
+        audioId: audioId,
+        playDurationMs: playDurationMs,
+        playProgressMs: playProgressMs,
       );
     } catch (e) {
       print('记录播放停止失败: $e');
@@ -93,6 +85,12 @@ class AudioHistoryManager {
     Duration currentPosition, {
     bool forceUpdate = false,
   }) async {
+    final isLogin = await AuthService.isSignedIn();
+
+    if (!isLogin) {
+      throw Exception('User not login');
+    }
+
     try {
       final now = DateTime.now();
 
@@ -101,13 +99,17 @@ class AudioHistoryManager {
         final timeSinceLastUpdate = now
             .difference(_lastProgressUpdate!)
             .inSeconds;
-        if (timeSinceLastUpdate < AudioHistoryDatabase.progressUpdateInterval) {
+        if (timeSinceLastUpdate < progressUpdateIntervalS) {
           return; // 还没到更新间隔
         }
       }
 
       // 更新数据库中的进度
-      await _database.updatePlaybackProgress(audioId, currentPosition);
+      await UserHistoryService.submitPlayProgress(
+        audioId: audioId,
+        playDurationMs: 0,
+        playProgressMs: currentPosition.inMilliseconds,
+      );
 
       _lastProgressUpdate = now;
 
@@ -138,7 +140,7 @@ class AudioHistoryManager {
 
     // 启动定时器，使用配置的间隔时间
     _progressUpdateTimer = Timer.periodic(
-      Duration(seconds: AudioHistoryDatabase.progressUpdateInterval),
+      Duration(seconds: progressUpdateIntervalS),
       (timer) async {
         try {
           // 这里需要从外部获取当前播放位置
@@ -151,9 +153,7 @@ class AudioHistoryManager {
       },
     );
 
-    print(
-      '开始追踪音频播放进度: $audioId，每${AudioHistoryDatabase.progressUpdateInterval}秒更新一次',
-    );
+    print('开始追踪音频播放进度: $audioId，每${progressUpdateIntervalS}秒更新一次');
   }
 
   /// 停止进度追踪
@@ -177,89 +177,29 @@ class AudioHistoryManager {
   }
 
   /// 获取音频的播放历史
-  Future<AudioItem?> getAudioHistory(String audioId) async {
+  Future<List<AudioItem>> getAudioHistory() async {
     try {
-      return await _database.getHistoryById(audioId);
+      final response = await UserHistoryService.getUserHistoryList();
+      _historyCache = response.history; // cache
+      return response.history;
     } catch (e) {
       print('获取音频历史失败: $e');
-      return null;
-    }
-  }
-
-  /// 获取最近播放的音频列表
-  Future<List<AudioItem>> getRecentHistory({int limit = 10}) async {
-    try {
-      return await _database.getRecentHistory(limit: limit);
-    } catch (e) {
-      print('获取最近播放列表失败: $e');
       return [];
     }
   }
 
-  /// 获取所有播放历史
-  Future<List<AudioItem>> getAllHistory() async {
+  // 先搜索缓存，无缓存时获取历史再搜索
+  Future<AudioItem> searchHistory(String audioId) async {
     try {
-      return await _database.getAllHistory();
-    } catch (e) {
-      print('获取所有播放历史失败: $e');
-      return [];
-    }
-  }
-
-  /// 搜索播放历史
-  Future<List<AudioItem>> searchHistory(String keyword) async {
-    try {
-      return await _database.searchHistory(keyword);
+      if (_historyCache.isNotEmpty) {
+        return _historyCache.firstWhere((item) => item.id == audioId);
+      } else {
+        final history = await getAudioHistory();
+        return history.firstWhere((item) => item.id == audioId);
+      }
     } catch (e) {
       print('搜索播放历史失败: $e');
-      return [];
-    }
-  }
-
-  /// 删除指定音频的历史记录
-  Future<bool> deleteHistory(String audioId) async {
-    try {
-      final success = await _database.deleteHistory(audioId);
-      return success;
-    } catch (e) {
-      print('删除播放历史失败: $e');
-      return false;
-    }
-  }
-
-  /// 清空所有播放历史
-  Future<bool> clearAllHistory() async {
-    try {
-      final success = await _database.clearAllHistory();
-      if (success) {
-        // 注意：这里不清空数据池，因为数据池可能包含其他来源的数据
-        print('已清空所有播放历史（数据池保持不变）');
-      }
-      return success;
-    } catch (e) {
-      print('清空播放历史失败: $e');
-      return false;
-    }
-  }
-
-  /// 获取播放历史统计信息
-  Future<Map<String, dynamic>> getHistoryStats() async {
-    try {
-      return await _database.getHistoryStats();
-    } catch (e) {
-      print('获取历史统计失败: $e');
-      return {};
-    }
-  }
-
-  /// 配置历史记录设置
-  void configureSettings({int? maxHistoryCount, int? progressUpdateInterval}) {
-    if (maxHistoryCount != null) {
-      AudioHistoryDatabase.setMaxHistoryCount(maxHistoryCount);
-    }
-
-    if (progressUpdateInterval != null) {
-      AudioHistoryDatabase.setProgressUpdateInterval(progressUpdateInterval);
+      rethrow;
     }
   }
 
@@ -298,18 +238,10 @@ class AudioHistoryManager {
     return Duration.zero;
   }
 
-  /// 打印调试信息
-  Future<void> printDebugInfo() async {
-    // 数据库统计
-    await _database.printDebugInfo();
-  }
-
   /// 清理资源
   Future<void> dispose() async {
     // 停止进度追踪
     _stopProgressTracking();
-
-    await _database.close();
     print('音频历史管理器资源已清理');
   }
 }
