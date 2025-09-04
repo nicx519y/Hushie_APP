@@ -29,14 +29,14 @@ class AudioLikeService {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('HTTP错误: ${response.statusCode}');
+        throw Exception('HTTP failed: ${response.statusCode}');
       }
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
       final int errNo = jsonData['errNo'] ?? -1;
       if (errNo != 0) {
-        throw Exception('API错误: errNo=$errNo');
+        throw Exception('API failed: errNo=$errNo');
       }
 
       return jsonData['data'] ?? {};
@@ -44,7 +44,7 @@ class AudioLikeService {
       if (e is Exception) {
         rethrow;
       }
-      throw Exception('音频点赞操作失败: $e');
+      throw Exception('Audio like operation failed: $e');
     }
   }
 }

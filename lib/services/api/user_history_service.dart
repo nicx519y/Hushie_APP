@@ -37,19 +37,19 @@ class UserHistoryService {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('HTTP错误: ${response.statusCode}');
+        throw Exception('HTTP failed: ${response.statusCode}');
       }
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
       final int errNo = jsonData['errNo'] ?? -1;
       if (errNo != 0) {
-        throw Exception('API错误: errNo=$errNo');
+        throw Exception('API failed: errNo=$errNo');
       }
 
       final dynamic dataJson = jsonData['data'];
       if (dataJson == null) {
-        throw Exception('响应数据为空');
+        throw Exception('Response data is empty');
       }
 
       final List<dynamic> itemsData = dataJson['history'] ?? [];
@@ -62,7 +62,7 @@ class UserHistoryService {
       if (e is Exception) {
         rethrow;
       }
-      throw Exception('获取用户播放历史失败: $e');
+      throw Exception('Failed to get user history: $e');
     }
   }
 
@@ -88,19 +88,19 @@ class UserHistoryService {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('HTTP错误: ${response.statusCode}');
+        throw Exception('HTTP failed: ${response.statusCode}');
       }
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
       final int errNo = jsonData['errNo'] ?? -1;
       if (errNo != 0) {
-        throw Exception('API错误: errNo=$errNo');
+        throw Exception('API failed: errNo=$errNo');
       }
 
       final dynamic dataJson = jsonData['data'];
       if (dataJson == null) {
-        throw Exception('响应数据为空');
+        throw Exception('Response data is empty');
       }
 
       final List<dynamic> itemsData = dataJson['history'] ?? [];
@@ -113,7 +113,7 @@ class UserHistoryService {
       if (e is Exception) {
         rethrow;
       }
-      throw Exception('提交播放进度失败: $e');
+      throw Exception('Failed to submit play progress: $e');
     }
   }
 }
