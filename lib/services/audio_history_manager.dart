@@ -39,8 +39,8 @@ class AudioHistoryManager {
         playProgressMs: progressMs,
       );
 
-      if (response.errNo == 0) {
-        _historyCache = response.data?.history ?? [];
+      if (response.isNotEmpty) {
+        _historyCache = response;
       }
 
       // 启动进度追踪
@@ -180,8 +180,8 @@ class AudioHistoryManager {
   Future<List<AudioItem>> getAudioHistory() async {
     try {
       final response = await UserHistoryService.getUserHistoryList();
-      _historyCache = response.history; // cache
-      return response.history;
+      _historyCache = response; // cache
+      return response;
     } catch (e) {
       print('获取音频历史失败: $e');
       return [];

@@ -1,52 +1,33 @@
 import 'dart:convert';
-import '../../models/api_response.dart';
 import '../../models/audio_item.dart';
 import '../../config/api_config.dart';
-import '../api_service.dart';
-import '../mock/audio_search_mock.dart';
 import '../http_client_service.dart';
 
 /// 音频搜索服务
 class AudioSearchService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
-  /// 搜索音频列表
-  static Future<ApiResponse<SimpleResponse<AudioItem>>> getAudioSearchList({
-    required String searchQuery,
+  /// 搜索音频
+  static Future<List<AudioItem>> searchAudio({
+    required String query,
     String? cid,
     int count = 20,
   }) async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return AudioSearchMock.getMockAudioSearchList(
-        searchQuery: searchQuery,
-        cid: cid,
-        count: count,
-      );
-    } else {
-      return _getRealAudioSearchList(
-        searchQuery: searchQuery,
-        cid: cid,
-        count: count,
-      );
-    }
+    return _getRealAudioSearch(query: query, cid: cid, count: count);
   }
 
-  /// 真实接口 - 搜索音频列表
-  static Future<ApiResponse<SimpleResponse<AudioItem>>>
-  _getRealAudioSearchList({
-    required String searchQuery,
+  /// 真实接口 - 搜索音频
+  static Future<List<AudioItem>> _getRealAudioSearch({
+    required String query,
     String? cid,
     int count = 20,
   }) async {
     try {
       final queryParams = <String, String>{
-        'q': searchQuery,
+        'query': query,
+        'cid': cid ?? '',
         'count': count.toString(),
       };
-
-      if (cid != null && cid.isNotEmpty) {
-        queryParams['cid'] = cid;
-      }
 
       final uri = Uri.parse(
         ApiConfig.getFullUrl(ApiEndpoints.audioSearch),
@@ -57,22 +38,33 @@ class AudioSearchService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        // 使用统一的JSON处理函数
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) => SimpleResponse<AudioItem>.fromMap(
-            dataJson,
-            (itemJson) => AudioItem.fromMap(itemJson),
-          ),
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP错误: ${response.statusCode}');
       }
+
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+
+      final int errNo = jsonData['errNo'] ?? -1;
+      if (errNo != 0) {
+        throw Exception('API错误: errNo=$errNo');
+      }
+
+      final dynamic dataJson = jsonData['data'];
+      if (dataJson == null) {
+        throw Exception('响应数据为空');
+      }
+
+      final List<dynamic> itemsData = dataJson['items'] ?? [];
+      final List<AudioItem> audioItems = itemsData
+          .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
+          .toList();
+
+      return audioItems;
     } catch (e) {
-      return ApiResponse.error(errNo: -1);
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('搜索音频失败: $e');
     }
   }
 }

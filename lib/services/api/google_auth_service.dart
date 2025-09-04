@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../models/api_response.dart';
 import '../../config/api_config.dart';
-import '../api_service.dart';
-import '../mock/google_auth_mock.dart';
 import '../http_client_service.dart';
 
 /// Google认证服务
@@ -20,54 +18,28 @@ class GoogleAuthService {
 
   /// Google账号登录 - 完整的OAuth 2.0流程
   static Future<ApiResponse<GoogleAuthResponse>> googleSignIn() async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return GoogleAuthMock.getMockGoogleSignIn();
-    } else {
-      return _getRealGoogleSignIn();
-    }
+    return _getRealGoogleSignIn();
   }
 
   /// 用Google登录凭证获取access token
   static Future<ApiResponse<AccessTokenResponse>> getAccessToken({
     required String googleToken,
   }) async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return GoogleAuthMock.getMockAccessToken(googleToken: googleToken);
-    } else {
-      return _getRealAccessToken(googleToken: googleToken);
-    }
+    return _getRealAccessToken(googleToken: googleToken);
   }
 
   /// 刷新Access Token
   static Future<ApiResponse<AccessTokenResponse>> refreshAccessToken({
     required String refreshToken,
   }) async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      // Mock模式下模拟刷新Token
-      return GoogleAuthMock.getMockAccessToken(googleToken: refreshToken);
-    } else {
-      return _getRealRefreshToken(refreshToken: refreshToken);
-    }
+    return _getRealRefreshToken(refreshToken: refreshToken);
   }
 
   /// 验证Token是否有效
   static Future<ApiResponse<TokenValidationResponse>> validateToken({
     required String accessToken,
   }) async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      // Mock模式下总是返回有效
-      return ApiResponse.success(
-        data: TokenValidationResponse(
-          isValid: true,
-          expiresAt: DateTime.now().add(const Duration(hours: 1)),
-          userId: 'mock_user_id',
-          email: 'mock@example.com',
-        ),
-        errNo: 0,
-      );
-    } else {
-      return _getRealTokenValidation(accessToken: accessToken);
-    }
+    return _getRealTokenValidation(accessToken: accessToken);
   }
 
   /// 真实接口 - Google账号登录
@@ -236,20 +208,12 @@ class GoogleAuthService {
 
   /// 服务器登出接口
   static Future<ApiResponse<void>> logout() async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return GoogleAuthMock.getMockLogout();
-    } else {
-      return _getRealLogout();
-    }
+    return _getRealLogout();
   }
 
   /// 删除账户接口
   static Future<ApiResponse<void>> deleteAccount() async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return GoogleAuthMock.getMockDeleteAccount();
-    } else {
-      return _getRealDeleteAccount();
-    }
+    return _getRealDeleteAccount();
   }
 
   /// 检查是否已登录

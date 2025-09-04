@@ -141,3 +141,139 @@ class UserHistoryResponse {
     );
   }
 }
+
+/// Google认证响应模型
+class GoogleAuthResponse {
+  final String userId;
+  final String email;
+  final String displayName;
+  final String? photoUrl;
+  final String authCode;
+  final String authType;
+
+  GoogleAuthResponse({
+    required this.userId,
+    required this.email,
+    required this.displayName,
+    this.photoUrl,
+    required this.authCode,
+    required this.authType,
+  });
+
+  factory GoogleAuthResponse.fromMap(Map<String, dynamic> map) {
+    return GoogleAuthResponse(
+      userId: map['user_id'] ?? '',
+      email: map['email'] ?? '',
+      displayName: map['display_name'] ?? '',
+      photoUrl: map['photo_url'],
+      authCode: map['auth_code'] ?? '',
+      authType: map['auth_type'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'user_id': userId,
+      'email': email,
+      'display_name': displayName,
+      'photo_url': photoUrl,
+      'auth_code': authCode,
+      'auth_type': authType,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'GoogleAuthResponse(userId: $userId, email: $email, displayName: $displayName, photoUrl: $photoUrl, authCode: $authCode, authType: $authType)';
+  }
+}
+
+/// 访问令牌响应模型
+class AccessTokenResponse {
+  final String accessToken;
+  final String refreshToken;
+  final int expiresIn;
+  final String tokenType;
+  final int expiresAt;
+
+  AccessTokenResponse({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.expiresIn,
+    required this.tokenType,
+    required this.expiresAt,
+  });
+
+  factory AccessTokenResponse.fromMap(Map<String, dynamic> map) {
+    return AccessTokenResponse(
+      accessToken: map['access_token'] ?? '',
+      refreshToken: map['refresh_token'] ?? '',
+      expiresIn: map['expires_in'] ?? 0,
+      tokenType: map['token_type'] ?? 'Bearer',
+      expiresAt: map['expires_at'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'access_token': accessToken,
+      'refresh_token': refreshToken,
+      'expires_in': expiresIn,
+      'token_type': tokenType,
+      'expires_at': expiresAt,
+    };
+  }
+
+  /// 检查Token是否即将过期（30分钟内）
+  bool get isExpiringSoon {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    return (expiresAt - now) < 1800; // 30分钟 = 1800秒
+  }
+
+  @override
+  String toString() {
+    return 'AccessTokenResponse(accessToken: ${accessToken.substring(0, 10)}..., refreshToken: ${refreshToken.substring(0, 10)}..., expiresIn: $expiresIn, tokenType: $tokenType, expiresAt: $expiresAt)';
+  }
+}
+
+/// 令牌验证响应模型
+class TokenValidationResponse {
+  final bool isValid;
+  final int expiresAt;
+  final String userId;
+  final String email;
+  final List<String> scopes;
+
+  TokenValidationResponse({
+    required this.isValid,
+    required this.expiresAt,
+    required this.userId,
+    required this.email,
+    required this.scopes,
+  });
+
+  factory TokenValidationResponse.fromMap(Map<String, dynamic> map) {
+    return TokenValidationResponse(
+      isValid: map['is_valid'] ?? false,
+      expiresAt: map['expires_at'] ?? 0,
+      userId: map['user_id'] ?? '',
+      email: map['email'] ?? '',
+      scopes: List<String>.from(map['scopes'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'is_valid': isValid,
+      'expires_at': expiresAt,
+      'user_id': userId,
+      'email': email,
+      'scopes': scopes,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'TokenValidationResponse(isValid: $isValid, expiresAt: $expiresAt, userId: $userId, email: $email, scopes: $scopes)';
+  }
+}

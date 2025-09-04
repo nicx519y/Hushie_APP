@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:hushie_app/services/api/audio_list_service.dart';
 import '../models/audio_item.dart';
-import '../services/api_service.dart';
 import 'audio_card.dart';
 
 /// PagedAudioGrid - 支持无限滚动和虚拟化的音频网格组件
@@ -18,12 +18,12 @@ import 'audio_card.dart';
 /// // 定义三个数据获取方法
 /// Future<List<AudioItem>> initData({String? tag}) async {
 ///   // 初始化数据逻辑
-///   return await ApiService.getAudioList(tag: tag, cid: null, count: 20);
+///   return await AudioListService.getAudioList(tag: tag, cid: null, count: 20);
 /// }
 ///
 /// Future<List<AudioItem>> refreshData({String? tag}) async {
 ///   // 刷新数据逻辑（上拉刷新）
-///   return await ApiService.getAudioList(tag: tag, cid: null, count: 20);
+///   return await AudioListService.getAudioList(tag: tag, cid: null, count: 20);
 /// }
 ///
 /// Future<List<AudioItem>> loadMoreData({
@@ -32,7 +32,7 @@ import 'audio_card.dart';
 ///   int? count,
 /// }) async {
 ///   // 加载更多数据逻辑（下滑加载）
-///   return await ApiService.getAudioList(tag: tag, cid: pageKey, count: count);
+///   return await AudioListService.getAudioList(tag: tag, cid: pageKey, count: count);
 /// }
 ///
 /// // 在Widget中使用
@@ -122,16 +122,16 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
           newItems = await widget.initDataFetcher!(tag: widget.tag);
         } else {
           // 使用默认的API服务
-          final response = await ApiService.getAudioList(
+          final response = await AudioListService.getAudioList(
             tag: widget.tag,
             cid: null,
             count: _pageSize,
           );
 
-          if (response.errNo == 0 && response.data != null) {
-            newItems = response.data!.items;
+          if (response.isNotEmpty) {
+            newItems = response;
           } else {
-            _pagingController.error = '加载失败: 错误码 ${response.errNo}';
+            _pagingController.error = '加载失败';
             return;
           }
         }
@@ -145,16 +145,16 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
           );
         } else {
           // 使用默认的API服务
-          final response = await ApiService.getAudioList(
+          final response = await AudioListService.getAudioList(
             tag: widget.tag,
             cid: pageKey,
             count: _pageSize,
           );
 
-          if (response.errNo == 0 && response.data != null) {
-            newItems = response.data!.items;
+          if (response.isNotEmpty) {
+            newItems = response;
           } else {
-            _pagingController.error = '加载失败: 错误码 ${response.errNo}';
+            _pagingController.error = '加载失败';
             return;
           }
         }

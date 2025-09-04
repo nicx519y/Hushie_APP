@@ -159,23 +159,15 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     try {
       // 调用API
       final response = await AudioLikeService.likeAudio(
-        cid: _currentAudio!.id,
-        action: newIsLiked ? 'like' : 'unlike',
+        audioId: _currentAudio!.id,
+        isLiked: newIsLiked,
       );
-
-      if (response.errNo == 0) {
-        // API调用成功，本地状态已经正确，不需要回滚
-        print('点赞操作成功: ${newIsLiked ? '点赞' : '取消点赞'}');
-      } else {
-        // API调用失败，回滚本地状态
-        print('点赞操作失败: errNo=${response.errNo}');
-        setState(() {
-          _localIsLiked = !newIsLiked;
-          _localLikesCount = newIsLiked
-              ? _localLikesCount - 1
-              : _localLikesCount + 1;
-        });
-      }
+      setState(() {
+        _localIsLiked = !newIsLiked;
+        _localLikesCount = newIsLiked
+            ? _localLikesCount - 1
+            : _localLikesCount + 1;
+      });
     } catch (e) {
       // 网络异常，回滚本地状态
       print('点赞操作异常: $e');

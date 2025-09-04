@@ -1,9 +1,6 @@
 import 'dart:convert';
-import '../../models/api_response.dart';
 import '../../models/audio_item.dart';
 import '../../config/api_config.dart';
-import '../api_service.dart';
-import '../mock/audio_list_mock.dart';
 import '../http_client_service.dart';
 
 /// 音频列表服务
@@ -11,20 +8,16 @@ class AudioListService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 获取音频列表
-  static Future<ApiResponse<SimpleResponse<AudioItem>>> getAudioList({
+  static Future<List<AudioItem>> getAudioList({
     String? tag,
     String? cid,
     int count = 20,
   }) async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return AudioListMock.getMockAudioList(tag: tag, cid: cid, count: count);
-    } else {
-      return _getRealAudioList(tag: tag, cid: cid, count: count);
-    }
+    return _getRealAudioList(tag: tag, cid: cid, count: count);
   }
 
   /// 真实接口 - 获取音频列表
-  static Future<ApiResponse<SimpleResponse<AudioItem>>> _getRealAudioList({
+  static Future<List<AudioItem>> _getRealAudioList({
     String? tag,
     String? cid,
     int count = 20,
@@ -49,22 +42,33 @@ class AudioListService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        // 使用统一的JSON处理函数
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) => SimpleResponse<AudioItem>.fromMap(
-            dataJson,
-            (itemJson) => AudioItem.fromMap(itemJson),
-          ),
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP错误: ${response.statusCode}');
       }
+
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+
+      final int errNo = jsonData['errNo'] ?? -1;
+      if (errNo != 0) {
+        throw Exception('API错误: errNo=$errNo');
+      }
+
+      final dynamic dataJson = jsonData['data'];
+      if (dataJson == null) {
+        throw Exception('响应数据为空');
+      }
+
+      final List<dynamic> itemsData = dataJson['items'] ?? [];
+      final List<AudioItem> audioItems = itemsData
+          .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
+          .toList();
+
+      return audioItems;
     } catch (e) {
-      return ApiResponse.error(errNo: -1);
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('获取音频列表失败: $e');
     }
   }
 }

@@ -2,8 +2,6 @@ import 'dart:convert';
 import '../../models/api_response.dart';
 import '../../models/audio_item.dart';
 import '../../config/api_config.dart';
-import '../api_service.dart';
-import '../mock/user_history_mock.dart';
 import '../http_client_service.dart';
 
 /// 用户播放历史服务
@@ -11,37 +9,25 @@ class UserHistoryService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 获取用户播放历史列表
-  static Future<UserHistoryResponse> getUserHistoryList() async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return UserHistoryMock.getMockUserHistoryList();
-    } else {
-      return _getRealUserHistoryList();
-    }
+  static Future<List<AudioItem>> getUserHistoryList() async {
+    return _getRealUserHistoryList();
   }
 
   /// 提交用户播放进度
-  static Future<ApiResponse<UserHistoryResponse>> submitPlayProgress({
+  static Future<List<AudioItem>> submitPlayProgress({
     required String audioId,
     required int playDurationMs,
     required int playProgressMs,
   }) async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return UserHistoryMock.submitMockPlayProgress(
-        audioId: audioId,
-        playDurationMs: playDurationMs,
-        playProgressMs: playProgressMs,
-      );
-    } else {
-      return _submitRealPlayProgress(
-        audioId: audioId,
-        playDurationMs: playDurationMs,
-        playProgressMs: playProgressMs,
-      );
-    }
+    return _submitRealPlayProgress(
+      audioId: audioId,
+      playDurationMs: playDurationMs,
+      playProgressMs: playProgressMs,
+    );
   }
 
   /// 真实接口 - 获取用户播放历史列表
-  static Future<UserHistoryResponse> _getRealUserHistoryList() async {
+  static Future<List<AudioItem>> _getRealUserHistoryList() async {
     try {
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.userHistoryList));
 
@@ -50,27 +36,38 @@ class UserHistoryService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        return UserHistoryResponse.fromJson(
-          (jsonData['history'] as List<dynamic>?)
-                  ?.map(
-                    (item) => AudioItem.fromMap(item as Map<String, dynamic>),
-                  )
-                  .toList() ??
-              [],
-        );
-      } else {
-        throw Exception('获取用户播放历史列表失败: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        throw Exception('HTTP错误: ${response.statusCode}');
       }
+
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+
+      final int errNo = jsonData['errNo'] ?? -1;
+      if (errNo != 0) {
+        throw Exception('API错误: errNo=$errNo');
+      }
+
+      final dynamic dataJson = jsonData['data'];
+      if (dataJson == null) {
+        throw Exception('响应数据为空');
+      }
+
+      final List<dynamic> itemsData = dataJson['history'] ?? [];
+      final List<AudioItem> historyItems = itemsData
+          .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
+          .toList();
+
+      return historyItems;
     } catch (e) {
-      throw Exception('获取用户播放历史列表失败: $e');
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('获取用户播放历史失败: $e');
     }
   }
 
   /// 真实接口 - 提交用户播放进度
-  static Future<ApiResponse<UserHistoryResponse>> _submitRealPlayProgress({
+  static Future<List<AudioItem>> _submitRealPlayProgress({
     required String audioId,
     required int playDurationMs,
     required int playProgressMs,
@@ -80,38 +77,43 @@ class UserHistoryService {
         ApiConfig.getFullUrl(ApiEndpoints.userPlayProgress),
       );
 
-      final requestBody = {
-        "id": audioId,
-        'play_duration_ms': playDurationMs,
-        'play_progress_ms': playProgressMs,
-      };
-
       final response = await HttpClientService.postJson(
         uri,
-        body: requestBody,
+        body: {
+          'audio_id': audioId,
+          'play_duration_ms': playDurationMs,
+          'play_progress_ms': playProgressMs,
+        },
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200 &&
-          response.body.isNotEmpty &&
-          json.decode(response.body)['errNo'] == 0) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-        return ApiResponse.fromJson(
-          jsonData,
-          (data) => UserHistoryResponse.fromJson(
-            (data['history'] as List<dynamic>?)
-                    ?.map(
-                      (item) => AudioItem.fromMap(item as Map<String, dynamic>),
-                    )
-                    .toList() ??
-                [],
-          ),
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP错误: ${response.statusCode}');
       }
+
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+
+      final int errNo = jsonData['errNo'] ?? -1;
+      if (errNo != 0) {
+        throw Exception('API错误: errNo=$errNo');
+      }
+
+      final dynamic dataJson = jsonData['data'];
+      if (dataJson == null) {
+        throw Exception('响应数据为空');
+      }
+
+      final List<dynamic> itemsData = dataJson['history'] ?? [];
+      final List<AudioItem> historyItems = itemsData
+          .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
+          .toList();
+
+      return historyItems;
     } catch (e) {
-      return ApiResponse.error(errNo: -1);
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('提交播放进度失败: $e');
     }
   }
 }

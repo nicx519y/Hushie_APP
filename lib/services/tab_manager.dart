@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/tab_item.dart';
-import 'api_service.dart';
+import 'api/home_tabs_service.dart';
 
 /// Tab管理器
 class TabManager {
@@ -64,11 +64,8 @@ class TabManager {
   /// 从服务器获取tabs
   Future<List<TabItemModel>> _fetchTabsFromServer() async {
     try {
-      final response = await ApiService.getHomeTabs();
-      if (response.errNo == 0 && response.data != null) {
-        return response.data!;
-      }
-      return [];
+      final tabs = await HomeTabsService.getHomeTabs();
+      return tabs;
     } catch (e) {
       print('从服务器获取tabs失败: $e');
       return [];

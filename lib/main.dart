@@ -5,7 +5,6 @@ import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/splash_page.dart';
 import 'config/api_config.dart';
-import 'services/api_service.dart';
 
 void main() async {
   print('🚀 [MAIN] 应用启动开始');
@@ -31,7 +30,6 @@ void main() async {
   // 初始化 API 配置（同步操作，快速）
   print('🚀 [MAIN] 开始初始化API配置');
   ApiConfig.initialize(
-    initialMode: ApiMode.real, // 暂时使用Mock模式来测试
     debugMode: true, // 在开发环境启用调试模式
   );
   print('�� [MAIN] API配置初始化完成');

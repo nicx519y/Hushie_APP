@@ -1,5 +1,3 @@
-import '../services/api_service.dart';
-
 class ApiConfig {
   // API 基础配置
   static const String baseUrl = 'https://api.hushie.ai/api/v1';
@@ -8,11 +6,6 @@ class ApiConfig {
   // 分页配置
   static const int defaultPageSize = 10;
   static const int maxPageSize = 50;
-
-  // Mock 数据配置
-  static const bool enableMockMode = false; // 可以通过环境变量控制
-  static const int mockNetworkDelayMs = 1000; // Mock 网络延迟
-  static const double mockErrorRate = 0.05; // Mock 错误概率 (5%)
 
   // 缓存配置
   static const Duration cacheExpiry = Duration(minutes: 10);
@@ -48,21 +41,7 @@ class ApiConfig {
   }
 
   /// 初始化 API 配置
-  static void initialize({ApiMode? initialMode, bool? debugMode = false}) {
-    // 根据环境设置初始模式
-    final mode = initialMode ?? (enableMockMode ? ApiMode.mock : ApiMode.real);
-
-    ApiService.setApiMode(mode);
-
-    if (debugMode == true) {
-      print('API 配置初始化完成');
-      print('基础 URL: $baseUrl');
-      print('当前模式: ${mode == ApiMode.mock ? 'Mock 数据' : '真实接口'}');
-      print('应用 ID: $appId');
-      print('API 版本: $apiVersion');
-      print('签名算法: $signatureAlgorithm');
-    }
-  }
+  static void initialize({bool? debugMode = false}) {}
 
   /// 获取完整的 API URL
   static String getFullUrl(String endpoint) {

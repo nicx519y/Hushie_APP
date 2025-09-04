@@ -133,12 +133,11 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     try {
-      ApiResponse<SimpleResponse<AudioItem>> searchResults =
-          await AudioSearchService.getAudioSearchList(
-            searchQuery: keyword,
-            cid: isLoadMore ? _lastCid : null,
-            count: 30,
-          );
+      final searchResults = await AudioSearchService.searchAudio(
+        query: keyword,
+        cid: isLoadMore ? _lastCid : null,
+        count: 30,
+      );
 
       // 再次检查查询是否已过期（防止异步请求返回时查询已改变）
       if (!isLoadMore && keyword != _currentSearchQuery) {
@@ -149,8 +148,8 @@ class _SearchPageState extends State<SearchPage> {
         return;
       }
 
-      if (searchResults.errNo == 0 && searchResults.data != null) {
-        final newItems = searchResults.data!.items;
+      if (searchResults.isNotEmpty) {
+        final newItems = searchResults;
 
         setState(() {
           if (isLoadMore) {

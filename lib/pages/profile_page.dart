@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hushie_app/services/api/user_likes_service.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
 import '../components/custom_tab_bar.dart';
@@ -6,7 +7,6 @@ import '../components/audio_list.dart';
 import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
-import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
 import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
@@ -188,6 +188,23 @@ class _ProfilePageState extends State<ProfilePage>
 
   Future<void> _loadMoreLikedAudios() async {
     if (_isLoadingLiked) return;
+
+    setState(() {
+      _isLoadingLiked = true;
+    });
+
+    try {
+      final response = await UserLikesService.getUserLikedAudios();
+      setState(() {
+        likedAudios.addAll(response);
+      });
+    } catch (e) {
+      print('加载更多喜欢数据失败: $e');
+    } finally {
+      setState(() {
+        _isLoadingLiked = false;
+      });
+    }
   }
 
   Future<void> _refreshLikedAudios() async {

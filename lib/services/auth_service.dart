@@ -1,7 +1,6 @@
 import 'dart:convert';
 import '../models/api_response.dart';
 import 'api/google_auth_service.dart';
-import '../services/mock/google_auth_mock.dart';
 import 'secure_storage_service.dart';
 
 /// 认证服务 - 管理Token生命周期和自动刷新
@@ -160,7 +159,7 @@ class AuthService {
     }
 
     // 检查是否需要刷新
-    if (!force && !_currentToken!.isExpiringSoon && !_currentToken!.isExpired) {
+    if (!force && !_currentToken!.isExpiringSoon) {
       return true; // 不需要刷新
     }
 
@@ -211,8 +210,8 @@ class AuthService {
           expiresIn: 3600, // 默认1小时
           tokenType: 'Bearer',
           expiresAt: expiresAtMs != null
-              ? DateTime.fromMillisecondsSinceEpoch(expiresAtMs)
-              : null,
+              ? (expiresAtMs ~/ 1000)
+              : (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
         );
       }
     } catch (e) {
@@ -228,11 +227,9 @@ class AuthService {
       await SecureStorageService.saveAccessToken(token.accessToken);
       await SecureStorageService.saveRefreshToken(token.refreshToken);
 
-      if (token.expiresAt != null) {
-        await SecureStorageService.saveTokenExpiresAt(
-          token.expiresAt!.millisecondsSinceEpoch,
-        );
-      }
+      await SecureStorageService.saveTokenExpiresAt(
+        token.expiresAt * 1000, // 转换为毫秒
+      );
     } catch (e) {
       print('保存Token失败: $e');
     }

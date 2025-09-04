@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_item.dart';
-import 'api_service.dart';
+import 'api/audio_list_service.dart';
 
 /// 首页列表数据管理服务
 ///
@@ -81,29 +81,23 @@ class HomePageListService {
       final lastCid = _tabLastCidCache[tabId];
 
       // 调用API获取数据
-      final response = await ApiService.getAudioList(
+      final newItems = await AudioListService.getAudioList(
         tag: tabId == 'for_you' ? null : tabId,
         cid: lastCid,
         count: _maxItemsPerTab,
       );
 
-      if (response.errNo == 0 && response.data != null) {
-        final newItems = response.data!.items;
+      if (newItems.isNotEmpty) {
+        // 更新lastCid为最新数据的最后一个item的id
+        final newLastCid = newItems.last.id;
+        _tabLastCidCache[tabId] = newLastCid;
 
-        if (newItems.isNotEmpty) {
-          // 更新lastCid为最新数据的最后一个item的id
-          final newLastCid = newItems.last.id;
-          _tabLastCidCache[tabId] = newLastCid;
-
-          // 不使用缓存，每次都返回新数据
-          print('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: $newLastCid');
-          return newItems;
-        } else {
-          print('Tab $tabId 没有更多数据');
-          return [];
-        }
+        // 不使用缓存，每次都返回新数据
+        print('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: $newLastCid');
+        return newItems;
       } else {
-        throw Exception('获取数据失败: 错误码 ${response.errNo}');
+        print('Tab $tabId 没有更多数据');
+        return [];
       }
     } catch (error) {
       print('Tab $tabId 获取数据失败: $error');

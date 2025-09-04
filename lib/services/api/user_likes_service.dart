@@ -1,9 +1,6 @@
 import 'dart:convert';
-import '../../models/api_response.dart';
 import '../../models/audio_item.dart';
 import '../../config/api_config.dart';
-import '../api_service.dart';
-import '../mock/user_likes_mock.dart';
 import '../http_client_service.dart';
 
 /// 用户喜欢音频服务
@@ -11,26 +8,16 @@ class UserLikesService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 获取用户喜欢的音频列表
-  static Future<ApiResponse<SimpleResponse<AudioItem>>> getUserLikedAudios({
-    String? cid,
-    int count = 20,
-  }) async {
-    if (ApiService.currentMode == ApiMode.mock) {
-      return UserLikesMock.getMockUserLikedAudios(cid: cid, count: count);
-    } else {
-      return _getRealUserLikedAudios(cid: cid, count: count);
-    }
+  static Future<List<AudioItem>> getUserLikedAudios({int count = 20}) async {
+    return _getRealUserLikedAudios(count: count);
   }
 
   /// 真实接口 - 获取用户喜欢的音频列表
-  static Future<ApiResponse<SimpleResponse<AudioItem>>>
-  _getRealUserLikedAudios({String? cid, int count = 20}) async {
+  static Future<List<AudioItem>> _getRealUserLikedAudios({
+    int count = 20,
+  }) async {
     try {
       final queryParams = <String, String>{'count': count.toString()};
-
-      if (cid != null && cid.isNotEmpty) {
-        queryParams['cid'] = cid;
-      }
 
       final uri = Uri.parse(
         ApiConfig.getFullUrl(ApiEndpoints.userLikes),
@@ -41,22 +28,33 @@ class UserLikesService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        // 使用统一的JSON处理函数
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) => SimpleResponse<AudioItem>.fromMap(
-            dataJson,
-            (itemJson) => AudioItem.fromMap(itemJson),
-          ),
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP错误: ${response.statusCode}');
       }
+
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+
+      final int errNo = jsonData['errNo'] ?? -1;
+      if (errNo != 0) {
+        throw Exception('API错误: errNo=$errNo');
+      }
+
+      final dynamic dataJson = jsonData['data'];
+      if (dataJson == null) {
+        throw Exception('响应数据为空');
+      }
+
+      final List<dynamic> itemsData = dataJson['items'] ?? [];
+      final List<AudioItem> likedAudios = itemsData
+          .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
+          .toList();
+
+      return likedAudios;
     } catch (e) {
-      return ApiResponse.error(errNo: -1);
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('获取用户喜欢音频失败: $e');
     }
   }
 }

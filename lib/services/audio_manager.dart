@@ -272,14 +272,12 @@ class AudioManager {
         cid: currentAudio.id,
       );
 
-      if (response.errNo == 0 &&
-          response.data != null &&
-          response.data!.items.isNotEmpty) {
+      if (response.isNotEmpty) {
         // 添加新音频到播放列表
-        playlist.addAudioList(response.data!.items);
-        print('成功补充播放列表: ${response.data!.items.length} 首音频');
+        playlist.addAudioList(response);
+        print('成功补充播放列表: ${response.length} 首音频');
       } else {
-        print('补充播放列表失败: 没有更多数据 (errNo: ${response.errNo})');
+        print('补充播放列表失败: 没有更多数据');
       }
     } catch (e) {
       print('补充播放列表失败: $e');
