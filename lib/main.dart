@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'layouts/main_layout.dart';
-import 'pages/home_page.dart';
-import 'pages/profile_page.dart';
 import 'pages/splash_page.dart';
 import 'config/api_config.dart';
 

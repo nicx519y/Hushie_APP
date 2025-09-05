@@ -4,8 +4,6 @@ import '../layouts/main_layout.dart';
 import '../pages/home_page.dart';
 import '../pages/profile_page.dart';
 import '../services/audio_manager.dart';
-import '../services/audio_playlist.dart';
-import '../services/audio_history_manager.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -73,7 +71,7 @@ class _SplashPageState extends State<SplashPage> {
               }
             })
             .catchError((e) {
-              print('服务初始化失败: $e');
+              print('Failed to initialize services: $e');
               if (mounted) {
                 setState(() {
                   _servicesInitialized = true;
@@ -82,7 +80,7 @@ class _SplashPageState extends State<SplashPage> {
             }),
       );
     } catch (e) {
-      print('服务初始化失败: $e');
+      print('Failed to initialize services: $e');
       if (mounted) {
         setState(() {
           _servicesInitialized = true;

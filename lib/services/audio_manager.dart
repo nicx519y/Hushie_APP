@@ -6,6 +6,7 @@ import 'audio_service.dart';
 import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
 import 'api/audio_list_service.dart';
+import 'user_likes_manager.dart';
 
 class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
@@ -162,6 +163,10 @@ class AudioManager {
   Future<void> init() async {
     // 先初始化音频历史管理器（确保数据库可用）
     await AudioHistoryManager.instance.initialize();
+    print('AudioManager: AudioHistoryManager 初始化完成');
+    // 初始化likes管理器
+    await UserLikesManager.instance.initialize();
+    print('AudioManager: UserLikesManager 初始化完成');
     // 初始化AudioPlaylist
     await AudioPlaylist.instance.initialize();
     print('AudioManager: AudioPlaylist 初始化完成');

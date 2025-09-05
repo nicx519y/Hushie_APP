@@ -28,11 +28,6 @@ class AuthStatusChangeEvent {
 
 /// 认证服务 - 管理Token生命周期和自动刷新
 class AuthService {
-  static const String _accessTokenKey = 'access_token';
-  static const String _refreshTokenKey = 'refresh_token';
-  static const String _tokenExpiresAtKey = 'token_expires_at';
-  static const String _userInfoKey = 'user_info';
-
   static AccessTokenResponse? _currentToken;
   static GoogleAuthResponse? _currentUser;
   static AuthStatus _currentStatus = AuthStatus.unknown;
