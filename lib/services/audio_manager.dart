@@ -6,7 +6,6 @@ import 'audio_service.dart';
 import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
 import 'api/audio_list_service.dart';
-import 'user_likes_manager.dart';
 
 class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
@@ -59,29 +58,6 @@ class AudioManager {
     // 监听播放状态
     _audioService!.isPlayingStream.listen((isPlaying) {
       _isPlayingSubject.add(isPlaying);
-
-      if (isPlaying) {
-        print('播放状态: 开始播放');
-        final currentAudio = _currentAudioSubject.value;
-        if (currentAudio != null) {
-          print('记录播放开始: ${currentAudio.title}');
-          AudioHistoryManager.instance.recordPlayStart(
-            currentAudio,
-            _positionSubject.value.inMilliseconds,
-          );
-        }
-      } else {
-        print('播放状态: 停止播放');
-        final currentAudio = _currentAudioSubject.value;
-        if (currentAudio != null) {
-          print('记录播放结束: ${currentAudio.title}');
-          AudioHistoryManager.instance.recordPlayStop(
-            currentAudio.id,
-            _positionSubject.value.inMilliseconds,
-            _durationSubject.value.inMilliseconds,
-          );
-        }
-      }
     });
 
     // 监听当前音频
@@ -164,9 +140,7 @@ class AudioManager {
     // 先初始化音频历史管理器（确保数据库可用）
     await AudioHistoryManager.instance.initialize();
     print('AudioManager: AudioHistoryManager 初始化完成');
-    // 初始化likes管理器
-    await UserLikesManager.instance.initialize();
-    print('AudioManager: UserLikesManager 初始化完成');
+
     // 初始化AudioPlaylist
     await AudioPlaylist.instance.initialize();
     print('AudioManager: AudioPlaylist 初始化完成');
@@ -174,8 +148,8 @@ class AudioManager {
     // 从播放历史列表中获取最后一条播放记录
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
     if (lastHistory.isNotEmpty) {
-      print('AudioManager: 最后一条播放记录: ${lastHistory.last.title}');
-      AudioPlaylist.instance.addAudio(lastHistory.last);
+      print('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
+      AudioPlaylist.instance.addAudio(lastHistory.first);
     } else {
       print('AudioManager: 没有播放历史记录');
     }
@@ -398,17 +372,6 @@ class AudioManager {
   // 清理资源
   Future<void> dispose() async {
     // 在销毁前记录最后的播放停止
-    final currentAudio = _currentAudioSubject.value;
-    if (currentAudio != null) {
-      final currentPosition = _positionSubject.value;
-      final totalDuration = _durationSubject.value;
-      await AudioHistoryManager.instance.recordPlayStop(
-        currentAudio.id,
-        currentPosition.inMilliseconds,
-        totalDuration.inMilliseconds,
-      );
-    }
-
     if (_audioService != null) {
       await _audioService!.dispose();
     }

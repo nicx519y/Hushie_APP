@@ -28,7 +28,11 @@ class UserHistoryService {
   /// 真实接口 - 获取用户播放历史列表
   static Future<List<AudioItem>> _getRealUserHistoryList() async {
     try {
-      final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.userHistoryList));
+      final queryParameters = {'cid': '', 'count': 10000};
+
+      final uri = Uri.parse(
+        ApiConfig.getFullUrl(ApiEndpoints.userHistoryList),
+      ).replace(queryParameters: queryParameters);
 
       final response = await HttpClientService.get(
         uri,
@@ -79,9 +83,11 @@ class UserHistoryService {
       final response = await HttpClientService.postJson(
         uri,
         body: {
-          'audio_id': audioId,
+          'id': audioId,
           'play_duration_ms': playDurationMs,
           'play_progress_ms': playProgressMs,
+          'cid': '', //
+          'count': 10000, // 默认全返回
         },
         timeout: _defaultTimeout,
       );

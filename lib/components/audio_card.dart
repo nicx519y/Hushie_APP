@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../utils/custom_icons.dart';
 import '../models/image_model.dart';
@@ -53,22 +53,12 @@ class AudioCard extends StatelessWidget {
             Stack(
               children: [
                 // 图片
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: AspectRatio(
-                    aspectRatio: 0.9, // 0.9 的宽高比，确保合适的显示比例
-                    child: CachedNetworkImage(
-                      imageUrl: _getImageUrl(item['cover'], imageWidth),
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey[300],
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.error),
-                      ),
-                      fit: BoxFit.cover,
-                    ),
+                AspectRatio(
+                  aspectRatio: 0.9, // 0.9 的宽高比，确保合适的显示比例
+                  child: FallbackImage(
+                    imageUrl: _getImageUrl(item['cover'], imageWidth),
+                    borderRadius: 8,
+                    fit: BoxFit.cover,
                   ),
                 ),
                 // 播放按钮和统计信息覆盖层

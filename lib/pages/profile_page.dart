@@ -7,7 +7,6 @@ import '../components/audio_list.dart';
 import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
-import '../services/user_likes_manager.dart';
 import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
 import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
@@ -34,9 +33,7 @@ class _ProfilePageState extends State<ProfilePage>
   int currentTabIndex = 0;
 
   // 音频数据
-  List<AudioItem> historyAudios = [];
   List<AudioItem> likedAudios = [];
-  bool _isLoadingHistory = false;
   bool _isLoadingLiked = false;
   bool _isRefreshingAuth = false;
 
@@ -62,6 +59,9 @@ class _ProfilePageState extends State<ProfilePage>
 
     // 订阅认证状态变化事件
     _subscribeToAuthChanges();
+
+    // 初始化 AudioHistoryManager
+    AudioHistoryManager.instance.initialize();
 
     // 异步初始化登录状态
     _initializeAuthState();
@@ -101,7 +101,10 @@ class _ProfilePageState extends State<ProfilePage>
     print('👤 [PROFILE] 用户已登录，重新加载页面数据');
 
     // 并行加载历史和喜欢数据
-    await Future.wait([_loadHistoryData(), _loadLikedAudios()]);
+    await Future.wait([
+      AudioHistoryManager.instance.refreshHistory(),
+      _loadLikedAudios(),
+    ]);
   }
 
   /// 登出后清空页面数据
@@ -110,7 +113,6 @@ class _ProfilePageState extends State<ProfilePage>
 
     if (mounted) {
       setState(() {
-        historyAudios.clear();
         likedAudios.clear();
         userName = '';
       });
@@ -204,31 +206,13 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // 加载历史数据
-  Future<void> _loadHistoryData() async {
-    if (_isLoadingHistory || !isLoggedIn) return;
-
-    setState(() {
-      _isLoadingHistory = true;
-    });
-
+  // 刷新历史数据（用于下拉刷新）
+  Future<void> _refreshHistoryData() async {
+    if (!isLoggedIn) return;
     try {
-      // 使用 AudioHistoryManager 获取历史记录
-      final historyList = await AudioHistoryManager.instance.getAudioHistory();
-
-      if (mounted) {
-        setState(() {
-          historyAudios = historyList;
-        });
-      }
+      await AudioHistoryManager.instance.refreshHistory();
     } catch (e) {
-      print('加载历史数据失败: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingHistory = false;
-        });
-      }
+      print('刷新历史数据失败: $e');
     }
   }
 
@@ -242,7 +226,7 @@ class _ProfilePageState extends State<ProfilePage>
 
     try {
       // 使用 UserLikesManager 获取喜欢列表
-      final likesList = await UserLikesManager.instance.getLikedAudios();
+      final likesList = await UserLikesService.getUserLikedAudios();
 
       if (mounted) {
         setState(() {
@@ -260,7 +244,8 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  Future<void> _loadMoreLikedAudios() async {
+  // 1. 修复下拉刷新 - 应该重新加载第一页
+  Future<void> _refreshLikedAudios() async {
     if (_isLoadingLiked || !isLoggedIn) return;
 
     setState(() {
@@ -268,14 +253,47 @@ class _ProfilePageState extends State<ProfilePage>
     });
 
     try {
-      // 获取更多喜欢数据（这里可以实现分页逻辑）
-      final moreLikedAudios = await UserLikesManager.instance.getLikedAudios(
-        forceRefresh: true,
+      // 重新获取第一页数据
+      final refreshedAudios = await UserLikesService.getUserLikedAudios(
+        count: 20, // 不传cid，获取第一页
       );
 
       if (mounted) {
         setState(() {
-          likedAudios = moreLikedAudios; // 替换而不是添加，因为是完整列表
+          likedAudios = refreshedAudios; // 替换整个列表
+        });
+      }
+    } catch (e) {
+      print('刷新喜欢数据失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLiked = false;
+        });
+      }
+    }
+  }
+
+  // 2. 修复上拉加载更多
+  Future<void> _loadMoreLikedAudios() async {
+    if (_isLoadingLiked || !isLoggedIn) return;
+
+    // 检查是否有数据用于分页
+    if (likedAudios.isEmpty) return;
+
+    setState(() {
+      _isLoadingLiked = true;
+    });
+
+    try {
+      final moreLikedAudios = await UserLikesService.getUserLikedAudios(
+        cid: likedAudios.last.id, // 移除 ?? ''，因为上面已经检查了
+        count: 20,
+      );
+
+      if (moreLikedAudios.isNotEmpty) {
+        setState(() {
+          likedAudios.addAll(moreLikedAudios); // 追加数据
         });
       }
     } catch (e) {
@@ -286,24 +304,6 @@ class _ProfilePageState extends State<ProfilePage>
           _isLoadingLiked = false;
         });
       }
-    }
-  }
-
-  Future<void> _refreshLikedAudios() async {
-    if (!isLoggedIn) return;
-
-    try {
-      // 刷新喜欢列表
-      final refreshedLikedAudios = await UserLikesManager.instance
-          .refreshLikedAudios();
-
-      if (mounted) {
-        setState(() {
-          likedAudios = refreshedLikedAudios;
-        });
-      }
-    } catch (e) {
-      print('刷新喜欢数据失败: $e');
     }
   }
 
@@ -415,17 +415,21 @@ class _ProfilePageState extends State<ProfilePage>
               index: currentTabIndex,
               children: [
                 // History 标签页
-                _isLoadingHistory
-                    ? _buildLoadingWidget()
-                    : historyAudios.isEmpty
-                    ? _buildEmptyWidget('No history')
-                    : AudioList(
-                        padding: const EdgeInsets.only(bottom: 120),
-                        audios: historyAudios,
-                        emptyWidget: _buildEmptyWidget('No history'),
-                        onRefresh: _loadHistoryData,
-                        hasMoreData: false,
-                      ),
+                ValueListenableBuilder<List<AudioItem>>(
+                  valueListenable: AudioHistoryManager.instance.historyNotifier,
+                  builder: (context, historyList, child) {
+                    if (historyList.isEmpty) {
+                      return _buildEmptyWidget('No history');
+                    }
+                    return AudioList(
+                      padding: const EdgeInsets.only(bottom: 120),
+                      audios: historyList,
+                      emptyWidget: _buildEmptyWidget('No history'),
+                      onRefresh: _refreshHistoryData,
+                      hasMoreData: false,
+                    );
+                  },
+                ),
                 // Like 标签页
                 _isLoadingLiked && likedAudios.isEmpty
                     ? _buildLoadingWidget()
@@ -435,9 +439,10 @@ class _ProfilePageState extends State<ProfilePage>
                         audios: likedAudios,
                         padding: const EdgeInsets.only(bottom: 120),
                         emptyWidget: _buildEmptyWidget('No liked content'),
-                        onRefresh: _refreshLikedAudios,
-                        hasMoreData: true,
+                        onRefresh: _refreshLikedAudios, // 改为刷新方法
                         onLoadMore: _loadMoreLikedAudios,
+                        hasMoreData: true,
+                        isLoadingMore: _isLoadingLiked, // 添加加载状态
                       ),
               ],
             ),

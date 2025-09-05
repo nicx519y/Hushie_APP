@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:hushie_app/services/auth_service.dart';
+import 'package:rxdart/rxdart.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
 import '../services/api/audio_like_service.dart';
 import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
+import '../pages/login_page.dart';
+import '../components/history_list.dart';
+import '../components/fallback_image.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -92,8 +96,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       }
     });
 
-    // 监听播放位置
-    _audioManager.positionStream.listen((position) {
+    // 监听播放位置 - 使用防抖动技术减少更新频率
+    _audioManager.positionStream
+        .debounceTime(const Duration(milliseconds: 200)) // 添加200ms的防抖动
+        .listen((position) {
       if (mounted) {
         setState(() {
           _currentPosition = position;
@@ -134,6 +140,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   void _onLikeButtonPressed() async {
+    final isLogin = await AuthService.isSignedIn();
+    if (!isLogin) {
+      // 打开登录页
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const LoginPage()));
+
+      return;
+    }
+
     // 如果正在请求中，直接返回
     if (_isLikeRequesting) return;
 
@@ -185,6 +201,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     }
   }
 
+  void _onPlaylistButtonTap() async {
+    final isLogin = await AuthService.isSignedIn();
+    if (!isLogin) {
+      // 打开登录页
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const LoginPage()));
+
+      return;
+    }
+
+    showHistoryListWithAnimation(
+      context,
+      onItemTap: (audio) {
+        _audioManager.playAudio(audio);
+      },
+    );
+  }
+
   void _onSeek(Duration position) {
     _audioManager.seek(position);
   }
@@ -215,38 +250,60 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 构建音频背景
   Widget _buildAudioBackground() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final bgImage =
-        _currentAudio?.bgImage?.getBestResolution(screenWidth).url ??
-        'assets/images/logo.png';
+    final bgImageUrl = _currentAudio?.bgImage
+        ?.getBestResolution(screenWidth)
+        .url;
 
     return Positioned.fill(
-      child: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: bgImage.startsWith('http')
-                ? NetworkImage(bgImage)
-                : AssetImage(bgImage) as ImageProvider,
-            fit: BoxFit.cover,
-            onError: (exception, stackTrace) {
-              print('背景图片加载失败: $exception，使用默认图片');
-            },
+      child: Stack(
+        children: [
+          // 背景图片层 - 使用RepaintBoundary避免频繁重绘
+          RepaintBoundary(
+            child: _buildBackgroundImage(bgImageUrl),
           ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black.withOpacity(0.3),
-                Colors.black.withOpacity(0.7),
-              ],
+          // 渐变遮罩层
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.3),
+                  Colors.black.withOpacity(0.7),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
+  }
+
+  // 缓存当前背景图片URL
+  String? _cachedBgImageUrl;
+  // 缓存的背景图片组件
+  Widget? _cachedBackgroundImage;
+
+  // 构建背景图片，包含备用图片逻辑和缓存机制
+  Widget _buildBackgroundImage(String? imageUrl) {
+    // 如果图片URL没有变化，直接返回缓存的组件
+    if (_cachedBgImageUrl == imageUrl && _cachedBackgroundImage != null) {
+      return _cachedBackgroundImage!;
+    }
+    
+    // 更新缓存
+    _cachedBgImageUrl = imageUrl;
+    _cachedBackgroundImage = FallbackImage(
+      imageUrl: imageUrl,
+      fallbackImage: 'assets/images/backup.png',
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      fadeInDuration: const Duration(milliseconds: 300),
+    );
+    
+    return _cachedBackgroundImage!;
   }
 
   // 构建状态栏
@@ -467,9 +524,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      onPressed: () {
-        // TODO: 播放列表功能
-      },
+      onPressed: _onPlaylistButtonTap,
       icon: Icon(CustomIcons.menu, color: Colors.white, size: 20),
     );
   }

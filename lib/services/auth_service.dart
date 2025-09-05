@@ -31,6 +31,8 @@ class AuthService {
   static AccessTokenResponse? _currentToken;
   static GoogleAuthResponse? _currentUser;
   static AuthStatus _currentStatus = AuthStatus.unknown;
+  static bool _isRefreshing = false;
+  static Completer<bool>? _refreshCompleter;
 
   // 认证状态变化事件流
   static final StreamController<AuthStatusChangeEvent> _authStatusController =
@@ -58,15 +60,26 @@ class AuthService {
 
   /// 获取当前访问Token
   static Future<String?> getAccessToken() async {
+    // 先从内存中检查
     if (_currentToken != null &&
         _currentToken!.accessToken.isNotEmpty &&
         !_currentToken!.isExpiringSoon) {
       return _currentToken!.accessToken;
     }
+
+    // 从存储中加载
     await _loadTokenFromStorage();
 
     if (_currentToken == null) {
       return null;
+    }
+
+    // 检查是否需要刷新
+    if (_currentToken!.isExpiringSoon) {
+      final refreshSuccess = await _refreshTokenIfNeeded();
+      if (!refreshSuccess) {
+        return null; // 刷新失败
+      }
     }
 
     return _currentToken!.accessToken;
@@ -195,18 +208,18 @@ class AuthService {
   /// 检查是否已登录
   static Future<bool> isSignedIn() async {
     try {
-      final token = await getAccessToken();
-      final isValid = token != null && token.isNotEmpty;
+      // 判断token是否存在 并且不为空 并且没过期，如果过期 强制刷新
+      final isTokenValid = await _refreshTokenIfNeeded(force: false);
 
       // 更新认证状态（如果状态未知）
       if (_currentStatus == AuthStatus.unknown) {
         _notifyAuthStatusChange(
-          isValid ? AuthStatus.authenticated : AuthStatus.unauthenticated,
+          isTokenValid ? AuthStatus.authenticated : AuthStatus.unauthenticated,
           user: _currentUser,
         );
       }
 
-      return isValid;
+      return isTokenValid;
     } catch (e) {
       print('🔐 [AUTH] isSignedIn异常: $e');
       // 通知认证状态为未知
@@ -261,7 +274,28 @@ class AuthService {
       return true; // 不需要刷新
     }
 
+    // 如果已经在刷新中，等待刷新完成
+    if (_isRefreshing && _refreshCompleter != null) {
+      print('🔐 [AUTH] Token刷新已在进行中，等待完成...');
+      return await _refreshCompleter!.future;
+    }
+
+    // 设置刷新状态并创建 Completer
+    _isRefreshing = true;
+    _refreshCompleter = Completer<bool>();
+    
+    // 添加超时机制，确保不会永久等待
+    Timer? timeoutTimer;
+    timeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+        print('🔐 [AUTH] Token刷新超时');
+        _refreshCompleter!.complete(false);
+      }
+      timeoutTimer = null;
+    });
+
     try {
+      print('🔐 [AUTH] 开始刷新Token...');
       final result = await GoogleAuthService.refreshAccessToken(
         refreshToken: _currentToken!.refreshToken,
       );
@@ -282,10 +316,36 @@ class AuthService {
 
         await _saveTokenToSecureStorage(newToken);
         _currentToken = newToken;
+
+        print('🔐 [AUTH] Token刷新成功');
+        if (!_refreshCompleter!.isCompleted) {
+          _refreshCompleter!.complete(true);
+        }
         return true;
+      } else {
+        print('🔐 [AUTH] Token刷新失败: ${result.errNo}');
+        if (!_refreshCompleter!.isCompleted) {
+          _refreshCompleter!.complete(false);
+        }
       }
     } catch (e) {
-      print('Token刷新失败: $e');
+      print('🔐 [AUTH] Token刷新异常: $e');
+      if (!_refreshCompleter!.isCompleted) {
+        _refreshCompleter!.complete(false);
+      }
+    } finally {
+      // 取消超时定时器
+      timeoutTimer?.cancel();
+      
+      // 确保completer总是被完成
+      if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+        print('🔐 [AUTH] 确保Token刷新Completer被完成');
+        _refreshCompleter!.complete(false);
+      }
+      
+      // 重置刷新状态
+      _isRefreshing = false;
+      _refreshCompleter = null;
     }
 
     // 刷新失败，清除Token
@@ -391,6 +451,22 @@ class AuthService {
     } catch (e) {
       print('清除所有认证数据失败: $e');
     }
+  }
+
+  /// 测试并发刷新（仅用于调试）
+  static Future<void> testConcurrentRefresh() async {
+    print('🔐 [AUTH] 开始测试并发刷新...');
+
+    // 模拟多个并发请求
+    final futures = List.generate(5, (index) async {
+      print('🔐 [AUTH] 请求 $index 开始');
+      final result = await _refreshTokenIfNeeded(force: true);
+      print('🔐 [AUTH] 请求 $index 完成: $result');
+      return result;
+    });
+
+    final results = await Future.wait(futures);
+    print('🔐 [AUTH] 并发测试完成，结果: $results');
   }
 
   /// 关闭事件流（应用退出时调用）

@@ -10,9 +10,9 @@ class UserLikesService {
   /// 获取用户喜欢的音频列表
   static Future<List<AudioItem>> getUserLikedAudios({
     String? cid,
-    int count = 20,
+    int? count = 20,
   }) async {
-    return _getRealUserLikedAudios(cid: cid, count: count);
+    return _getRealUserLikedAudios(cid: cid, count: count ?? 20);
   }
 
   /// 真实接口 - 获取用户喜欢的音频列表
