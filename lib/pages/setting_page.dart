@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hushie_app/components/confirm_dialog.dart';
 import '../services/auth_service.dart';
 import '../components/custom_outline_button.dart';
-import 'about_us_page.dart';
-import 'account_page.dart';
+import '../router/navigation_utils.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -99,10 +98,7 @@ class _SettingPageState extends State<SettingPage> {
             _buildSettingItem(
               title: 'About Us',
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AboutUsPage()),
-                );
+                NavigationUtils.navigateToAboutUs(context);
               },
             ),
 
@@ -111,12 +107,7 @@ class _SettingPageState extends State<SettingPage> {
               _buildSettingItem(
                 title: 'Account',
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AccountPage(),
-                    ),
-                  );
+                  NavigationUtils.navigateToAccount(context);
                 },
               ),
             ],

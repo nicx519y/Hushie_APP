@@ -1,19 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import '../services/auth_service.dart';
-import '../models/api_response.dart';
+import '../router/navigation_utils.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
+
+  /// 显示登录页面的静态方法
+  /// 确保全局只能打开一个登录页面实例
+  /// 
+  /// 使用方式：
+  /// ```dart
+  /// LoginPage.show(context);
+  /// ```
+  static Future<void> show(BuildContext context) async {
+    return NavigationUtils.navigateToLogin(context);
+  }
+
+  /// 检查登录页面是否已经打开
+  static bool get isOpen => NavigationUtils.isLoginPageOpen;
 }
 
 const linkColor = Color(0xFF2A4EFF);
 
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 确保状态正确标记为已打开
+    print('🔐 [LOGIN] LoginPage initState');
+  }
+
+  @override
+  void dispose() {
+    // 页面销毁时重置状态
+    NavigationUtils.resetLoginPageState();
+    print('🔐 [LOGIN] LoginPage dispose');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

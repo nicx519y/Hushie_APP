@@ -9,9 +9,9 @@ import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
 import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
-import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
 import 'login_page.dart';
-import 'setting_page.dart';
+import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
+import '../router/navigation_utils.dart';
 import 'dart:async';
 
 class ProfilePage extends StatefulWidget {
@@ -333,12 +333,7 @@ class _ProfilePageState extends State<ProfilePage>
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingPage(),
-                        ),
-                      );
+                      NavigationUtils.navigateToSettings(context);
                     },
                     icon: Icon(CustomIcons.setup, size: 20),
                   ),
@@ -352,9 +347,7 @@ class _ProfilePageState extends State<ProfilePage>
                 isLoggedIn: isLoggedIn,
                 userName: userName,
                 onLoginTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
-                  );
+                  LoginPage.show(context);
                 },
               ),
 
@@ -501,11 +494,7 @@ class _ProfilePageState extends State<ProfilePage>
                       side: const BorderSide(color: Color(0xFF333333)),
                     ),
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const LoginPage(),
-                        ),
-                      );
+                      LoginPage.show(context);
                     },
                     child: const Text(
                       'Log in / Sign up',

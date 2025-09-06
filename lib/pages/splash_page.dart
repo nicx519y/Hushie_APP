@@ -4,6 +4,7 @@ import '../layouts/main_layout.dart';
 import '../pages/home_page.dart';
 import '../pages/profile_page.dart';
 import '../services/audio_manager.dart';
+import '../router/navigation_utils.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -41,16 +42,7 @@ class _SplashPageState extends State<SplashPage> {
     // 跳转到主页（无动画）
     if (mounted) {
       print('🔄 [SPLASH] 开始跳转到MainApp');
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) {
-            print('🔄 [SPLASH] MainApp页面构建开始');
-            return const MainApp();
-          },
-          transitionDuration: Duration.zero, // 无过渡动画
-          reverseTransitionDuration: Duration.zero,
-        ),
-      );
+      NavigationUtils.navigateToMainApp(context, const MainApp());
       print('🔄 [SPLASH] 跳转完成');
     } else {
       print('🔄 [SPLASH] 组件已卸载，取消跳转');

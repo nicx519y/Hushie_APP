@@ -9,6 +9,8 @@ import '../utils/custom_icons.dart';
 import '../pages/login_page.dart';
 import '../components/history_list.dart';
 import '../components/fallback_image.dart';
+import '../utils/number_formatter.dart';
+import '../router/navigation_utils.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -19,6 +21,9 @@ class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
         pageBuilder: (context, animation, secondaryAnimation) => page,
         transitionDuration: const Duration(milliseconds: 300),
         reverseTransitionDuration: const Duration(milliseconds: 300),
+        maintainState: true,
+        fullscreenDialog: true,
+        opaque: false,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(0.0, 1.0); // 从底部开始
           const end = Offset.zero; // 到正常位置
@@ -35,6 +40,14 @@ class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
           );
         },
       );
+      
+  @override
+  bool get popGestureEnabled => false;
+  
+  @override
+  Future<RoutePopDisposition> willPop() async {
+    return RoutePopDisposition.pop;
+  }
 }
 
 class AudioPlayerPage extends StatefulWidget {
@@ -42,8 +55,7 @@ class AudioPlayerPage extends StatefulWidget {
 
   /// 使用标准上滑动画打开播放器页面
   static Future<T?> show<T extends Object?>(BuildContext context) {
-    return Navigator.push<T>(
-      context,
+    return Navigator.of(context, rootNavigator: true).push<T>(
       SlideUpPageRoute(page: const AudioPlayerPage()),
     );
   }
@@ -143,10 +155,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     final isLogin = await AuthService.isSignedIn();
     if (!isLogin) {
       // 打开登录页
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (context) => const LoginPage()));
-
+      NavigationUtils.navigateToLogin(context);
       return;
     }
 
@@ -161,38 +170,24 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       _isLikeRequesting = true;
     });
 
-    // 先更新本地状态（乐观更新）
-    final newIsLiked = !_localIsLiked;
-    final newLikesCount = newIsLiked
-        ? _localLikesCount + 1
-        : _localLikesCount - 1;
-
-    setState(() {
-      _localIsLiked = newIsLiked;
-      _localLikesCount = newLikesCount;
-    });
-
     try {
       // 调用API
       final response = await AudioLikeService.likeAudio(
         audioId: _currentAudio!.id,
-        isLiked: newIsLiked,
+        isLiked: !_localIsLiked,
       );
+
+      final finalIsLiked = response['is_liked'];
+      final finalLikesCount = response['likes_count'];
+
       setState(() {
-        _localIsLiked = !newIsLiked;
-        _localLikesCount = newIsLiked
-            ? _localLikesCount - 1
-            : _localLikesCount + 1;
+        _localIsLiked = finalIsLiked;
+        _localLikesCount = finalLikesCount;
       });
     } catch (e) {
       // 网络异常，回滚本地状态
       print('点赞操作异常: $e');
-      setState(() {
-        _localIsLiked = !newIsLiked;
-        _localLikesCount = newIsLiked
-            ? _localLikesCount - 1
-            : _localLikesCount + 1;
-      });
+
     } finally {
       // 重置请求状态
       setState(() {
@@ -205,10 +200,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     final isLogin = await AuthService.isSignedIn();
     if (!isLogin) {
       // 打开登录页
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (context) => const LoginPage()));
-
+      NavigationUtils.navigateToLogin(context);
       return;
     }
 
@@ -232,16 +224,24 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        // onTap: _toggleControls,
-        child: Stack(
-          children: [
-            _buildAudioBackground(),
-            _buildStatusBar(),
-            _buildControlBar(),
-          ],
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: GestureDetector(
+          // onTap: _toggleControls,
+          child: Stack(
+            children: [
+              _buildAudioBackground(),
+              _buildStatusBar(),
+              _buildControlBar(),
+            ],
+          ),
         ),
       ),
     );
@@ -456,7 +456,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           style: IconButton.styleFrom(
             padding: EdgeInsets.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            backgroundColor: const Color(0x66000000),
+            backgroundColor: _localIsLiked ? Colors.white : const Color(0x66000000),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -472,15 +472,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
-              : Icon(
-                  CustomIcons.likes,
-                  color: _localIsLiked ? Colors.pink : Colors.white,
-                  size: 14,
+              : Transform.translate(
+                  offset: const Offset(0, -1),
+                  child: Icon(
+                    CustomIcons.likes,
+                    color: _localIsLiked ? Color(0xFFFF254E) : Colors.white,
+                    size: 14,
+                  ),
                 ),
         ),
         const SizedBox(height: 4),
         Text(
-          '${_localLikesCount}',
+          NumberFormatter.countNumFilter(_localLikesCount),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 12,

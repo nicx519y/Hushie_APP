@@ -7,8 +7,8 @@ import '../models/tab_item.dart';
 import '../services/audio_manager.dart';
 import '../services/tab_manager.dart';
 import '../services/home_page_list_service.dart';
-import 'search_page.dart';
-import 'audio_player_page.dart';
+
+import '../router/navigation_utils.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -208,10 +208,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _onSearchTap() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SearchPage()),
-    );
+    NavigationUtils.navigateToSearch(context);
   }
 
   // 获取服务状态信息（用于调试）
@@ -240,7 +237,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _playAudio(item);
 
     // 使用播放器页面的标准打开方式（包含上滑动画）
-    AudioPlayerPage.show(context);
+    NavigationUtils.navigateToAudioPlayer(context);
   }
 
   Future<void> _playAudio(AudioItem item) async {
@@ -260,12 +257,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         children: [
           // 自定义顶部栏
           CustomAppBar(onSearchTap: _onSearchTap),
-          IconButton(
-            onPressed: () {
-              _initTabs();
-            },
-            icon: const Icon(Icons.refresh),
-          ),
+          // IconButton(
+          //   onPressed: () {
+          //     _initTabs();
+          //   },
+          //   icon: const Icon(Icons.refresh),
+          // ),
           // Tab 栏
           if (_tabItems.isNotEmpty)
             CustomTabBar(

@@ -64,8 +64,8 @@ class _HistoryListState extends State<HistoryList>
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
+        animation: _animationController,
+        builder: (context, child) {
         return Stack(
           children: [
             // 从底部滑上来的内容区域
@@ -149,7 +149,7 @@ class _HistoryListState extends State<HistoryList>
             ),
           ],
         );
-      },
+        },
     );
   }
 
@@ -181,7 +181,7 @@ Future<void> showHistoryListWithAnimation(
     PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => HistoryList(
         onItemTap: onItemTap,
-        onClose: () => Navigator.of(context).pop(),
+        onClose: () => Navigator.of(context, rootNavigator: true).pop(),
       ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final opacityAnimation = Tween<double>(

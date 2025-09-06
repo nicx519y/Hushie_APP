@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hushie_app/models/api_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../components/search_box.dart';
@@ -7,7 +6,7 @@ import '../components/audio_list.dart';
 import '../models/audio_item.dart';
 import '../services/api/audio_search_service.dart';
 import '../services/audio_manager.dart';
-import '../pages/audio_player_page.dart';
+import '../router/navigation_utils.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -455,7 +454,7 @@ class _SearchPageState extends State<SearchPage> {
         // 播放音频
         _playAudio(audio);
         // 进入播放页面
-        AudioPlayerPage.show(context);
+        NavigationUtils.navigateToAudioPlayer(context);
       },
     );
   }

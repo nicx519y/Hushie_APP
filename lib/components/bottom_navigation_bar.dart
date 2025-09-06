@@ -3,7 +3,7 @@ import 'package:flutter_svg/svg.dart';
 import 'circular_play_button.dart';
 import '../services/audio_manager.dart';
 import '../models/audio_item.dart';
-import '../pages/audio_player_page.dart';
+import '../router/navigation_utils.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   final int currentIndex;
@@ -84,7 +84,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
       if (_isPlaying) {
         await _audioManager.pause();
       } else {
-        AudioPlayerPage.show(context);
+        NavigationUtils.navigateToAudioPlayer(context);
         await _audioManager.play();
       }
     }

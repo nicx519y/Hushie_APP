@@ -1229,7 +1229,20 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
+### 1.7 获取音频详情
 
+接口描述：获取音频详情信息
+
+请求信息:
+- URL: `GET /audios/{id}`
+- 方法: GET
+
+上行参数:
+```json
+{
+  "id": "audio_003",
+}
+```
 
 
 
