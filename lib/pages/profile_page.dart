@@ -14,6 +14,8 @@ import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
 import '../router/navigation_utils.dart';
 import 'dart:async';
 import 'package:hushie_app/services/api/user_history_service.dart';
+import 'audio_player_page.dart';
+import 'package:hushie_app/services/audio_manager.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -457,6 +459,10 @@ class _ProfilePageState extends State<ProfilePage>
                         onLoadMore: _loadMoreLikedAudios,
                         hasMoreData: true,
                         isLoadingMore: _isLoadingLiked, // 添加加载状态
+                        onItemTap: (audio) {
+                          AudioManager.instance.playAudio(audio);
+                          NavigationUtils.navigateToAudioPlayer(context);
+                        },
                       ),
               ],
             ),

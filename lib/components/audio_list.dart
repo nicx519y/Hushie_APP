@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_stats.dart';
+import 'fallback_image.dart';
 
 class AudioList extends StatefulWidget {
   final List<AudioItem> audios;
@@ -122,7 +123,7 @@ class _AudioListState extends State<AudioList> {
   }
 
   Widget _buildAudioItem(AudioItem audio) {
-    return GestureDetector(
+    return InkWell(
       onTap: widget.onItemTap != null ? () => widget.onItemTap!(audio) : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 18),
@@ -146,17 +147,13 @@ class _AudioListState extends State<AudioList> {
                       imageUrl = null;
                     }
 
-                    if (imageUrl != null && imageUrl.isNotEmpty) {
-                      return Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.play_arrow, size: 30);
-                        },
-                      );
-                    } else {
-                      return const Icon(Icons.play_arrow, size: 30);
-                    }
+                    return FallbackImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      fallbackImage: 'assets/images/backup.png',
+                      width: double.infinity,
+                      height: double.infinity,
+                    );
                   },
                 ),
               ),
@@ -176,7 +173,7 @@ class _AudioListState extends State<AudioList> {
                       height: 1.5,
                       color: Color(0xFF333333),
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),

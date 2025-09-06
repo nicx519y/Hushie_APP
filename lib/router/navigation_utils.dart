@@ -31,7 +31,7 @@ class NavigationUtils {
     try {
       print('🔐 [LOGIN] 打开登录页面');
       // 导航到登录页面
-      await Navigator.of(context).push(
+      await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (context) => const LoginPage(),
           settings: const RouteSettings(name: '/login'),
@@ -60,7 +60,9 @@ class NavigationUtils {
   static Future<T?> navigateToAudioPlayer<T extends Object?>(BuildContext context) async {
     try {
       print('🎵 [AUDIO_PLAYER] 打开音频播放器页面');
-      return await AudioPlayerPage.show<T>(context);
+      return await Navigator.of(context, rootNavigator: true).push(
+        SlideUpPageRoute(page: const AudioPlayerPage()),
+      );
     } catch (e) {
       print('🎵 [AUDIO_PLAYER] 导航到音频播放器页面时发生错误: $e');
       return null;
@@ -71,7 +73,7 @@ class NavigationUtils {
   static Future<void> navigateToSettings(BuildContext context) async {
     try {
       print('⚙️ [SETTINGS] 打开设置页面');
-      await Navigator.of(context).push(
+      await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (context) => const SettingPage(),
           settings: const RouteSettings(name: '/settings'),
@@ -87,7 +89,7 @@ class NavigationUtils {
   static Future<void> navigateToAccount(BuildContext context) async {
     try {
       print('👤 [ACCOUNT] 打开账户页面');
-      await Navigator.of(context).push(
+      await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (context) => const AccountPage(),
           settings: const RouteSettings(name: '/account'),
@@ -103,7 +105,7 @@ class NavigationUtils {
   static Future<void> navigateToAboutUs(BuildContext context) async {
     try {
       print('ℹ️ [ABOUT_US] 打开关于我们页面');
-      await Navigator.of(context).push(
+      await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (context) => const AboutUsPage(),
           settings: const RouteSettings(name: '/about_us'),
@@ -119,7 +121,7 @@ class NavigationUtils {
   static Future<void> navigateToSearch(BuildContext context) async {
     try {
       print('🔍 [SEARCH] 打开搜索页面');
-      await Navigator.of(context).push(
+      await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (context) => const SearchPage(),
           settings: const RouteSettings(name: '/search'),

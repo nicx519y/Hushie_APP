@@ -124,7 +124,7 @@ class AudioHistoryManager {
 
   /// 播放位置变化回调
   void _onPositionChanged(Duration position) {
-    _lastRecordedPosition = position;
+  _lastRecordedPosition = position;
 
     // 检查是否需要记录进度（基于时间间隔）
     if (_currentPlayingAudio != null && _isCurrentlyPlaying) {

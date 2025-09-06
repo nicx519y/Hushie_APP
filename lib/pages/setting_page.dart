@@ -71,7 +71,7 @@ class _SettingPageState extends State<SettingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+        backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -125,7 +125,7 @@ class _SettingPageState extends State<SettingPage> {
           ],
         ),
       ),
-    );
+    );  
   }
 
   Widget _buildSettingItem({

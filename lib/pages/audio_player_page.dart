@@ -54,11 +54,7 @@ class AudioPlayerPage extends StatefulWidget {
   const AudioPlayerPage({super.key});
 
   /// 使用标准上滑动画打开播放器页面
-  static Future<T?> show<T extends Object?>(BuildContext context) {
-    return Navigator.of(context, rootNavigator: true).push<T>(
-      SlideUpPageRoute(page: const AudioPlayerPage()),
-    );
-  }
+  
 
   @override
   State<AudioPlayerPage> createState() => _AudioPlayerPageState();
@@ -71,6 +67,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
   bool _isLiked = false;
+  bool _isLoadingMetadata = false; // 是否正在加载metadata
 
   // 点赞相关状态管理
   bool _isLikeRequesting = false; // 是否正在请求点赞
@@ -95,6 +92,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           // 初始化本地状态
           _localIsLiked = _isLiked;
           _localLikesCount = _currentAudio?.likesCount ?? 0;
+          _totalDuration = Duration.zero;
+          _isLoadingMetadata = audio != null; // 切换音频时开始加载状态
         });
       }
     });
@@ -124,12 +123,19 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       if (mounted) {
         setState(() {
           _totalDuration = duration;
+          // 如果通过音频流获取到了时长，也要结束加载状态
+          if (duration > Duration.zero) {
+            _isLoadingMetadata = false;
+          }
         });
       }
     });
   }
 
   void _togglePlay() {
+    // 如果正在加载metadata，不允许播放
+    if (_isLoadingMetadata) return;
+    
     if (!_isPlaying) {
       // 如果当前没有播放，或者播放的不是当前音频，则开始播放当前音频
       final currentAudio = _audioManager.currentAudio;
@@ -212,8 +218,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  void _onSeek(Duration position) {
-    _audioManager.seek(position);
+  Future<void> _onSeek(Duration position) async {
+    await _audioManager.seek(position);
   }
 
   // void _toggleControls() {
@@ -224,14 +230,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: true,
-      onPopInvoked: (didPop) {
-        if (!didPop) {
-          Navigator.of(context).pop();
-        }
-      },
-      child: Scaffold(
+    return  Scaffold(
         backgroundColor: Colors.black,
         body: GestureDetector(
           // onTap: _toggleControls,
@@ -243,7 +242,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -496,10 +494,19 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建进度条
   Widget _buildProgressBar() {
-    return AudioProgressBar(
-      currentPosition: _currentPosition,
-      totalDuration: _totalDuration,
-      onSeek: _onSeek,
+    // 如果正在加载metadata或没有时长信息，隐藏进度条
+    if (_isLoadingMetadata || _totalDuration == Duration.zero) {
+      return const SizedBox(height: 40); // 保持布局高度
+    }
+    
+    return AnimatedOpacity(
+      opacity: 1.0,
+      duration: const Duration(milliseconds: 300),
+      child: AudioProgressBar(
+        currentPosition: _currentPosition,
+        totalDuration: _totalDuration,
+        onSeek: _onSeek,
+      ),
     );
   }
 
@@ -534,9 +541,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建播放/暂停按钮
   Widget _buildPlayPauseButton() {
-    return GestureDetector(
-      onTap: _togglePlay,
-      child: IconButton(
+    return IconButton(
         alignment: Alignment.center,
         style: IconButton.styleFrom(
           minimumSize: const Size(64, 64),
@@ -546,17 +551,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           ),
         ),
         onPressed: _togglePlay,
-        icon: Transform.translate(
-          offset: !_isPlaying
-              ? const Offset(2, 0)
-              : const Offset(0, 0), // 播放箭头向右偏移2像素
-          child: Icon(
-            !_isPlaying ? CustomIcons.play_arrow : CustomIcons.pause,
-            color: Colors.black,
-            size: !_isPlaying ? 26 : 22,
-          ),
-        ),
-      ),
+        icon: _isLoadingMetadata
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                ),
+              )
+            : Transform.translate(
+                offset: !_isPlaying
+                    ? const Offset(2, 0)
+                    : const Offset(0, 0), // 播放箭头向右偏移2像素
+                child: Icon(
+                  !_isPlaying ? CustomIcons.play_arrow : CustomIcons.pause,
+                  color: Colors.black,
+                  size: !_isPlaying ? 26 : 22,
+                ),
+              ),
     );
   }
 }

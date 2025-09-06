@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../components/bottom_navigation_bar.dart';
 
 // 全局路由观察者
@@ -46,6 +47,21 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
+  // 处理返回键逻辑
+  void _handleBackPress() {
+    // 检查当前导航器是否可以返回
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      // 如果有页面可以返回，则返回上一页
+      navigator.pop();
+      print('🔙 [MAIN_LAYOUT] 返回上一页');
+    } else {
+      // 如果没有页面可以返回，则退出应用
+      print('🔙 [MAIN_LAYOUT] 返回键被按下，退出应用');
+      SystemNavigator.pop(); // 退出应用
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     print('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
@@ -62,49 +78,49 @@ class _MainLayoutState extends State<MainLayout> {
 
   Widget _buildMainContent() {
     return Scaffold(
-      backgroundColor: Colors.white,
-      extendBodyBehindAppBar: true, // 让body延伸到状态栏后面
+        backgroundColor: Colors.white,
+        extendBodyBehindAppBar: true, // 让body延伸到状态栏后面
 
-      body: Stack(
-        children: [
-          // 页面主体内容
-          SafeArea(
-            top: true, // 确保内容不被状态栏遮挡
-            bottom: false,
-            child: IndexedStack(index: _currentIndex, children: widget.pages),
-          ),
-
-          // 底部导航栏（放在Stack最上层，脱离Scaffold默认布局）
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: -30, // 考虑底部安全区域
-            child: Stack(
-              children: [
-                // 自定义阴影
-                CustomPaint(
-                  painter: BottomNavShadowPainter(),
-                  size: Size(
-                    MediaQuery.of(context).size.width,
-                    120 + MediaQuery.of(context).padding.bottom,
-                  ),
-                ),
-                // 导航栏内容
-                ClipPath(
-                  clipper: BottomNavClipper(),
-                  child: CustomBottomNavigationBar(
-                    currentIndex: _currentIndex,
-                    onTap: _onBottomNavTap,
-                  ),
-                ),
-              ],
+        body: Stack(
+          children: [
+            // 页面主体内容
+            SafeArea(
+              top: true, // 确保内容不被状态栏遮挡
+              bottom: false,
+              child: IndexedStack(index: _currentIndex, children: widget.pages),
             ),
-          ),
-        ],
-      ),
-      // 禁用默认的bottomNavigationBar
-      bottomNavigationBar: const SizedBox.shrink(),
-    );
+
+            // 底部导航栏（放在Stack最上层，脱离Scaffold默认布局）
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: -30, // 考虑底部安全区域
+              child: Stack(
+                children: [
+                  // 自定义阴影
+                  CustomPaint(
+                    painter: BottomNavShadowPainter(),
+                    size: Size(
+                      MediaQuery.of(context).size.width,
+                      120 + MediaQuery.of(context).padding.bottom,
+                    ),
+                  ),
+                  // 导航栏内容
+                  ClipPath(
+                    clipper: BottomNavClipper(),
+                    child: CustomBottomNavigationBar(
+                      currentIndex: _currentIndex,
+                      onTap: _onBottomNavTap,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        // 禁用默认的bottomNavigationBar
+        bottomNavigationBar: const SizedBox.shrink(),
+      );
   }
 }
 

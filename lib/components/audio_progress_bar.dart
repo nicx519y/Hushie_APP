@@ -73,18 +73,23 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             ),
             child: Slider(
               value: progress.clamp(0.0, 1.0),
-              onChanged: (value) {
+              onChanged: (value) async {
                 setState(() {
                   _isDragging = true;
                   _dragValue = value;
                 });
-              },
-              onChangeEnd: (value) {
                 final newPosition = Duration(
                   milliseconds: (value * widget.totalDuration.inMilliseconds)
                       .round(),
                 );
-                widget.onSeek(newPosition);
+                await widget.onSeek(newPosition);
+              },
+              onChangeEnd: (value) async {
+                final newPosition = Duration(
+                  milliseconds: (value * widget.totalDuration.inMilliseconds)
+                      .round(),
+                );
+                await widget.onSeek(newPosition);
                 setState(() {
                   _isDragging = false;
                 });
