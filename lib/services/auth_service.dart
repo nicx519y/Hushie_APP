@@ -307,17 +307,30 @@ class AuthService {
   /// 执行实际的Token刷新操作
   static Future<bool> _performTokenRefresh() async {
     print('🔐 [AUTH] 开始刷新Token...');
+    print('🔐 [AUTH] 当前RefreshToken长度: ${_currentToken?.refreshToken.length ?? 0}');
     
     try {
+      print('🔐 [AUTH] 调用GoogleAuthService.refreshAccessToken...');
       final result = await GoogleAuthService.refreshAccessToken(
         refreshToken: _currentToken!.refreshToken,
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          print('🔐 [AUTH] Token刷新请求超时(30秒)');
+          throw TimeoutException('Token refresh timeout', const Duration(seconds: 30));
+        },
+      );
 
+      print('🔐 [AUTH] GoogleAuthService返回结果: errNo=${result.errNo}');
+      
       if (result.errNo == 0 && result.data != null) {
         var newToken = result.data!;
+        print('🔐 [AUTH] 获得新Token，AccessToken长度: ${newToken.accessToken.length}');
+        print('🔐 [AUTH] 新Token过期时间: ${newToken.expiresAt}');
 
         // 保留原有的refresh token（如果新的为空）
         if (newToken.refreshToken.isEmpty && _currentToken != null) {
+          print('🔐 [AUTH] 新RefreshToken为空，保留原有RefreshToken');
           newToken = AccessTokenResponse(
             accessToken: newToken.accessToken,
             refreshToken: _currentToken!.refreshToken,
@@ -327,13 +340,15 @@ class AuthService {
           );
         }
 
+        print('🔐 [AUTH] 保存新Token到安全存储...');
         await _saveTokenToSecureStorage(newToken);
         _currentToken = newToken;
 
         print('🔐 [AUTH] Token刷新成功');
         return true;
       } else {
-        print('🔐 [AUTH] Token刷新失败: ${result.errNo}');
+        print('🔐 [AUTH] Token刷新失败: errNo=${result.errNo}');
+        print('🔐 [AUTH] 响应数据为空: ${result.data == null}');
         // 刷新失败，清除Token
         await _clearTokenFromSecureStorage();
         _currentToken = null;
@@ -343,6 +358,10 @@ class AuthService {
       }
     } catch (e) {
       print('🔐 [AUTH] Token刷新异常: $e');
+      print('🔐 [AUTH] 异常类型: ${e.runtimeType}');
+      if (e is TimeoutException) {
+        print('🔐 [AUTH] 这是一个超时异常');
+      }
       // 刷新异常，清除Token
       await _clearTokenFromSecureStorage();
       _currentToken = null;

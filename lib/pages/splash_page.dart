@@ -35,9 +35,9 @@ class _SplashPageState extends State<SplashPage> {
     _initializeServices();
 
     // 延迟跳转，给服务初始化一些时间
-    print('🔄 [SPLASH] 等待500ms后跳转');
-    await Future.delayed(const Duration(milliseconds: 500));
-    print('🔄 [SPLASH] 延迟完成，准备跳转');
+    // print('🔄 [SPLASH] 等待500ms后跳转');
+    // await Future.delayed(const Duration(milliseconds: 500));
+    // print('🔄 [SPLASH] 延迟完成，准备跳转');
 
     // 跳转到主页（无动画）
     if (mounted) {
@@ -51,26 +51,12 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeServices() async {
     try {
-      // 异步初始化音频服务，不阻塞UI
-      unawaited(
-        AudioManager.instance
-            .init()
-            .then((_) {
-              if (mounted) {
-                setState(() {
-                  _servicesInitialized = true;
-                });
-              }
-            })
-            .catchError((e) {
-              print('Failed to initialize services: $e');
-              if (mounted) {
-                setState(() {
-                  _servicesInitialized = true;
-                });
-              }
-            }),
-      );
+      await AudioManager.instance.init();
+      if (mounted) {
+        setState(() {
+          _servicesInitialized = true;
+        });
+      }
     } catch (e) {
       print('Failed to initialize services: $e');
       if (mounted) {

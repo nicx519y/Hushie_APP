@@ -141,27 +141,46 @@ class GoogleAuthService {
     required String refreshToken,
   }) async {
     try {
+      print('🔐 [GOOGLE_AUTH] 开始刷新Token请求');
+      print('🔐 [GOOGLE_AUTH] RefreshToken长度: ${refreshToken.length}');
+      
       final uri = Uri.parse(
         ApiConfig.getFullUrl(ApiEndpoints.googleRefreshToken),
       );
+      print('🔐 [GOOGLE_AUTH] 请求URL: $uri');
 
+      final requestBody = {'refresh_token': refreshToken, 'grant_type': 'refresh_token'};
+      print('🔐 [GOOGLE_AUTH] 请求体: ${requestBody.keys.toList()}');
+      
+      print('🔐 [GOOGLE_AUTH] 发送HTTP请求...');
       final response = await HttpClientService.postJson(
         uri,
-        body: {'refresh_token': refreshToken, 'grant_type': 'refresh_token'},
+        body: requestBody,
         timeout: _defaultTimeout,
       );
 
+      print('🔐 [GOOGLE_AUTH] HTTP响应状态码: ${response.statusCode}');
+      print('🔐 [GOOGLE_AUTH] HTTP响应体长度: ${response.body.length}');
+      
       if (response.statusCode == 200) {
+        print('🔐 [GOOGLE_AUTH] 开始解析JSON响应...');
         final Map<String, dynamic> jsonData = json.decode(response.body);
+        print('🔐 [GOOGLE_AUTH] JSON解析成功，errNo: ${jsonData['errNo']}');
 
-        return ApiResponse.fromJson(
+        final apiResponse = ApiResponse.fromJson(
           jsonData,
           (dataJson) => AccessTokenResponse.fromMap(dataJson),
         );
+        print('🔐 [GOOGLE_AUTH] Token刷新API调用完成，errNo: ${apiResponse.errNo}');
+        return apiResponse;
       } else {
+        print('🔐 [GOOGLE_AUTH] HTTP请求失败，状态码: ${response.statusCode}');
+        print('🔐 [GOOGLE_AUTH] 错误响应体: ${response.body}');
         return ApiResponse.error(errNo: response.statusCode);
       }
     } catch (e) {
+      print('🔐 [GOOGLE_AUTH] Token刷新请求异常: $e');
+      print('🔐 [GOOGLE_AUTH] 异常类型: ${e.runtimeType}');
       return ApiResponse.error(errNo: -1);
     }
   }

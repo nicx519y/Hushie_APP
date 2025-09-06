@@ -136,14 +136,17 @@ class AudioHistoryManager {
   Future<void> _checkAndRecordProgress() async {
     final now = DateTime.now();
 
+    // 必须有上次记录时间才能进行间隔检查
+    if (_lastProgressRecordTime == null) {
+      return; // 没有基准时间，不进行定时上报
+    }
+
     // 检查是否需要记录（距离上次记录是否超过间隔时间）
-    if (_lastProgressRecordTime != null) {
-      final timeSinceLastRecord = now
-          .difference(_lastProgressRecordTime!)
-          .inSeconds;
-      if (timeSinceLastRecord < progressUpdateIntervalS) {
-        return; // 还没到记录间隔
-      }
+    final timeSinceLastRecord = now
+        .difference(_lastProgressRecordTime!)
+        .inSeconds;
+    if (timeSinceLastRecord < progressUpdateIntervalS) {
+      return; // 还没到记录间隔
     }
 
     try {
@@ -151,7 +154,7 @@ class AudioHistoryManager {
       if (!isLogin) return;
 
       print(
-        '🎵 [HISTORY] 基于位置变化记录播放进度: ${_currentPlayingAudio!.title} -> ${_formatDuration(_lastRecordedPosition)}',
+        '🎵 [HISTORY] 定时记录播放进度(${timeSinceLastRecord}秒): ${_currentPlayingAudio!.title} -> ${_formatDuration(_lastRecordedPosition)}',
       );
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
@@ -184,6 +187,7 @@ class AudioHistoryManager {
       );
 
       _updateLocalCache(updatedHistory);
+      // 重置进度记录时间，确保30秒后才开始定时上报
       _lastProgressRecordTime = DateTime.now();
     } catch (e) {
       print('🎵 [HISTORY] 记录播放开始失败: $e');
@@ -207,6 +211,8 @@ class AudioHistoryManager {
       );
 
       _updateLocalCache(updatedHistory);
+      // 停止播放时清除进度记录时间
+      _lastProgressRecordTime = null;
     } catch (e) {
       print('🎵 [HISTORY] 记录播放停止失败: $e');
     }

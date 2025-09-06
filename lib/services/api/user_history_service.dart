@@ -104,8 +104,8 @@ class UserHistoryService {
           'id': audioId,
           'play_duration_ms': playDurationMs,
           'play_progress_ms': playProgressMs,
-          'cid': '', //
-          'count': 10000, // 默认全返回
+          // 'cid': '', //
+          'count': 20, // 默认全返回
         },
         timeout: _defaultTimeout,
       );

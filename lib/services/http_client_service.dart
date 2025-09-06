@@ -223,19 +223,24 @@ class HttpClientService {
     }
 
     // 自动添加用户Token（如果存在）
-    try {
-      print('🔐 [HTTP] 开始获取访问令牌');
-      final accessToken = await AuthService.getAccessToken();
-      if (accessToken != null && accessToken.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $accessToken';
-        print('🔐 [HTTP] 成功添加 Authorization 头，令牌长度: ${accessToken.length}');
-      } else {
-        print('🔐 [HTTP] 访问令牌为空，跳过 Authorization 头');
+    // 注意：对于Token刷新请求，跳过Token获取以避免循环依赖
+    if (!path.contains('/auth/google/refresh')) {
+      try {
+        print('🔐 [HTTP] 开始获取访问令牌');
+        final accessToken = await AuthService.getAccessToken();
+        if (accessToken != null && accessToken.isNotEmpty) {
+          headers['Authorization'] = 'Bearer $accessToken';
+          print('🔐 [HTTP] 成功添加 Authorization 头，令牌长度: ${accessToken.length}');
+        } else {
+          print('🔐 [HTTP] 访问令牌为空，跳过 Authorization 头');
+        }
+      } catch (e) {
+        print('🔐 [HTTP] 获取access token失败: $e');
+        print('🔐 [HTTP] 异常类型: ${e.runtimeType}');
+        // 不添加Authorization头
       }
-    } catch (e) {
-      print('🔐 [HTTP] 获取access token失败: $e');
-      print('🔐 [HTTP] 异常类型: ${e.runtimeType}');
-      // 不添加Authorization头
+    } else {
+      print('🔐 [HTTP] Token刷新请求，跳过Authorization头以避免循环依赖');
     }
     
     print('🔧 [HTTP] 请求头构建完成，最终包含 ${headers.length} 个字段');

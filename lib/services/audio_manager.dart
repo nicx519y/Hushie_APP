@@ -145,6 +145,12 @@ class AudioManager {
     await AudioPlaylist.instance.initialize();
     print('AudioManager: AudioPlaylist 初始化完成');
 
+    await _ensureInitialized();
+    print('AudioManager: AudioService 初始化完成');
+
+    // 设置音频服务，开启播放历史记录
+    AudioHistoryManager.instance.setAudioService(_audioService!);
+
     // 从播放历史列表中获取最后一条播放记录
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
     if (lastHistory.isNotEmpty) {
@@ -169,7 +175,7 @@ class AudioManager {
       if (lastAudio != null) {
         final audioItem = AudioPlaylist.instance.getAudioItemById(lastAudio.id);
         if (audioItem != null) {
-          await _ensureInitialized();
+          // await _ensureInitialized();
           await _audioService!.loadAudio(audioItem);
         }
       }
@@ -186,7 +192,7 @@ class AudioManager {
   // 播放音频
   Future<void> playAudio(AudioItem audio) async {
     try {
-      await _ensureInitialized();
+      // await _ensureInitialized();
       if (_audioService != null) {
         await _audioService!.playAudio(audio);
       } else {
@@ -200,7 +206,7 @@ class AudioManager {
   }
 
   Future<void> play() async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       await _audioService!.play();
     }
@@ -265,7 +271,7 @@ class AudioManager {
 
   // 播放/暂停
   Future<void> togglePlayPause() async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       if (_audioService!.isPlaying) {
         await pause(); // pause() 会自动处理进度记录
@@ -277,7 +283,7 @@ class AudioManager {
 
   // 暂停
   Future<void> pause() async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       await _audioService!.pause();
     }
@@ -285,7 +291,7 @@ class AudioManager {
 
   // 停止
   Future<void> stop() async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       await _audioService!.stop();
     }
@@ -293,7 +299,7 @@ class AudioManager {
 
   // 跳转
   Future<void> seek(Duration position) async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       await _audioService!.seek(position);
     }
@@ -301,7 +307,7 @@ class AudioManager {
 
   // 设置播放速度
   Future<void> setSpeed(double speed) async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       await _audioService!.setSpeed(speed);
     }
@@ -309,7 +315,7 @@ class AudioManager {
 
   // 快进30秒
   Future<void> fastForward() async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       await _audioService!.fastForward();
     }
@@ -317,7 +323,7 @@ class AudioManager {
 
   // 快退30秒
   Future<void> rewind() async {
-    await _ensureInitialized();
+    // await _ensureInitialized();
     if (_audioService != null) {
       await _audioService!.rewind();
     }
