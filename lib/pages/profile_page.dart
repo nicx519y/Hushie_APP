@@ -427,8 +427,8 @@ class _ProfilePageState extends State<ProfilePage>
 
           // 内容区域
           Expanded(
-            child: IndexedStack(
-              index: currentTabIndex,
+            child: TabBarView(
+              controller: _tabController,
               children: [
                 // History 标签页
                 ValueListenableBuilder<List<AudioItem>>(
