@@ -13,6 +13,7 @@ import 'login_page.dart';
 import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
 import '../router/navigation_utils.dart';
 import 'dart:async';
+import 'package:hushie_app/services/api/user_history_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -68,24 +69,23 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   /// 订阅认证状态变化事件
-  void _subscribeToAuthChanges() {
+  Future<void> _subscribeToAuthChanges() async {
     _authSubscription?.cancel(); // 取消之前的订阅
 
-    _authSubscription = AuthService.authStatusChanges.listen((event) {
+    _authSubscription = AuthService.authStatusChanges.listen((event) async {
       print('👤 [PROFILE] 收到认证状态变化事件: ${event.status}');
-
-      // 认证状态变化时，刷新页面状态
-      _refreshAuthState();
-
+      
       // 根据状态变化刷新数据
       switch (event.status) {
         case AuthStatus.authenticated:
           // 用户登录，重新加载数据
-          _loadDataAfterLogin();
+          await _refreshAuthState();
+          await _loadDataAfterLogin();
           break;
         case AuthStatus.unauthenticated:
           // 用户登出，清空页面数据
-          _clearDataAfterLogout();
+          await _refreshAuthState();
+          await _clearDataAfterLogout();
           break;
         case AuthStatus.unknown:
           // 状态未知，暂不处理
@@ -100,15 +100,35 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _loadDataAfterLogin() async {
     print('👤 [PROFILE] 用户已登录，重新加载页面数据');
 
+    // 检查认证状态
+    final token = await AuthService.getAccessToken();
+    print('👤 [PROFILE] 当前访问令牌: ${token != null ? "存在(${token.length}字符)" : "不存在"}');
+    
+    final isSignedIn = await AuthService.isSignedIn();
+    print('👤 [PROFILE] 登录状态检查: $isSignedIn');
+
     // 并行加载历史和喜欢数据
     await Future.wait([
-      AudioHistoryManager.instance.refreshHistory(),
       _loadLikedAudios(),
+      // AudioHistoryManager.instance.refreshHistory(),
+      () async {
+        try {
+          print('🎵 [HISTORY] 开始调用 UserHistoryService.getUserHistoryList()');
+          final value = await UserHistoryService.getUserHistoryList();
+          print('🎵 [HISTORY] 刷新用户播放历史成功: $value');
+        } catch (error) {
+          print('🎵 [HISTORY] 获取用户播放历史失败: $error');
+          print('🎵 [HISTORY] 错误类型: ${error.runtimeType}');
+          if (error is Exception) {
+            print('🎵 [HISTORY] 异常详情: ${error.toString()}');
+          }
+        }
+      }()
     ]);
   }
 
   /// 登出后清空页面数据
-  void _clearDataAfterLogout() {
+  Future<void> _clearDataAfterLogout() async {
     print('👤 [PROFILE] 用户已登出，清空页面数据');
 
     if (mounted) {
@@ -166,7 +186,6 @@ class _ProfilePageState extends State<ProfilePage>
 
     try {
       final newLoginState = await AuthService.isSignedIn();
-      final oldLoginState = isLoggedIn; // 保存旧状态用于比较
 
       if (mounted) {
         setState(() {
@@ -174,12 +193,12 @@ class _ProfilePageState extends State<ProfilePage>
         });
 
         // 如果登录状态发生变化，重新获取用户信息
-        if (newLoginState && !oldLoginState) {
+        if (newLoginState) {
           await _refreshUserInfo();
         }
 
         // 如果登录状态变为false，清空用户信息
-        if (!newLoginState && oldLoginState) {
+        if (!newLoginState) {
           setState(() {
             userName = '';
           });
@@ -196,6 +215,7 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _refreshUserInfo() async {
     try {
       final user = await AuthService.getCurrentUser();
+      print('👤 [PROFILE] 刷新用户信息: ${user?.displayName}');
       if (mounted) {
         setState(() {
           userName = user?.displayName ?? '';
@@ -218,6 +238,7 @@ class _ProfilePageState extends State<ProfilePage>
 
   // 加载喜欢数据
   Future<void> _loadLikedAudios() async {
+    print('👤 [PROFILE] 加载喜欢数据, _isLoadingLiked: ${_isLoadingLiked}, isLoggedIn: ${isLoggedIn}');
     if (_isLoadingLiked || !isLoggedIn) return;
 
     setState(() {

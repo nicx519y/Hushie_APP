@@ -28,11 +28,17 @@ class UserHistoryService {
   /// 真实接口 - 获取用户播放历史列表
   static Future<List<AudioItem>> _getRealUserHistoryList() async {
     try {
-      final queryParameters = {'cid': '', 'count': 10000};
+      final queryParameters = {'count': '10000'};
 
-      final uri = Uri.parse(
-        ApiConfig.getFullUrl(ApiEndpoints.userHistoryList),
-      ).replace(queryParameters: queryParameters);
+      final baseUrl = ApiConfig.getFullUrl(ApiEndpoints.userHistoryList);
+
+      Uri uri;
+      try {
+        final parsedUri = Uri.parse(baseUrl);
+        uri = parsedUri.replace(queryParameters: queryParameters);
+      } catch (e) {
+        throw Exception('URI构建失败: $e');
+      }
 
       final response = await HttpClientService.get(
         uri,
@@ -55,7 +61,19 @@ class UserHistoryService {
         throw Exception('Response data is empty');
       }
 
-      final List<dynamic> itemsData = dataJson['history'] ?? [];
+      // 检查history字段的类型
+      final dynamic historyData = dataJson['history'];
+      List<dynamic> itemsData = [];
+      
+      if (historyData is List) {
+        itemsData = historyData;
+      } else if (historyData is int) {
+        // 如果返回的是int类型（可能表示数量或错误码），则返回空列表
+        itemsData = [];
+      } else {
+        itemsData = [];
+      }
+      
       final List<AudioItem> historyItems = itemsData
           .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
           .toList();
@@ -108,7 +126,21 @@ class UserHistoryService {
         throw Exception('Response data is empty');
       }
 
-      final List<dynamic> itemsData = dataJson['history'] ?? [];
+      // 检查history字段的类型
+      final dynamic historyData = dataJson['history'];
+      List<dynamic> itemsData = [];
+      
+      if (historyData is List) {
+        itemsData = historyData;
+      } else if (historyData is int) {
+        // 如果返回的是int类型（可能表示数量或错误码），则返回空列表
+        print('🎵 [HISTORY] 提交进度API返回的history字段是int类型: $historyData，返回空列表');
+        itemsData = [];
+      } else {
+        print('🎵 [HISTORY] 提交进度API返回的history字段类型异常: ${historyData.runtimeType}，返回空列表');
+        itemsData = [];
+      }
+      
       final List<AudioItem> historyItems = itemsData
           .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
           .toList();
