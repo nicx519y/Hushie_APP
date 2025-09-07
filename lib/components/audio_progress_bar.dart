@@ -120,21 +120,29 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                 );
                 await widget.onSeek(newPosition);
               },
-              onChangeEnd: (value) async {
-                // 如果需要限制在预览区域内
-                if (widget.showPreview) {
-                  value = value.clamp(previewStart, previewEnd);
-                }
+              // onChangeEnd: (value) async {
+              //   // 如果需要限制在预览区域内
+              //   if (_showPreview()) {
+              //     // 检查是否超出预览区域边界
+              //     if (value < previewStart || value > previewEnd) {
+              //       // 触发边界回调
+              //       widget.onOutPreview();
+              //       return; // 不更新位置
+              //     }
+              //     // 限制在预览区域内
+              //     value = value.clamp(previewStart, previewEnd);
+              //   }
                 
-                final newPosition = Duration(
-                  milliseconds: (value * widget.totalDuration.inMilliseconds)
-                      .round(),
-                );
-                await widget.onSeek(newPosition);
-                setState(() {
-                  _isDragging = false;
-                });
-              },
+              //   setState(() {
+              //     _isDragging = true;
+              //     _dragValue = value;
+              //   });
+              //   final newPosition = Duration(
+              //     milliseconds: (value * widget.totalDuration.inMilliseconds)
+              //         .round(),
+              //   );
+              //   await widget.onSeek(newPosition);
+              // },
             ),
           ),
         ),

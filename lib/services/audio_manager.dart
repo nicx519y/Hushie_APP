@@ -369,7 +369,7 @@ class AudioManager {
         final previewStart = currentAudio.previewStart ?? Duration.zero;
         final previewDuration = currentAudio.previewDuration ?? Duration.zero;
         
-        if (previewStart > Duration.zero && previewDuration > Duration.zero) {
+        if (previewStart >= Duration.zero && previewDuration > Duration.zero) {
           final previewEnd = previewStart + previewDuration;
           
           // 限制在预览区间内
@@ -380,19 +380,22 @@ class AudioManager {
             seekPosition = previewEnd;
             print('seek位置超过预览结束位置，调整到预览结束: $previewEnd');
           }
+           return await _audioService!.seek(seekPosition);
         }
-      } else {
-        // 可以播放完整时长时，限制在总时长内
-        if (seekPosition < Duration.zero) {
-          seekPosition = Duration.zero;
-          print('seek位置小于0，调整到0');
-        } else if (seekPosition > totalDuration) {
-          seekPosition = totalDuration;
-          print('seek位置超过总时长，调整到总时长: $totalDuration');
-        }
+      } 
+      
+      // 可以播放完整时长时，限制在总时长内
+      if (seekPosition < Duration.zero) {
+        seekPosition = Duration.zero;
+        print('seek位置小于0，调整到0');
+      } else if (seekPosition > totalDuration) {
+        seekPosition = totalDuration;
+        print('seek位置超过总时长，调整到总时长: $totalDuration');
       }
       
-      await _audioService!.seek(seekPosition);
+
+      
+      return await _audioService!.seek(seekPosition);
     }
   }
 
