@@ -87,11 +87,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     // 监听当前音频
     _audioManager.currentAudioStream.listen((audio) {
       if (mounted) {
-        print('audio previewStart: ${audio?.previewStart?.inMilliseconds}');
-        print(
-          'audio previewDuration: ${audio?.previewDuration?.inMilliseconds}',
-        );
-
         setState(() {
           _currentAudio = audio;
           _isLiked = _currentAudio?.isLiked ?? false;
@@ -100,8 +95,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _localLikesCount = _currentAudio?.likesCount ?? 0;
           
           _totalDuration = Duration.zero;
-          // _previewStartPosition = Duration(milliseconds: 5000); //测试
-          // _previewDuration = Duration(milliseconds: 500000);
 
           _isLoadingMetadata = audio != null; // 切换音频时开始加载状态
         });
@@ -141,20 +134,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     _audioManager.durationStream.listen((duration) {
       if (mounted) {
         setState(() {
-          _totalDuration = duration;
+          print("获取元数据 duration: ${duration.totalDuration.inMilliseconds} ms");
+
+          _totalDuration = duration.totalDuration;
           // 如果通过音频流获取到了时长，也要结束加载状态
-          if (duration > Duration.zero) {
+          if (duration.totalDuration > Duration.zero) {
             _isLoadingMetadata = false;
-
-            _totalDuration = Duration.zero;
-
-            _previewStartPosition = _currentAudio?.previewStart ?? Duration.zero;
-            final maxPreviewDuration = _totalDuration - _previewStartPosition;
-            _previewDuration = _currentAudio?.previewDuration ?? maxPreviewDuration;
-            // 确保预览时长不超过总时长减去预览开始点
-            if (_previewDuration > maxPreviewDuration) {
-              _previewDuration = maxPreviewDuration;
-            }
+            _previewStartPosition = duration.previewStart ?? Duration.zero;
+            _previewDuration = duration.previewDuration ?? Duration.zero;
           }
         });
       }

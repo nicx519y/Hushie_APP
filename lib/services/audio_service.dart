@@ -152,12 +152,7 @@ class AudioPlayerService extends BaseAudioHandler {
   // 加载并播放音频
   Future<void> playAudio(AudioItem audio) async {
     try {
-      print('开始播放音频: ${audio.title} (ID: ${audio.id})');
-
       await loadAudio(audio);
-
-      print('开始播放音频: ${audio.title} (URL: ${audio.audioUrl})');
-      // 开始播放
       await _audioPlayer.play();
       print('音频播放开始成功');
     } catch (e) {

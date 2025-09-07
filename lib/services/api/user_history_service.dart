@@ -17,11 +17,13 @@ class UserHistoryService {
     required String audioId,
     required int playDurationMs,
     required int playProgressMs,
+    bool isFirst = false,
   }) async {
     return _submitRealPlayProgress(
       audioId: audioId,
       playDurationMs: playDurationMs,
       playProgressMs: playProgressMs,
+      isFirst: isFirst,
     );
   }
 
@@ -92,6 +94,7 @@ class UserHistoryService {
     required String audioId,
     required int playDurationMs,
     required int playProgressMs,
+    bool isFirst = false,
   }) async {
     try {
       final uri = Uri.parse(
@@ -102,6 +105,7 @@ class UserHistoryService {
         uri,
         body: {
           'id': audioId,
+          'is_first': isFirst,
           'play_duration_ms': playDurationMs,
           'play_progress_ms': playProgressMs,
           'cid': audioId, // 暂时和id保持一致

@@ -68,7 +68,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     _audioManager.durationStream.listen((duration) {
       if (mounted) {
         setState(() {
-          _totalDuration = duration;
+          _totalDuration = duration.totalDuration;
         });
       }
     });

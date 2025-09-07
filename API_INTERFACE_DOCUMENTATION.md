@@ -1142,12 +1142,16 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - 方法: POST
 
 #### 上行参数:
+- 增加is_first参数，用于播放次数统计
 
 ```json
 {
   "id": "music_123",
+  "is_first": true,
   "play_duration_ms": 12314,
-  "play_progress_ms": 12414 
+  "play_progress_ms": 12414,
+  "cid": "music_123",
+  "count": 20,
 }
 ```
 

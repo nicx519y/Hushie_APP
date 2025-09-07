@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:rxdart/rxdart.dart';
 import 'package:audio_service/audio_service.dart';
 import '../models/audio_item.dart';
+import '../models/audio_duration_info.dart';
 import 'audio_service.dart';
 import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
@@ -19,8 +20,10 @@ class AudioManager {
       BehaviorSubject<AudioItem?>.seeded(null);
   final BehaviorSubject<Duration> _positionSubject =
       BehaviorSubject<Duration>.seeded(Duration.zero);
-  final BehaviorSubject<Duration> _durationSubject =
-      BehaviorSubject<Duration>.seeded(Duration.zero);
+  final BehaviorSubject<AudioDurationInfo> _durationSubject =
+      BehaviorSubject<AudioDurationInfo>.seeded(
+        const AudioDurationInfo(totalDuration: Duration.zero)
+      );
   final BehaviorSubject<double> _speedSubject = BehaviorSubject<double>.seeded(
     1.0,
   );
@@ -70,6 +73,15 @@ class AudioManager {
     _audioService!.currentAudioStream.listen((audio) {
       _currentAudioSubject.add(audio);
 
+      // 更新时长信息
+      final currentDurationInfo = _durationSubject.value;
+      final newDurationInfo = AudioDurationInfo.withValidation(
+        totalDuration: currentDurationInfo.totalDuration,
+        previewStart: audio?.previewStart,
+        previewDuration: audio?.previewDuration,
+      );
+      _durationSubject.add(newDurationInfo);
+
       // 管理播放列表
       if (audio != null) {
         final isInPlaylist =
@@ -94,7 +106,13 @@ class AudioManager {
 
     // 监听播放时长
     _audioService!.durationStream.listen((duration) {
-      _durationSubject.add(duration);
+      final currentAudio = _currentAudioSubject.value;
+      final newDurationInfo = AudioDurationInfo.withValidation(
+        totalDuration: duration,
+        previewStart: currentAudio?.previewStart,
+        previewDuration: currentAudio?.previewDuration,
+      );
+      _durationSubject.add(newDurationInfo);
     });
 
     // 监听播放速度
@@ -111,7 +129,8 @@ class AudioManager {
   /// 检查播放是否完成并自动播放下一首
   void _checkPlaybackCompletion(Duration position) {
     final currentAudio = _currentAudioSubject.value;
-    final totalDuration = _durationSubject.value;
+    final durationInfo = _durationSubject.value;
+    final totalDuration = durationInfo.totalDuration;
     final isPlaying = _isPlayingSubject.value;
     final canAutoPlayNext = _canAutoPlayNextSubject.value;
 
@@ -136,12 +155,16 @@ class AudioManager {
     if (!canPlayAllDuration && currentAudio != null && isPlaying) {
       final previewStart = currentAudio.previewStart ?? Duration.zero;
       final previewDuration = currentAudio.previewDuration ?? Duration.zero;
-      final previewEnd = previewStart + previewDuration;
-
-      // 如果播放位置超过预览区间末尾，则停止播放
-      if (position >= previewEnd && previewDuration.inMilliseconds > 0) {
-        pause();
-        print('预览时长限制：播放到预览区间末尾，停止播放');
+      
+      // 当previewStart > 0 && previewDuration > 0时，检查是否超出预览区间
+      if (previewStart > Duration.zero && previewDuration > Duration.zero) {
+        final previewEnd = previewStart + previewDuration;
+        
+        // 如果播放位置超过预览区间末尾，则停止播放
+        if (position >= previewEnd) {
+          pause();
+          print('预览时长限制：播放到预览区间末尾，停止播放');
+        }
       }
     }
   }
@@ -228,9 +251,11 @@ class AudioManager {
       if (_audioService != null) {
         await _audioService!.playAudio(audio);
         
-        // 如果不能播放完整时长，则从预览开始位置开始播放
+        // 如果不能播放完整时长，并且previewStart > 0，则从预览开始位置开始播放
         final canPlayAllDuration = _canPlayAllDurationSubject.value;
-        if (!canPlayAllDuration && audio.previewStart != null) {
+        if (!canPlayAllDuration 
+          && audio.previewStart != null 
+          && audio.previewStart! > Duration.zero) {
           await _audioService!.seek(audio.previewStart!);
           print('canPlayAllDuration为false，从预览开始位置播放: ${audio.previewStart}');
         }
@@ -282,18 +307,10 @@ class AudioManager {
       final playlist = AudioPlaylist.instance;
       final currentAudio = playlist.getCurrentAudio();
 
-      if (currentAudio == null) {
-        print('补充播放列表: 当前没有可用的音频，无法补充播放列表');
-        print('播放列表状态: ${playlist.getPlaylistStats()}');
-        return;
-      }
-
-      print('补充播放列表: 当前ID: $currentAudio.id');
-
       // 从API获取更多音频数据
       final response = await AudioListService.getAudioList(
         tag: null,
-        cid: currentAudio.id,
+        cid: currentAudio?.id ?? '',
       );
 
       if (response.isNotEmpty) {
@@ -340,7 +357,41 @@ class AudioManager {
   Future<void> seek(Duration position) async {
     // await _ensureInitialized();
     if (_audioService != null) {
-      await _audioService!.seek(position);
+      final currentAudio = _currentAudioSubject.value;
+      final canPlayAllDuration = _canPlayAllDurationSubject.value;
+      final totalDuration = _durationSubject.value.totalDuration;
+      
+      Duration seekPosition = position;
+      
+      // 如果不能播放完整时长，需要检查边界
+      if (!canPlayAllDuration && currentAudio != null) {
+        final previewStart = currentAudio.previewStart ?? Duration.zero;
+        final previewDuration = currentAudio.previewDuration ?? Duration.zero;
+        
+        if (previewStart > Duration.zero && previewDuration > Duration.zero) {
+          final previewEnd = previewStart + previewDuration;
+          
+          // 限制在预览区间内
+          if (seekPosition < previewStart) {
+            seekPosition = previewStart;
+            print('seek位置小于预览开始位置，调整到预览开始: $previewStart');
+          } else if (seekPosition > previewEnd) {
+            seekPosition = previewEnd;
+            print('seek位置超过预览结束位置，调整到预览结束: $previewEnd');
+          }
+        }
+      } else {
+        // 可以播放完整时长时，限制在总时长内
+        if (seekPosition < Duration.zero) {
+          seekPosition = Duration.zero;
+          print('seek位置小于0，调整到0');
+        } else if (seekPosition > totalDuration) {
+          seekPosition = totalDuration;
+          print('seek位置超过总时长，调整到总时长: $totalDuration');
+        }
+      }
+      
+      await _audioService!.seek(seekPosition);
     }
   }
 
@@ -384,7 +435,7 @@ class AudioManager {
   }
 
   // 获取总时长流 - 修复版本
-  Stream<Duration> get durationStream {
+  Stream<AudioDurationInfo> get durationStream {
     return _durationSubject.stream;
   }
 
@@ -406,8 +457,12 @@ class AudioManager {
     return _positionSubject.value;
   }
 
-  Duration get duration {
+  AudioDurationInfo get durationInfo {
     return _durationSubject.value;
+  }
+
+  Duration get duration {
+    return _durationSubject.value.totalDuration;
   }
 
   double get speed {

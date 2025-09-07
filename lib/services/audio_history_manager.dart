@@ -89,19 +89,12 @@ class AudioHistoryManager {
   void _onCurrentAudioChanged(AudioItem? audio) {
     print('🎵 [HISTORY] 当前播放音频变化: ${audio?.id ?? 'null'}');
 
-    // 如果之前有播放的音频，先记录停止播放
-    if (_currentPlayingAudio != null && _isCurrentlyPlaying) {
-      _recordPlayStop();
-    }
-
     _currentPlayingAudio = audio;
     _lastRecordedPosition = Duration.zero;
     _lastProgressRecordTime = null;
 
-    // 如果新音频开始播放，记录播放开始
-    if (audio != null && _isCurrentlyPlaying) {
-      _recordPlayStart();
-    }
+    _recordPlayStart(); // 记录首次播放
+    
   }
 
   /// 播放状态变化回调
@@ -112,10 +105,7 @@ class AudioHistoryManager {
     _isCurrentlyPlaying = isPlaying;
 
     if (_currentPlayingAudio != null) {
-      if (isPlaying && !wasPlaying) {
-        // 开始播放
-        _recordPlayStart();
-      } else if (!isPlaying && wasPlaying) {
+      if (!isPlaying && wasPlaying) {
         // 停止播放
         _recordPlayStop();
       }
@@ -170,7 +160,7 @@ class AudioHistoryManager {
     }
   }
 
-  /// 记录播放开始
+  /// 记录首次播放开始
   Future<void> _recordPlayStart() async {
     if (_currentPlayingAudio == null) return;
 
@@ -182,6 +172,7 @@ class AudioHistoryManager {
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
+        isFirst: true,    // 首次播放
         playDurationMs: 0,
         playProgressMs: _lastRecordedPosition.inMilliseconds,
       );
