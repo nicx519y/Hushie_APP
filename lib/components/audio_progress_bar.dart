@@ -5,7 +5,7 @@ class AudioProgressBar extends StatefulWidget {
   final Duration totalDuration;
   final Duration previewStartPosition;
   final Duration previewDuration; 
-  final bool needInPreviewDuration;
+  final bool showPreview;
   final Function() onOutPreview;
   final Function(Duration) onSeek;
   final bool isDragging;
@@ -17,7 +17,7 @@ class AudioProgressBar extends StatefulWidget {
     required this.totalDuration,
     required this.previewStartPosition,
     required this.previewDuration,
-    required this.needInPreviewDuration,
+    required this.showPreview,
     required this.onOutPreview,
     required this.onSeek,
     this.isDragging = false,
@@ -55,6 +55,10 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
+  bool _showPreview() {
+    return widget.showPreview && widget.previewStartPosition >= Duration.zero && widget.previewDuration > Duration.zero;
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = _isDragging
@@ -88,14 +92,14 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               trackShape: CustomTrackShape(
                 previewStart: previewStart,
                 previewEnd: previewEnd,
-                showPreview: widget.needInPreviewDuration,
+                showPreview: _showPreview(),
               ),
             ),
             child: Slider( 
               value: progress.clamp(0.0, 1.0),
               onChanged: (value) async {
                 // 如果需要限制在预览区域内
-                if (widget.needInPreviewDuration) {
+                if (_showPreview()) {
                   // 检查是否超出预览区域边界
                   if (value < previewStart || value > previewEnd) {
                     // 触发边界回调
@@ -118,7 +122,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               },
               onChangeEnd: (value) async {
                 // 如果需要限制在预览区域内
-                if (widget.needInPreviewDuration) {
+                if (widget.showPreview) {
                   value = value.clamp(previewStart, previewEnd);
                 }
                 

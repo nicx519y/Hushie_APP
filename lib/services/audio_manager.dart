@@ -32,10 +32,10 @@ class AudioManager {
     PlayerState(false, ProcessingState.idle),
   );
   final BehaviorSubject<bool> _canPlayAllDurationSubject = BehaviorSubject<bool>.seeded(
-    true,
+    false,
   );
   final BehaviorSubject<bool> _canAutoPlayNextSubject = BehaviorSubject<bool>.seeded(
-    true,
+    false,
   );
 
   AudioManager._internal();
@@ -138,8 +138,12 @@ class AudioManager {
   void _checkPlaybackCompletion(PlayerState playerState) {
     final canAutoPlayNext = _canAutoPlayNextSubject.value;
     final currentAudio = _currentAudioSubject.value;
-    if(canAutoPlayNext && playerState.processingState == ProcessingState.completed && currentAudio != null) {
-      _playNextAudio(currentAudio.id);
+    if(playerState.processingState == ProcessingState.completed && currentAudio != null) {
+      if(canAutoPlayNext) {
+        _playNextAudio(currentAudio.id);
+      } else {
+        pause();
+      }
     }
   }
 

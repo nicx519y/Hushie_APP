@@ -30,6 +30,32 @@ class AudioItem {
   final Duration? previewStart; // 可预览开始时间点
   final Duration? previewDuration; // 可预览时长
 
+  // 解析duration的静态方法，包含容错处理
+  static int _parseDurationMs(dynamic duration) {
+    try {
+      if (duration == null) return 0;
+      
+      // 如果已经是数字类型
+      if (duration is num) {
+        return (duration.toDouble() * 1000).round();
+      }
+      
+      // 如果是字符串，尝试解析
+      if (duration is String) {
+        final parsed = double.tryParse(duration);
+        if (parsed != null) {
+          return (parsed * 1000).round();
+        }
+      }
+      
+      // 解析失败，返回默认值
+      return 0;
+    } catch (e) {
+      // 捕获任何异常，返回默认值
+      return 0;
+    }
+  }
+
   AudioItem({
     required this.id, // id
     required this.cover, // 封面
@@ -65,7 +91,7 @@ class AudioItem {
       playTimes: map['play_times'] ?? 0,
       likesCount: map['likes_count'] ?? 0,
       audioUrl: map['audio_url'],
-      durationMs: map['duration'] != null ? (double.parse(map['duration']) * 1000).round() : 0, // response 是秒，需要转换为毫秒
+      durationMs: map['duration'] != null ? _parseDurationMs(map['duration']) : 0, // response 是秒，需要转换为毫秒
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,

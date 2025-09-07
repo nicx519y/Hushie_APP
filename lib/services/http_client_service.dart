@@ -74,19 +74,15 @@ class HttpClientService {
     print('🌐 [HTTP] 开始GET请求: $uri');
     
     try {
-      print('🌐 [HTTP] 构建请求头...');
       final requestHeaders = await _buildRequestHeaders(
         method: 'GET',
         path: uri.path,
         customHeaders: headers,
       );
-      print('🌐 [HTTP] 请求头构建完成，包含 ${requestHeaders.length} 个字段');
       
-      print('🌐 [HTTP] 发送HTTP GET请求...');
       final response = await http
           .get(uri, headers: requestHeaders)
           .timeout(timeout ?? _defaultTimeout);
-      print('🌐 [HTTP] HTTP GET请求完成，状态码: ${response.statusCode}');
       
       return response;
     } catch (e) {

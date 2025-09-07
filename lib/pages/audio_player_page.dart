@@ -161,6 +161,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   void _togglePlay() {
     // 如果正在加载metadata，不允许播放
+    print('点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id');
     if (_isAudioLoading) return;
 
     if (!_isPlaying) {
@@ -542,7 +543,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         onSeek: _onSeek,
         previewStartPosition: _previewStartPosition,
         previewDuration: _previewDuration,
-        needInPreviewDuration: !_canPlayAllDuration,
+        showPreview: !_canPlayAllDuration,
         onOutPreview: _onUnlockFullAccessTap,
       ),
     );
