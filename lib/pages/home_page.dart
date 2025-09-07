@@ -234,6 +234,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _onAudioTap(AudioItem item) {
     // 先开始播放音频，然后跳转到播放页面
+    print('点击音频: ${item.title} ${item.id}');
     _playAudio(item);
 
     // 使用播放器页面的标准打开方式（包含上滑动画）

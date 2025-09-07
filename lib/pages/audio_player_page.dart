@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hushie_app/services/auth_service.dart';
-import 'package:rxdart/rxdart.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
 import '../services/api/audio_like_service.dart';
 import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
-import '../pages/login_page.dart';
 import '../components/history_list.dart';
 import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
@@ -40,10 +38,10 @@ class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
           );
         },
       );
-      
+
   @override
   bool get popGestureEnabled => false;
-  
+
   @override
   Future<RoutePopDisposition> willPop() async {
     return RoutePopDisposition.pop;
@@ -54,7 +52,6 @@ class AudioPlayerPage extends StatefulWidget {
   const AudioPlayerPage({super.key});
 
   /// 使用标准上滑动画打开播放器页面
-  
 
   @override
   State<AudioPlayerPage> createState() => _AudioPlayerPageState();
@@ -64,6 +61,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
+  Duration _previewStartPosition = Duration.zero;
+  Duration _previewDuration = Duration.zero;
+  bool _canPlayAllDuration = true;
+
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
   bool _isLiked = false;
@@ -86,14 +87,32 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     // 监听当前音频
     _audioManager.currentAudioStream.listen((audio) {
       if (mounted) {
+        print('audio previewStart: ${audio?.previewStart?.inMilliseconds}');
+        print(
+          'audio previewDuration: ${audio?.previewDuration?.inMilliseconds}',
+        );
+
         setState(() {
           _currentAudio = audio;
           _isLiked = _currentAudio?.isLiked ?? false;
           // 初始化本地状态
           _localIsLiked = _isLiked;
           _localLikesCount = _currentAudio?.likesCount ?? 0;
+          
           _totalDuration = Duration.zero;
+          // _previewStartPosition = Duration(milliseconds: 5000); //测试
+          // _previewDuration = Duration(milliseconds: 500000);
+
           _isLoadingMetadata = audio != null; // 切换音频时开始加载状态
+        });
+      }
+    });
+
+    // 是否能播放全部时长，否则只能播放预览时长
+    _audioManager.canPlayAllDurationStream.listen((canPlayAll) {
+      if (mounted) {
+        setState(() {
+          _canPlayAllDuration = canPlayAll;
         });
       }
     });
@@ -109,8 +128,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     // 监听播放位置 - 使用防抖动技术减少更新频率
     _audioManager.positionStream
-        .debounceTime(const Duration(milliseconds: 200)) // 添加200ms的防抖动
-        .listen((position) {
+    // .debounceTime(const Duration(milliseconds: 200)) // 添加200ms的防抖动
+    .listen((position) {
       if (mounted) {
         setState(() {
           _currentPosition = position;
@@ -126,6 +145,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           // 如果通过音频流获取到了时长，也要结束加载状态
           if (duration > Duration.zero) {
             _isLoadingMetadata = false;
+
+            _totalDuration = Duration.zero;
+
+            _previewStartPosition = _currentAudio?.previewStart ?? Duration.zero;
+            final maxPreviewDuration = _totalDuration - _previewStartPosition;
+            _previewDuration = _currentAudio?.previewDuration ?? maxPreviewDuration;
+            // 确保预览时长不超过总时长减去预览开始点
+            if (_previewDuration > maxPreviewDuration) {
+              _previewDuration = maxPreviewDuration;
+            }
           }
         });
       }
@@ -135,7 +164,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   void _togglePlay() {
     // 如果正在加载metadata，不允许播放
     if (_isLoadingMetadata) return;
-    
+
     if (!_isPlaying) {
       // 如果当前没有播放，或者播放的不是当前音频，则开始播放当前音频
       final currentAudio = _audioManager.currentAudio;
@@ -193,7 +222,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     } catch (e) {
       // 网络异常，回滚本地状态
       print('点赞操作异常: $e');
-
     } finally {
       // 重置请求状态
       setState(() {
@@ -222,6 +250,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     await _audioManager.seek(position);
   }
 
+  // 解锁全功能提示点击事件
+  void _onUnlockFullAccessTap() async {}
+
   // void _toggleControls() {
   //   setState(() {
   //     _showControls = !_showControls;
@@ -230,18 +261,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
-        backgroundColor: Colors.black,
-        body: GestureDetector(
-          // onTap: _toggleControls,
-          child: Stack(
-            children: [
-              _buildAudioBackground(),
-              _buildStatusBar(),
-              _buildControlBar(),
-            ],
-          ),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        // onTap: _toggleControls,
+        child: Stack(
+          children: [
+            _buildAudioBackground(),
+            _buildStatusBar(),
+            _buildControlBar(),
+          ],
         ),
+      ),
     );
   }
 
@@ -256,9 +287,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       child: Stack(
         children: [
           // 背景图片层 - 使用RepaintBoundary避免频繁重绘
-          RepaintBoundary(
-            child: _buildBackgroundImage(bgImageUrl),
-          ),
+          RepaintBoundary(child: _buildBackgroundImage(bgImageUrl)),
           // 渐变遮罩层
           Container(
             decoration: BoxDecoration(
@@ -289,7 +318,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     if (_cachedBgImageUrl == imageUrl && _cachedBackgroundImage != null) {
       return _cachedBackgroundImage!;
     }
-    
+
     // 更新缓存
     _cachedBgImageUrl = imageUrl;
     _cachedBackgroundImage = FallbackImage(
@@ -300,7 +329,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       height: double.infinity,
       fadeInDuration: const Duration(milliseconds: 300),
     );
-    
+
     return _cachedBackgroundImage!;
   }
 
@@ -339,7 +368,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           children: [
             _buildAudioInfo(),
             const SizedBox(height: 30),
-            _buildProgressBar(),
+
+            Row(
+              children: [
+              Expanded(child: _buildProgressBar()),
+              const SizedBox(width: 10),
+              _buildUnlockFullAccessTip()]),
             const SizedBox(height: 20),
             _buildPlaybackControls(),
             const SizedBox(height: 40),
@@ -454,7 +488,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           style: IconButton.styleFrom(
             padding: EdgeInsets.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            backgroundColor: _localIsLiked ? Colors.white : const Color(0x66000000),
+            backgroundColor: _localIsLiked
+                ? Colors.white
+                : const Color(0x66000000),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -498,7 +534,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     if (_isLoadingMetadata || _totalDuration == Duration.zero) {
       return const SizedBox(height: 40); // 保持布局高度
     }
-    
+
     return AnimatedOpacity(
       opacity: 1.0,
       duration: const Duration(milliseconds: 300),
@@ -506,6 +542,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         currentPosition: _currentPosition,
         totalDuration: _totalDuration,
         onSeek: _onSeek,
+        previewStartPosition: _previewStartPosition,
+        previewDuration: _previewDuration,
+        needInPreviewDuration: !_canPlayAllDuration,
+        onOutPreview: _onUnlockFullAccessTap,
       ),
     );
   }
@@ -542,34 +582,78 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 构建播放/暂停按钮
   Widget _buildPlayPauseButton() {
     return IconButton(
-        alignment: Alignment.center,
-        style: IconButton.styleFrom(
-          minimumSize: const Size(64, 64),
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(32),
+      alignment: Alignment.center,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(64, 64),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+      ),
+      onPressed: _togglePlay,
+      icon: _isLoadingMetadata
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+              ),
+            )
+          : Transform.translate(
+              offset: !_isPlaying
+                  ? const Offset(2, 0)
+                  : const Offset(0, 0), // 播放箭头向右偏移2像素
+              child: Icon(
+                !_isPlaying ? CustomIcons.play_arrow : CustomIcons.pause,
+                color: Colors.black,
+                size: !_isPlaying ? 26 : 22,
+              ),
+            ),
+    );
+  }
+
+  // 构建解锁全功能提示
+  Widget _buildUnlockFullAccessTip() {
+    return InkWell(
+      onTap: _onUnlockFullAccessTap,
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            padding: EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(50),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Image.asset(
+              'assets/images/crown_mini.png',
+              fit: BoxFit.contain,
+            ),
           ),
-        ),
-        onPressed: _togglePlay,
-        icon: _isLoadingMetadata
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                ),
-              )
-            : Transform.translate(
-                offset: !_isPlaying
-                    ? const Offset(2, 0)
-                    : const Offset(0, 0), // 播放箭头向右偏移2像素
-                child: Icon(
-                  !_isPlaying ? CustomIcons.play_arrow : CustomIcons.pause,
-                  color: Colors.black,
-                  size: !_isPlaying ? 26 : 22,
+          const SizedBox(width: 4),
+          SizedBox(
+            width: 86,
+            height: 40,
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: [Color(0xFFFEED96), Color(0xFFFFC733)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ).createShader(bounds),
+              child: Text(
+                'Unlock\nFull Access',
+                maxLines: 2,
+                style: TextStyle(
+                  color: Colors.white, // 这里必须设置颜色，会被shader覆盖
+                  fontSize: 16,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

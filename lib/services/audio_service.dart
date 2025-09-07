@@ -74,6 +74,7 @@ class AudioPlayerService extends BaseAudioHandler {
   Future<void> loadAudio(AudioItem audio) async {
     try {
       // 先完全停止并重置播放器状态
+
       await _stopAndReset();
       _currentAudioSubject.add(audio);
 

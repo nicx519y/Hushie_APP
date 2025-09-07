@@ -52,7 +52,6 @@ class AudioPlaylist {
     _playlist.add(audio);
     _audioIndexMap[audio.id] = newIndex;
 
-    print('已添加音频到播放列表: ${audio.title} (ID: ${audio.id})');
   }
 
   /// 批量添加音频数据到播放列表

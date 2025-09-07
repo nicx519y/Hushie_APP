@@ -24,6 +24,12 @@ class AudioManager {
   final BehaviorSubject<double> _speedSubject = BehaviorSubject<double>.seeded(
     1.0,
   );
+  final BehaviorSubject<bool> _canPlayAllDurationSubject = BehaviorSubject<bool>.seeded(
+    true,
+  );
+  final BehaviorSubject<bool> _canAutoPlayNextSubject = BehaviorSubject<bool>.seeded(
+    true,
+  );
 
   AudioManager._internal();
 
@@ -73,7 +79,7 @@ class AudioManager {
           AudioPlaylist.instance.addAudio(audio);
         }
 
-        print('音频改变，管理播放列表: ${audio.title}');
+        print('音频改变，管理播放列表: ${audio.id}');
         _managePlaylist(audio.id);
       }
     });
@@ -95,6 +101,11 @@ class AudioManager {
     _audioService!.speedStream.listen((speed) {
       _speedSubject.add(speed);
     });
+
+    // 监听播放位置，检查预览区间限制
+    _positionSubject.stream.listen((position) {
+      _checkPreviewDurationLimit(position);
+    });
   }
 
   /// 检查播放是否完成并自动播放下一首
@@ -102,15 +113,36 @@ class AudioManager {
     final currentAudio = _currentAudioSubject.value;
     final totalDuration = _durationSubject.value;
     final isPlaying = _isPlayingSubject.value;
+    final canAutoPlayNext = _canAutoPlayNextSubject.value;
 
     if (currentAudio != null &&
         totalDuration.inMilliseconds > 0 &&
         position.inMilliseconds >=
             totalDuration.inMilliseconds * 0.98 && // 98%算作播放完成
-        !isPlaying) {
+        !isPlaying &&
+        canAutoPlayNext) { // 只有在允许自动播放下一首时才执行
       // 确保当前不在播放状态
 
       _playNextAudio(currentAudio.id);
+    }
+  }
+
+  /// 检查预览时长限制
+  void _checkPreviewDurationLimit(Duration position) {
+    final currentAudio = _currentAudioSubject.value;
+    final canPlayAllDuration = _canPlayAllDurationSubject.value;
+    final isPlaying = _isPlayingSubject.value;
+
+    if (!canPlayAllDuration && currentAudio != null && isPlaying) {
+      final previewStart = currentAudio.previewStart ?? Duration.zero;
+      final previewDuration = currentAudio.previewDuration ?? Duration.zero;
+      final previewEnd = previewStart + previewDuration;
+
+      // 如果播放位置超过预览区间末尾，则停止播放
+      if (position >= previewEnd && previewDuration.inMilliseconds > 0) {
+        pause();
+        print('预览时长限制：播放到预览区间末尾，停止播放');
+      }
     }
   }
 
@@ -195,6 +227,13 @@ class AudioManager {
       // await _ensureInitialized();
       if (_audioService != null) {
         await _audioService!.playAudio(audio);
+        
+        // 如果不能播放完整时长，则从预览开始位置开始播放
+        final canPlayAllDuration = _canPlayAllDurationSubject.value;
+        if (!canPlayAllDuration && audio.previewStart != null) {
+          await _audioService!.seek(audio.previewStart!);
+          print('canPlayAllDuration为false，从预览开始位置播放: ${audio.previewStart}');
+        }
       } else {
         print('音频服务未初始化，无法播放音频');
         throw Exception('音频服务未初始化');
@@ -375,6 +414,34 @@ class AudioManager {
     return _speedSubject.value;
   }
 
+  bool get canPlayAllDuration {
+    return _canPlayAllDurationSubject.value;
+  }
+
+  bool get canAutoPlayNext {
+    return _canAutoPlayNextSubject.value;
+  }
+
+  // 获取状态流
+  Stream<bool> get canPlayAllDurationStream {
+    return _canPlayAllDurationSubject.stream;
+  }
+
+  Stream<bool> get canAutoPlayNextStream {
+    return _canAutoPlayNextSubject.stream;
+  }
+
+  // 设置状态
+  void setCanPlayAllDuration(bool canPlay) {
+    _canPlayAllDurationSubject.add(canPlay);
+    print('设置canPlayAllDuration: $canPlay');
+  }
+
+  void setCanAutoPlayNext(bool canAutoPlay) {
+    _canAutoPlayNextSubject.add(canAutoPlay);
+    print('设置canAutoPlayNext: $canAutoPlay');
+  }
+
   // 清理资源
   Future<void> dispose() async {
     // 在销毁前记录最后的播放停止
@@ -388,6 +455,8 @@ class AudioManager {
     await _positionSubject.close();
     await _durationSubject.close();
     await _speedSubject.close();
+    await _canPlayAllDurationSubject.close();
+    await _canAutoPlayNextSubject.close();
 
     _audioService = null;
   }

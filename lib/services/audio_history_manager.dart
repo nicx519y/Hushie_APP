@@ -87,7 +87,7 @@ class AudioHistoryManager {
 
   /// 当前播放音频变化回调
   void _onCurrentAudioChanged(AudioItem? audio) {
-    print('🎵 [HISTORY] 当前播放音频变化: ${audio?.title ?? 'null'}');
+    print('🎵 [HISTORY] 当前播放音频变化: ${audio?.id ?? 'null'}');
 
     // 如果之前有播放的音频，先记录停止播放
     if (_currentPlayingAudio != null && _isCurrentlyPlaying) {
@@ -178,7 +178,7 @@ class AudioHistoryManager {
       final bool isLogin = await AuthService.isSignedIn();
       if (!isLogin) return;
 
-      print('🎵 [HISTORY] 记录播放开始: ${_currentPlayingAudio!.title}');
+      print('🎵 [HISTORY] 记录播放开始: ${_currentPlayingAudio!.title}  id: ${_currentPlayingAudio!.id}');
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
