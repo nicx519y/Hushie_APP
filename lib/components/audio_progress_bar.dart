@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 class AudioProgressBar extends StatefulWidget {
   final Duration currentPosition;
   final Duration totalDuration;
+  final Duration previewStartPosition;
+  final Duration previewDuration; 
   final Function(Duration) onSeek;
   final bool isDragging;
   final double? width; // 添加宽度参数
@@ -11,6 +13,8 @@ class AudioProgressBar extends StatefulWidget {
     super.key,
     required this.currentPosition,
     required this.totalDuration,
+    required this.previewStartPosition,
+    required this.previewDuration,
     required this.onSeek,
     this.isDragging = false,
     this.width,
@@ -62,16 +66,16 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 2.0,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.0),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
-              activeTrackColor: Colors.white,
-              inactiveTrackColor: Colors.white.withOpacity(0.3),
+              activeTrackColor: Color(0xFF999999).withAlpha(200),
+              inactiveTrackColor: Color(0xFF999999).withAlpha(200),
               thumbColor: Colors.white,
-              overlayColor: Colors.white.withOpacity(0.2),
+              overlayColor: Colors.white.withAlpha(64),
               // 自定义轨道形状，移除默认padding
               trackShape: const CustomTrackShape(),
             ),
-            child: Slider(
+            child: Slider( 
               value: progress.clamp(0.0, 1.0),
               onChanged: (value) async {
                 setState(() {

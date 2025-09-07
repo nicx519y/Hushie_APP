@@ -36,10 +36,6 @@ class _HistoryListState extends State<HistoryList> {
         alignment: Alignment.bottomCenter,
         child: Material(
           color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-          ),
           child: Container(
             height: MediaQuery.of(context).size.height * 0.7,
             child: Column(
@@ -51,9 +47,11 @@ class _HistoryListState extends State<HistoryList> {
                     children: [
                       // 标题和关闭按钮
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 5,
+                        padding: const EdgeInsets.only(
+                          top: 5,
+                          bottom: 5,
+                          left: 16,
+                          right: 5,
                         ),
                         child: Row(
                           children: [

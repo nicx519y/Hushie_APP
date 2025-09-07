@@ -24,7 +24,7 @@ class AudioSearchService {
   }) async {
     try {
       final queryParams = <String, String>{
-        'query': query,
+        'q': query,
         'cid': cid ?? '',
         'count': count.toString(),
       };

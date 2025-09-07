@@ -73,14 +73,24 @@ class PremiumAccessCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          height: 1,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF502D19),
-                        ),
+                      Row(
+                        children: [
+                          Image.asset(
+                            'assets/images/crown_mini.png',
+                            width: 29,
+                            height: 21.5,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              height: 1,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF502D19),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 14),
                       Text(
