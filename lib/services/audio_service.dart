@@ -19,6 +19,9 @@ class AudioPlayerService extends BaseAudioHandler {
   final BehaviorSubject<double> _speedSubject = BehaviorSubject<double>.seeded(
     1.0,
   );
+  final BehaviorSubject<PlayerState> _playerStateSubject = BehaviorSubject<PlayerState>.seeded(
+    PlayerState(false, ProcessingState.idle)
+  );
 
   // 公开的流
   Stream<bool> get isPlayingStream => _isPlayingSubject.stream;
@@ -26,6 +29,7 @@ class AudioPlayerService extends BaseAudioHandler {
   Stream<Duration> get positionStream => _positionSubject.stream;
   Stream<Duration> get durationStream => _durationSubject.stream;
   Stream<double> get speedStream => _speedSubject.stream;
+  Stream<PlayerState> get playerStateStream => _playerStateSubject.stream;
 
   // 当前状态的getter
   bool get isPlaying => _isPlayingSubject.value;
@@ -33,6 +37,7 @@ class AudioPlayerService extends BaseAudioHandler {
   Duration get position => _positionSubject.value;
   Duration get duration => _durationSubject.value;
   double get speed => _speedSubject.value;
+  PlayerState get playerState => _playerStateSubject.value;
 
   AudioPlayerService() {
     _init();
@@ -65,9 +70,7 @@ class AudioPlayerService extends BaseAudioHandler {
 
     // 监听播放完成
     _audioPlayer.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
-        _onPlaybackCompleted();
-      }
+      _playerStateSubject.add(state);
     });
   }
 
@@ -104,8 +107,8 @@ class AudioPlayerService extends BaseAudioHandler {
         album: "Hushie",
         title: audio.title,
         artist: audio.author,
-        duration: audio.duration != null
-            ? _parseDuration(audio.duration!)
+        duration: audio.durationMs != null
+            ? Duration(milliseconds: audio.durationMs!)
             : Duration.zero,
         artUri: coverUrlString != null ? Uri.parse(coverUrlString) : null,
         extras: audio.toMap(),
@@ -283,12 +286,6 @@ class AudioPlayerService extends BaseAudioHandler {
     }
   }
 
-  // 播放完成回调
-  void _onPlaybackCompleted() {
-    // 可以在这里实现自动播放下一首的逻辑
-    stop();
-  }
-
   // 快进
   @override
   Future<void> fastForward() async {
@@ -322,5 +319,6 @@ class AudioPlayerService extends BaseAudioHandler {
     await _positionSubject.close();
     await _durationSubject.close();
     await _speedSubject.close();
+    await _playerStateSubject.close();
   }
 }

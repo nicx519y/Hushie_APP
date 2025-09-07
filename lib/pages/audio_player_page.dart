@@ -9,6 +9,7 @@ import '../components/history_list.dart';
 import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
+import 'package:just_audio/just_audio.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -68,7 +69,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
   bool _isLiked = false;
-  bool _isLoadingMetadata = false; // 是否正在加载metadata
+  bool _isAudioLoading = false; // 是否正在加载metadata
 
   // 点赞相关状态管理
   bool _isLikeRequesting = false; // 是否正在请求点赞
@@ -94,9 +95,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _localIsLiked = _isLiked;
           _localLikesCount = _currentAudio?.likesCount ?? 0;
           
-          _totalDuration = Duration.zero;
+          _totalDuration = Duration(milliseconds: audio!.durationMs!);
 
-          _isLoadingMetadata = audio != null; // 切换音频时开始加载状态
         });
       }
     });
@@ -111,13 +111,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     });
 
     // 监听音频播放状态
-    _audioManager.isPlayingStream.listen((isPlaying) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = isPlaying;
-        });
-      }
-    });
+    // _audioManager.isPlayingStream.listen((isPlaying) {
+    //   if (mounted) {
+    //     setState(() {
+    //       _isPlaying = isPlaying;
+    //     });
+    //   }
+    // });
 
     // 监听播放位置 - 使用防抖动技术减少更新频率
     _audioManager.positionStream
@@ -134,14 +134,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     _audioManager.durationStream.listen((duration) {
       if (mounted) {
         setState(() {
-          print("获取元数据 duration: ${duration.totalDuration.inMilliseconds} ms");
-
-          _totalDuration = duration.totalDuration;
+          // _totalDuration = duration.totalDuration;
           // 如果通过音频流获取到了时长，也要结束加载状态
           if (duration.totalDuration > Duration.zero) {
-            _isLoadingMetadata = false;
+            _totalDuration = duration.totalDuration;
             _previewStartPosition = duration.previewStart ?? Duration.zero;
             _previewDuration = duration.previewDuration ?? Duration.zero;
+          }
+        });
+      }
+    });
+
+    _audioManager.playerStateStream.listen((playerState) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = playerState.playing;
+          if(playerState.processingState == ProcessingState.loading || playerState.processingState == ProcessingState.buffering) {
+            _isAudioLoading = true;
+          } else {
+            _isAudioLoading = false;
           }
         });
       }
@@ -150,7 +161,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   void _togglePlay() {
     // 如果正在加载metadata，不允许播放
-    if (_isLoadingMetadata) return;
+    if (_isAudioLoading) return;
 
     if (!_isPlaying) {
       // 如果当前没有播放，或者播放的不是当前音频，则开始播放当前音频
@@ -518,9 +529,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 构建进度条
   Widget _buildProgressBar() {
     // 如果正在加载metadata或没有时长信息，隐藏进度条
-    if (_isLoadingMetadata || _totalDuration == Duration.zero) {
-      return const SizedBox(height: 40); // 保持布局高度
-    }
+    // if (_isLoadingMetadata || _totalDuration == Duration.zero) {
+    //   return const SizedBox(height: 40); // 保持布局高度
+    // }
 
     return AnimatedOpacity(
       opacity: 1.0,
@@ -576,7 +587,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
       ),
       onPressed: _togglePlay,
-      icon: _isLoadingMetadata
+      icon: _isAudioLoading
           ? const SizedBox(
               width: 24,
               height: 24,

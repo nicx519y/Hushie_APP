@@ -330,6 +330,11 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
+  void _onAudioListItemTap(AudioItem audio) {
+    AudioManager.instance.playAudio(audio);
+    NavigationUtils.navigateToAudioPlayer(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -443,6 +448,7 @@ class _ProfilePageState extends State<ProfilePage>
                       emptyWidget: _buildEmptyWidget('No history'),
                       onRefresh: _refreshHistoryData,
                       hasMoreData: false,
+                      onItemTap: _onAudioListItemTap,
                     );
                   },
                 ),
@@ -459,10 +465,7 @@ class _ProfilePageState extends State<ProfilePage>
                         onLoadMore: _loadMoreLikedAudios,
                         hasMoreData: true,
                         isLoadingMore: _isLoadingLiked, // 添加加载状态
-                        onItemTap: (audio) {
-                          AudioManager.instance.playAudio(audio);
-                          NavigationUtils.navigateToAudioPlayer(context);
-                        },
+                        onItemTap: _onAudioListItemTap,
                       ),
               ],
             ),

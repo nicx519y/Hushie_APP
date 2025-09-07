@@ -30,6 +30,7 @@ class AudioHistoryManager {
   bool _isCurrentlyPlaying = false;
   Duration _lastRecordedPosition = Duration.zero;
   DateTime? _lastProgressRecordTime;
+  bool _isRecordingProgress = false; // 防止并发记录进度
 
   static const int progressUpdateIntervalS = 30; // 30秒更新一次
 
@@ -124,6 +125,11 @@ class AudioHistoryManager {
 
   /// 检查并记录播放进度（基于时间间隔）
   Future<void> _checkAndRecordProgress() async {
+    // 防止并发执行
+    if (_isRecordingProgress) {
+      return;
+    }
+
     final now = DateTime.now();
 
     // 必须有上次记录时间才能进行间隔检查
@@ -138,6 +144,8 @@ class AudioHistoryManager {
     if (timeSinceLastRecord < progressUpdateIntervalS) {
       return; // 还没到记录间隔
     }
+
+    _isRecordingProgress = true; // 设置标志，防止并发
 
     try {
       final bool isLogin = await AuthService.isSignedIn();
@@ -157,6 +165,8 @@ class AudioHistoryManager {
       _lastProgressRecordTime = now;
     } catch (e) {
       print('🎵 [HISTORY] 记录播放进度失败: $e');
+    } finally {
+      _isRecordingProgress = false; // 无论成功失败都要重置标志
     }
   }
 

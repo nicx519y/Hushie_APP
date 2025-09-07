@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:rxdart/rxdart.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:just_audio/just_audio.dart';
 import '../models/audio_item.dart';
 import '../models/audio_duration_info.dart';
 import 'audio_service.dart';
@@ -26,6 +27,9 @@ class AudioManager {
       );
   final BehaviorSubject<double> _speedSubject = BehaviorSubject<double>.seeded(
     1.0,
+  );
+  final BehaviorSubject<PlayerState> _playerStateSubject = BehaviorSubject<PlayerState>.seeded(
+    PlayerState(false, ProcessingState.idle),
   );
   final BehaviorSubject<bool> _canPlayAllDurationSubject = BehaviorSubject<bool>.seeded(
     true,
@@ -99,9 +103,6 @@ class AudioManager {
     // 监听播放位置
     _audioService!.positionStream.listen((position) {
       _positionSubject.add(position);
-
-      // 检查是否播放完成，如果完成则自动播放下一首
-      _checkPlaybackCompletion(position);
     });
 
     // 监听播放时长
@@ -124,24 +125,20 @@ class AudioManager {
     _positionSubject.stream.listen((position) {
       _checkPreviewDurationLimit(position);
     });
+
+    // 监听播放器状态变化
+    _audioService!.playerStateStream.listen((playerState) {
+      _playerStateSubject.add(playerState);
+      _checkPlaybackCompletion(playerState);
+    });
+
   }
 
   /// 检查播放是否完成并自动播放下一首
-  void _checkPlaybackCompletion(Duration position) {
-    final currentAudio = _currentAudioSubject.value;
-    final durationInfo = _durationSubject.value;
-    final totalDuration = durationInfo.totalDuration;
-    final isPlaying = _isPlayingSubject.value;
+  void _checkPlaybackCompletion(PlayerState playerState) {
     final canAutoPlayNext = _canAutoPlayNextSubject.value;
-
-    if (currentAudio != null &&
-        totalDuration.inMilliseconds > 0 &&
-        position.inMilliseconds >=
-            totalDuration.inMilliseconds * 0.98 && // 98%算作播放完成
-        !isPlaying &&
-        canAutoPlayNext) { // 只有在允许自动播放下一首时才执行
-      // 确保当前不在播放状态
-
+    final currentAudio = _currentAudioSubject.value;
+    if(canAutoPlayNext && playerState.processingState == ProcessingState.completed && currentAudio != null) {
       _playNextAudio(currentAudio.id);
     }
   }
@@ -444,6 +441,11 @@ class AudioManager {
     return _speedSubject.stream;
   }
 
+  // 获取播放器状态流
+  Stream<PlayerState> get playerStateStream {
+    return _playerStateSubject.stream;
+  }
+
   // 获取当前状态
   bool get isPlaying {
     return _isPlayingSubject.value;
@@ -467,6 +469,10 @@ class AudioManager {
 
   double get speed {
     return _speedSubject.value;
+  }
+
+  PlayerState get playerState {
+    return _playerStateSubject.value;
   }
 
   bool get canPlayAllDuration {
@@ -510,6 +516,7 @@ class AudioManager {
     await _positionSubject.close();
     await _durationSubject.close();
     await _speedSubject.close();
+    await _playerStateSubject.close();
     await _canPlayAllDurationSubject.close();
     await _canAutoPlayNextSubject.close();
 

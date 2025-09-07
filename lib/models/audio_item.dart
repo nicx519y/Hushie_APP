@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:math';
 
 import 'image_model.dart';
 
@@ -13,7 +14,7 @@ class AudioItem {
   final int playTimes;
   final int likesCount;
   final String? audioUrl;
-  final String? duration;
+  final int? durationMs;  
   final DateTime? createdAt;
   final List<String>? tags;
   final bool isLiked;
@@ -39,7 +40,7 @@ class AudioItem {
     required this.playTimes, // 播放次数
     required this.likesCount, // 点赞数
     this.audioUrl, // 音频URL
-    this.duration, // 时长 单位：毫秒
+    this.durationMs, // 时长 单位：毫秒
     this.createdAt, // 创建时间
     this.tags, // 标签
     this.bgImage, // 背景图片
@@ -64,7 +65,7 @@ class AudioItem {
       playTimes: map['play_times'] ?? 0,
       likesCount: map['likes_count'] ?? 0,
       audioUrl: map['audio_url'],
-      duration: map['duration'],
+      durationMs: map['duration'] != null ? (double.parse(map['duration']) * 1000).round() : 0, // response 是秒，需要转换为毫秒
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
@@ -102,7 +103,7 @@ class AudioItem {
       'play_times': playTimes,
       'likes_count': likesCount,
       'audio_url': audioUrl,
-      'duration': duration,
+      'duration': durationMs,
       'created_at': createdAt?.toIso8601String(),
       'tags': tags,
       'bg_image': bgImage?.toJson(),
@@ -151,7 +152,7 @@ class AudioItem {
       playTimes: playTimes ?? this.playTimes,
       likesCount: likesCount ?? this.likesCount,
       audioUrl: audioUrl ?? this.audioUrl,
-      duration: duration ?? this.duration,
+      durationMs: durationMs ?? this.durationMs,
       createdAt: createdAt ?? this.createdAt,
       tags: tags ?? this.tags,
       bgImage: bgImage ?? this.bgImage,
