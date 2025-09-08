@@ -10,6 +10,7 @@ class AudioProgressBar extends StatefulWidget {
   final Function(Duration) onSeek;
   final bool isDragging;
   final double? width; // 添加宽度参数
+  final bool disabled; // 添加禁用参数
   
   // 预览条样式参数
   final Color previewColor;
@@ -32,6 +33,7 @@ class AudioProgressBar extends StatefulWidget {
     required this.onSeek,
     this.isDragging = false,
     this.width,
+    this.disabled = false, // 默认不禁用
     // 预览条样式参数默认值
     this.previewColor = Colors.white,
     this.previewOpacity = 1.0,
@@ -96,8 +98,12 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
         ? widget.bufferedPosition.inMilliseconds / widget.totalDuration.inMilliseconds
         : 0.0;
 
-    return Column(
-      children: [
+    return Opacity(
+      opacity: widget.disabled ? 0.7 : 1.0, // 禁用时透明度降低50%
+      child: AbsorbPointer(
+        absorbing: widget.disabled, // 禁用时阻止所有交互
+        child: Column(
+          children: [
         // 进度条
         SizedBox(
           width: double.infinity,
@@ -129,7 +135,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             ),
             child: Slider( 
               value: progress.clamp(0.0, 1.0),
-              onChanged: (value) async {
+              onChanged: widget.disabled ? null : (value) async {
                 // 如果需要限制在预览区域内
                 if (_showPreview()) {
                   // 检查是否超出预览区域边界
@@ -204,7 +210,9 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             ],
           ),
         ),
-      ],
+        ],
+        ),
+      ),
     );
   }
 }

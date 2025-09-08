@@ -71,6 +71,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   AudioItem? _currentAudio;
   bool _isLiked = false;
   bool _isAudioLoading = false; // 是否正在加载metadata
+  bool _progressBarDisabled = false;
 
   // 点赞相关状态管理
   bool _isLikeRequesting = false; // 是否正在请求点赞
@@ -154,6 +155,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             _isAudioLoading = true;
           } else {
             _isAudioLoading = false;
+          }
+
+          if(playerState.processingState == ProcessingState.loading) {
+            _progressBarDisabled = true;
+          } else {
+            _progressBarDisabled = false;
           }
         });
       }
@@ -548,6 +555,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       opacity: 1.0,
       duration: const Duration(milliseconds: 300),
       child: AudioProgressBar(
+        disabled: _progressBarDisabled,
         currentPosition: _currentPosition,
         totalDuration: _totalDuration,
         bufferedPosition: _bufferedPosition,
