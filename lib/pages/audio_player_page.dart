@@ -65,6 +65,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Duration _previewStartPosition = Duration.zero;
   Duration _previewDuration = Duration.zero;
   bool _canPlayAllDuration = true;
+  Duration _bufferedPosition = Duration.zero;
 
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
@@ -154,6 +155,15 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           } else {
             _isAudioLoading = false;
           }
+        });
+      }
+    });
+
+    // 监听缓冲位置
+    _audioManager.bufferedPositionStream.listen((bufferedPosition) {
+      if (mounted) {
+        setState(() {
+          _bufferedPosition = bufferedPosition;
         });
       }
     });
@@ -540,10 +550,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       child: AudioProgressBar(
         currentPosition: _currentPosition,
         totalDuration: _totalDuration,
+        bufferedPosition: _bufferedPosition,
         onSeek: _onSeek,
         previewStartPosition: _previewStartPosition,
         previewDuration: _previewDuration,
-        showPreview: !_canPlayAllDuration,
+        showPreviewBar: !_canPlayAllDuration,
         onOutPreview: _onUnlockFullAccessTap,
       ),
     );

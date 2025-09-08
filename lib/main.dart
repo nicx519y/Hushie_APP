@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'pages/splash_page.dart';
 import 'config/api_config.dart';
 
@@ -7,6 +8,12 @@ void main() async {
   print('🚀 [MAIN] 应用启动开始');
   WidgetsFlutterBinding.ensureInitialized();
   print('🚀 [MAIN] Flutter绑定初始化完成');
+
+  // 初始化 just_audio_media_kit 并配置缓冲大小
+  JustAudioMediaKit.ensureInitialized();
+  // 设置缓冲大小为 128MB（默认32MB）
+  JustAudioMediaKit.bufferSize = 512 * 1024 * 1024;
+  print('🚀 [MAIN] just_audio_media_kit 初始化完成，缓冲大小: 512MB');
 
   // 配置系统UI样式
   SystemChrome.setSystemUIOverlayStyle(

@@ -37,6 +37,9 @@ class AudioManager {
   final BehaviorSubject<bool> _canAutoPlayNextSubject = BehaviorSubject<bool>.seeded(
     false,
   );
+  final BehaviorSubject<Duration> _bufferedPositionSubject = BehaviorSubject<Duration>.seeded(
+    Duration.zero,
+  );
 
   AudioManager._internal();
 
@@ -130,6 +133,11 @@ class AudioManager {
     _audioService!.playerStateStream.listen((playerState) {
       _playerStateSubject.add(playerState);
       _checkPlaybackCompletion(playerState);
+    });
+
+    // 监听缓冲位置
+    _audioService!.bufferedPositionStream.listen((bufferedPosition) {
+      _bufferedPositionSubject.add(bufferedPosition);
     });
 
   }
@@ -253,12 +261,16 @@ class AudioManager {
         await _audioService!.playAudio(audio);
         
         // 如果不能播放完整时长，并且previewStart > 0，则从预览开始位置开始播放
+        // 等待音频加载完成后再进行seek操作
         final canPlayAllDuration = _canPlayAllDurationSubject.value;
         if (!canPlayAllDuration 
           && audio.previewStart != null 
-          && audio.previewStart! > Duration.zero) {
-          await _audioService!.seek(audio.previewStart!);
-          print('canPlayAllDuration为false，从预览开始位置播放: ${audio.previewStart}');
+          && audio.previewStart! > Duration.zero 
+          && audio.previewDuration != null 
+          && audio.previewDuration! > Duration.zero) {
+          
+          // 等待音频加载完成后再seek
+          _waitForAudioLoadedAndSeek(audio.previewStart!);
         }
       } else {
         print('音频服务未初始化，无法播放音频');
@@ -453,6 +465,11 @@ class AudioManager {
     return _playerStateSubject.stream;
   }
 
+  // 获取缓冲位置流
+  Stream<Duration> get bufferedPositionStream {
+    return _bufferedPositionSubject.stream;
+  }
+
   // 获取当前状态
   bool get isPlaying {
     return _isPlayingSubject.value;
@@ -490,6 +507,10 @@ class AudioManager {
     return _canAutoPlayNextSubject.value;
   }
 
+  Duration get bufferedPosition {
+    return _bufferedPositionSubject.value;
+  }
+
   // 获取状态流
   Stream<bool> get canPlayAllDurationStream {
     return _canPlayAllDurationSubject.stream;
@@ -510,6 +531,35 @@ class AudioManager {
     print('设置canAutoPlayNext: $canAutoPlay');
   }
 
+  /// 等待音频加载完成后进行seek操作
+  void _waitForAudioLoadedAndSeek(Duration seekPosition) {
+    // 监听播放器状态，等待音频加载完成
+    StreamSubscription? subscription;
+    subscription = _playerStateSubject.stream.listen((playerState) {
+      // 当音频加载完成且不是loading状态时，进行seek操作
+      if (playerState.processingState == ProcessingState.ready ||
+          playerState.processingState == ProcessingState.buffering) {
+        subscription?.cancel();
+        
+        // 延迟一小段时间确保音频完全准备好
+        Timer(const Duration(milliseconds: 100), () async {
+          try {
+            await _audioService?.seek(seekPosition);
+            print('音频加载完成后seek到预览开始位置: $seekPosition');
+          } catch (e) {
+            print('延迟seek操作失败: $e');
+          }
+        });
+      }
+    });
+    
+    // 设置超时，避免无限等待
+    Timer(const Duration(seconds: 5), () {
+      subscription?.cancel();
+      print('等待音频加载超时，取消seek操作');
+    });
+  }
+
   // 清理资源
   Future<void> dispose() async {
     // 在销毁前记录最后的播放停止
@@ -526,6 +576,7 @@ class AudioManager {
     await _playerStateSubject.close();
     await _canPlayAllDurationSubject.close();
     await _canAutoPlayNextSubject.close();
+    await _bufferedPositionSubject.close();
 
     _audioService = null;
   }

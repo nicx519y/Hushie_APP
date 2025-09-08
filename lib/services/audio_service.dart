@@ -22,6 +22,9 @@ class AudioPlayerService extends BaseAudioHandler {
   final BehaviorSubject<PlayerState> _playerStateSubject = BehaviorSubject<PlayerState>.seeded(
     PlayerState(false, ProcessingState.idle)
   );
+  final BehaviorSubject<Duration> _bufferedPositionSubject = BehaviorSubject<Duration>.seeded(
+    Duration.zero,
+  );
 
   // 公开的流
   Stream<bool> get isPlayingStream => _isPlayingSubject.stream;
@@ -30,6 +33,7 @@ class AudioPlayerService extends BaseAudioHandler {
   Stream<Duration> get durationStream => _durationSubject.stream;
   Stream<double> get speedStream => _speedSubject.stream;
   Stream<PlayerState> get playerStateStream => _playerStateSubject.stream;
+  Stream<Duration> get bufferedPositionStream => _bufferedPositionSubject.stream;
 
   // 当前状态的getter
   bool get isPlaying => _isPlayingSubject.value;
@@ -38,6 +42,7 @@ class AudioPlayerService extends BaseAudioHandler {
   Duration get duration => _durationSubject.value;
   double get speed => _speedSubject.value;
   PlayerState get playerState => _playerStateSubject.value;
+  Duration get bufferedPosition => _bufferedPositionSubject.value;
 
   AudioPlayerService() {
     _init();
@@ -71,6 +76,11 @@ class AudioPlayerService extends BaseAudioHandler {
     // 监听播放完成
     _audioPlayer.playerStateStream.listen((state) {
       _playerStateSubject.add(state);
+    });
+
+    // 监听缓冲位置变化
+    _audioPlayer.bufferedPositionStream.listen((bufferedPosition) {
+      _bufferedPositionSubject.add(bufferedPosition);
     });
   }
 
@@ -155,7 +165,15 @@ class AudioPlayerService extends BaseAudioHandler {
   // 加载并播放音频
   Future<void> playAudio(AudioItem audio) async {
     try {
-      await loadAudio(audio);
+      // 只有当音频ID不同时才重新加载，避免不必要的buffering
+      final currentAudio = _currentAudioSubject.value;
+      if (currentAudio == null || currentAudio.id != audio.id) {
+        print('加载新音频: ${audio.title} (ID: ${audio.id})');
+        await loadAudio(audio);
+      } else {
+        print('相同音频，跳过重新加载: ${audio.title} (ID: ${audio.id})');
+      }
+      
       await _audioPlayer.play();
       print('音频播放开始成功');
     } catch (e) {
@@ -320,5 +338,6 @@ class AudioPlayerService extends BaseAudioHandler {
     await _durationSubject.close();
     await _speedSubject.close();
     await _playerStateSubject.close();
+    await _bufferedPositionSubject.close();
   }
 }

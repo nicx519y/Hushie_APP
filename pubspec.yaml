@@ -56,6 +56,9 @@ dependencies:
   # 音频播放
   just_audio: ^0.9.36
   
+  # 音频播放媒体工具包（支持自定义缓冲大小）
+  just_audio_media_kit: ^2.0.4
+  
   # 后台音频服务
   audio_service: ^0.18.12
   
