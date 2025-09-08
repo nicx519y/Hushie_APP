@@ -66,4 +66,9 @@ class CustomIcons {
     fontFamily: _kFontFam,
     fontPackage: _kFontPkg,
   );
+  static const IconData playing = IconData(
+    0xe809,
+    fontFamily: _kFontFam,
+    fontPackage: _kFontPkg,
+  );
 }

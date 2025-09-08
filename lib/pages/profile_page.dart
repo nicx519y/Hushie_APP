@@ -14,7 +14,6 @@ import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
 import '../router/navigation_utils.dart';
 import 'dart:async';
 import 'package:hushie_app/services/api/user_history_service.dart';
-import 'audio_player_page.dart';
 import 'package:hushie_app/services/audio_manager.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -40,8 +39,13 @@ class _ProfilePageState extends State<ProfilePage>
   bool _isLoadingLiked = false;
   bool _isRefreshingAuth = false;
 
+  // 当前播放音频ID
+  String currentAudioId = '';
+
   // 认证状态订阅
   StreamSubscription<AuthStatusChangeEvent>? _authSubscription;
+  // 音频流订阅
+  StreamSubscription<AudioItem?>? _audioSubscription;
 
   @override
   void initState() {
@@ -62,6 +66,9 @@ class _ProfilePageState extends State<ProfilePage>
 
     // 订阅认证状态变化事件
     _subscribeToAuthChanges();
+
+    // 订阅音频流变化事件
+    _subscribeToAudioChanges();
 
     // 初始化 AudioHistoryManager
     AudioHistoryManager.instance.initialize();
@@ -96,6 +103,21 @@ class _ProfilePageState extends State<ProfilePage>
     });
 
     print('👤 [PROFILE] 已订阅认证状态变化事件');
+  }
+
+  /// 订阅音频流变化事件
+  void _subscribeToAudioChanges() {
+    _audioSubscription?.cancel(); // 取消之前的订阅
+
+    _audioSubscription = AudioManager.instance.currentAudioStream.listen((audio) {
+      if (mounted) {
+        setState(() {
+          currentAudioId = audio?.id ?? '';
+        });
+      }
+    });
+
+    print('🎵 [PROFILE] 已订阅音频流变化事件');
   }
 
   /// 登录后加载数据
@@ -166,6 +188,10 @@ class _ProfilePageState extends State<ProfilePage>
     // 取消认证状态订阅
     _authSubscription?.cancel();
     _authSubscription = null;
+
+    // 取消音频流订阅
+    _audioSubscription?.cancel();
+    _audioSubscription = null;
 
     // 取消路由观察者订阅
     final route = ModalRoute.of(context);
@@ -445,6 +471,7 @@ class _ProfilePageState extends State<ProfilePage>
                     return AudioList(
                       padding: const EdgeInsets.only(bottom: 120),
                       audios: historyList,
+                      activeId: currentAudioId,
                       emptyWidget: _buildEmptyWidget('No history'),
                       onRefresh: _refreshHistoryData,
                       hasMoreData: false,
@@ -459,6 +486,7 @@ class _ProfilePageState extends State<ProfilePage>
                     ? _buildEmptyWidget('No liked content')
                     : AudioList(
                         audios: likedAudios,
+                        activeId: currentAudioId,
                         padding: const EdgeInsets.only(bottom: 120),
                         emptyWidget: _buildEmptyWidget('No liked content'),
                         onRefresh: _refreshLikedAudios, // 改为刷新方法

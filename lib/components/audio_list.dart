@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_stats.dart';
 import 'fallback_image.dart';
+import '../utils/custom_icons.dart';
 
 class AudioList extends StatefulWidget {
   final List<AudioItem> audios;
+  final String activeId;
   final EdgeInsetsGeometry? padding;
   final ScrollPhysics? physics;
   final bool shrinkWrap;
@@ -23,6 +25,7 @@ class AudioList extends StatefulWidget {
   const AudioList({
     super.key,
     required this.audios,
+    this.activeId = '',
     this.padding = const EdgeInsets.all(0),
     this.physics,
     this.shrinkWrap = false,
@@ -65,6 +68,10 @@ class _AudioListState extends State<AudioList> {
     }
   }
 
+  bool _isActive(AudioItem item) {
+    return widget.activeId == item.id;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.audios.isEmpty) {
@@ -79,7 +86,7 @@ class _AudioListState extends State<AudioList> {
 
     return RefreshIndicator(
       onRefresh: widget.onRefresh ?? () async {},
-      child: ListView.builder(
+      child: ListView.separated(
         controller: _scrollController,
         padding: widget.padding,
         physics: widget.physics,
@@ -91,6 +98,14 @@ class _AudioListState extends State<AudioList> {
             return _buildLoadMoreIndicator();
           }
           return _buildAudioItem(widget.audios[index]);
+        },
+        separatorBuilder: (context, index) {
+          // 如果是最后一个音频项之后（即加载更多指示器之前），不添加分隔符
+          if (index == widget.audios.length - 1 && widget.hasMoreData) {
+            return const SizedBox.shrink();
+          }
+          // 添加间隔
+          return const SizedBox(height: 18.0);
         },
       ),
     );
@@ -122,11 +137,49 @@ class _AudioListState extends State<AudioList> {
     );
   }
 
+  Widget _buildItemTitle(AudioItem audio) {
+    final isActive = _isActive(audio);
+
+    if (isActive) {
+      return Row(
+        children: [
+          Icon(CustomIcons.playing, color: Color(0xFFFF2050), size: 14),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              audio.title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: 1.5,
+                color: Color(0xFFFF2050),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    } else {
+      return Text(
+        audio.title,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          height: 1.5,
+          color: Color(0xFF333333),
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+  }
+
   Widget _buildAudioItem(AudioItem audio) {
     return InkWell(
       onTap: widget.onItemTap != null ? () => widget.onItemTap!(audio) : null,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 18),
+        margin: const EdgeInsets.only(bottom: 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -165,18 +218,9 @@ class _AudioListState extends State<AudioList> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 标题
-                  Text(
-                    audio.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      height: 1.5,
-                      color: Color(0xFF333333),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
+                  _buildItemTitle(audio),
+
+                  const SizedBox(height: 8),
                   // 描述
                   Text(
                     audio.desc,
@@ -188,7 +232,7 @@ class _AudioListState extends State<AudioList> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 13),
                   // 视频统计信息
                   AudioStats(
                     playTimes: audio.playTimes,

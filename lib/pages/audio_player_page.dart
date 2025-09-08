@@ -78,6 +78,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _localIsLiked = false; // 本地点赞状态
   int _localLikesCount = 0; // 本地点赞数
 
+  // 播放列表相关状态管理
+  bool _isShowingPlaylist = false; // 是否正在显示播放列表
+
   @override
   void initState() {
     super.initState();
@@ -248,6 +251,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   void _onPlaylistButtonTap() async {
+    // 如果正在显示播放列表，直接返回
+    if (_isShowingPlaylist) return;
+
     final isLogin = await AuthService.isSignedIn();
     if (!isLogin) {
       // 打开登录页
@@ -255,11 +261,23 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       return;
     }
 
-    showHistoryListWithAnimation(
+    // 设置标志位
+    setState(() {
+      _isShowingPlaylist = true;
+    });
+
+    await showHistoryListWithAnimation(
       context,
       onItemTap: (audio) {
         _audioManager.playAudio(audio);
-
+      },
+      onClose: () {
+        // 播放列表关闭时重置标志位
+        if (mounted) {
+          setState(() {
+            _isShowingPlaylist = false;
+          });
+        }
       },
     );
   }

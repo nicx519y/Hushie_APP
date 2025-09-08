@@ -18,7 +18,7 @@ class AudioStats extends StatelessWidget {
     required this.author,
     this.iconSize = 12,
     this.fontSize = 10,
-    this.textColor = const Color(0xFF333333),
+    this.textColor = const Color(0xFF666666),
     this.spacing = 16,
   });
 

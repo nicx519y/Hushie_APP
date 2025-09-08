@@ -133,6 +133,7 @@ Widget _buildEmptyWidget() {
 Future<void> showHistoryListWithAnimation(
   BuildContext context, {
   void Function(AudioItem)? onItemTap,
+  VoidCallback? onClose,
 }) async {
   Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder(
@@ -140,7 +141,10 @@ Future<void> showHistoryListWithAnimation(
       barrierColor: Colors.black.withOpacity(0.5), // 设置半透明黑色背景
       pageBuilder: (context, animation, secondaryAnimation) => HistoryList(
         onItemTap: onItemTap,
-        onClose: () => Navigator.of(context, rootNavigator: true).pop(),
+        onClose: () {
+          Navigator.of(context, rootNavigator: true).pop();
+          onClose?.call();
+        },
       ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         // 从下往上滑动的动画
