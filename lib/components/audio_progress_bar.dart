@@ -79,19 +79,33 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     return widget.showPreviewBar && widget.previewStartPosition >= Duration.zero && widget.previewDuration > Duration.zero;
   }
 
+  double _getProgress() {
+    final result = widget.currentPosition.inMilliseconds /
+              widget.totalDuration.inMilliseconds;
+
+    return result;
+  }
+
+  double _getPreviewStart() {
+    return widget.previewStartPosition.inMilliseconds /
+              widget.totalDuration.inMilliseconds;
+  }
+
+  double _getPreviewEnd() {
+    return (widget.previewStartPosition.inMilliseconds +
+            widget.previewDuration.inMilliseconds) /
+        widget.totalDuration.inMilliseconds;
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = _isDragging
         ? _dragValue
-        : widget.currentPosition.inMilliseconds /
-              widget.totalDuration.inMilliseconds;
+        : _getProgress();
 
     // 计算预览区域的相对位置
-    final previewStart = widget.previewStartPosition.inMilliseconds /
-        widget.totalDuration.inMilliseconds;
-    final previewEnd = (widget.previewStartPosition.inMilliseconds +
-            widget.previewDuration.inMilliseconds) /
-        widget.totalDuration.inMilliseconds;
+    final previewStart = _getPreviewStart();
+    final previewEnd = _getPreviewEnd();
 
     // 计算缓冲进度
     final bufferedProgress = widget.totalDuration.inMilliseconds > 0
@@ -158,29 +172,11 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                 );
                 await widget.onSeek(newPosition);
               },
-              // onChangeEnd: (value) async {
-              //   // 如果需要限制在预览区域内
-              //   if (_showPreview()) {
-              //     // 检查是否超出预览区域边界
-              //     if (value < previewStart || value > previewEnd) {
-              //       // 触发边界回调
-              //       widget.onOutPreview();
-              //       return; // 不更新位置
-              //     }
-              //     // 限制在预览区域内
-              //     value = value.clamp(previewStart, previewEnd);
-              //   }
-                
-              //   setState(() {
-              //     _isDragging = true;
-              //     _dragValue = value;
-              //   });
-              //   final newPosition = Duration(
-              //     milliseconds: (value * widget.totalDuration.inMilliseconds)
-              //         .round(),
-              //   );
-              //   await widget.onSeek(newPosition);
-              // },
+              onChangeEnd: (value) {
+                setState(() {
+                  _isDragging = false;
+                });
+              },
             ),
           ),
         ),

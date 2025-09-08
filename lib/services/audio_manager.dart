@@ -98,8 +98,19 @@ class AudioManager {
           AudioPlaylist.instance.addAudio(audio);
         }
 
-        print('音频改变，管理播放列表: ${audio.id}');
         _managePlaylist(audio.id);
+        
+        // 检查是否需要从预览开始位置播放
+        final canPlayAllDuration = _canPlayAllDurationSubject.value;
+        if (!canPlayAllDuration 
+          && audio.previewStart != null 
+          && audio.previewStart! > Duration.zero 
+          && audio.previewDuration != null 
+          && audio.previewDuration! > Duration.zero) {
+          print('音频改变，需要从预览开始位置播放');
+          // 等待音频加载完成后再seek到预览开始位置
+          _waitForAudioLoadedAndSeek(audio.previewStart!);
+        }
       }
     });
 
@@ -260,18 +271,7 @@ class AudioManager {
       if (_audioService != null) {
         await _audioService!.playAudio(audio);
         
-        // 如果不能播放完整时长，并且previewStart > 0，则从预览开始位置开始播放
-        // 等待音频加载完成后再进行seek操作
-        final canPlayAllDuration = _canPlayAllDurationSubject.value;
-        if (!canPlayAllDuration 
-          && audio.previewStart != null 
-          && audio.previewStart! > Duration.zero 
-          && audio.previewDuration != null 
-          && audio.previewDuration! > Duration.zero) {
-          
-          // 等待音频加载完成后再seek
-          _waitForAudioLoadedAndSeek(audio.previewStart!);
-        }
+
       } else {
         print('音频服务未初始化，无法播放音频');
         throw Exception('音频服务未初始化');
@@ -406,7 +406,6 @@ class AudioManager {
       }
       
 
-      
       return await _audioService!.seek(seekPosition);
     }
   }
@@ -553,11 +552,6 @@ class AudioManager {
       }
     });
     
-    // 设置超时，避免无限等待
-    Timer(const Duration(seconds: 5), () {
-      subscription?.cancel();
-      print('等待音频加载超时，取消seek操作');
-    });
   }
 
   // 清理资源

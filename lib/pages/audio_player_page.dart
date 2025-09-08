@@ -127,6 +127,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     .listen((position) {
       if (mounted) {
         setState(() {
+          // print('audio_player_page 播放位置更新: $position');
           _currentPosition = position;
         });
       }
@@ -258,6 +259,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       context,
       onItemTap: (audio) {
         _audioManager.playAudio(audio);
+
       },
     );
   }

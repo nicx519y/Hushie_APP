@@ -88,10 +88,15 @@ class _HistoryListState extends State<HistoryList> {
                     builder: (context, historyList, child) {
                       return AudioList(
                         audios: historyList,
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         emptyWidget: _buildEmptyWidget(),
                         onRefresh: _refreshHistory,
-                        onItemTap: widget.onItemTap,
+                        onItemTap: (audio) {
+                          if (widget.onItemTap != null) {
+                            widget.onItemTap!(audio);
+                            _closeWithAnimation();
+                          }
+                        },
                         hasMoreData: false,
                       );
                     },
