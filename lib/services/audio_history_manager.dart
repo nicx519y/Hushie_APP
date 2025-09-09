@@ -157,8 +157,8 @@ class AudioHistoryManager {
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
-        playDurationMs: 0,
-        playProgressMs: _lastRecordedPosition.inMilliseconds,
+        playDuration: Duration.zero,
+        playProgress: _lastRecordedPosition,
       );
 
       _updateLocalCache(updatedHistory);
@@ -183,8 +183,8 @@ class AudioHistoryManager {
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
         isFirst: true,    // 首次播放
-        playDurationMs: 0,
-        playProgressMs: _lastRecordedPosition.inMilliseconds,
+        playDuration: Duration.zero,
+        playProgress: _lastRecordedPosition,
       );
 
       _updateLocalCache(updatedHistory);
@@ -207,8 +207,8 @@ class AudioHistoryManager {
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
-        playDurationMs: 0, // 这里可以计算实际播放时长
-        playProgressMs: _lastRecordedPosition.inMilliseconds,
+        playDuration: Duration.zero, // 这里可以计算实际播放时长
+        playProgress: _lastRecordedPosition,
       );
 
       _updateLocalCache(updatedHistory);
@@ -374,6 +374,38 @@ class AudioHistoryManager {
     // 通知状态变更
     _historyNotifier.value = List.from(_historyCache);
     debugPrint('🎵 [HISTORY] 本地缓存已更新: ${_historyCache.length} 条记录');
+  }
+
+  /// 获取音频的初始播放位置
+  /// 根据历史记录中的播放进度确定初始位置
+  Duration getPlaybackPosition(String audioId) {
+    try {
+      // 在历史缓存中查找对应的音频
+      final historyAudio = _historyCache.firstWhere(
+        (item) => item.id == audioId,
+        orElse: () => throw StateError('Audio not found'),
+      );
+      
+      // 获取播放进度和总时长
+      final playProgress = historyAudio.playProgress;
+      final duration = historyAudio.duration;
+      
+      // 如果没有播放进度或总时长，返回零位置
+      if (playProgress == null || duration == null) {
+        return Duration.zero;
+      }
+      
+      // 如果播放进度大于等于总时长，说明已播放完毕，从头开始
+      if (playProgress >= duration) {
+        return Duration.zero;
+      }
+      
+      // 返回历史播放进度
+      return playProgress;
+    } catch (e) {
+      // 历史记录中没有找到该音频，返回零位置
+      return Duration.zero;
+    }
   }
 
   /// 格式化时长为字符串

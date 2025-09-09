@@ -89,7 +89,7 @@ class AudioPlayerService extends BaseAudioHandler {
     });
   }
 
-  Future<void> loadAudio(AudioItem audio) async {
+  Future<void> loadAudio(AudioItem audio, {Duration? initialPosition}) async {
     try {
       // 先完全停止并重置播放器状态
 
@@ -103,7 +103,7 @@ class AudioPlayerService extends BaseAudioHandler {
         throw Exception('音频URL为空');
       }
 
-      debugPrint('loadAudio url: $audioUrl');
+      debugPrint('loadAudio url: $audioUrl${initialPosition != null ? '，初始位置: ${initialPosition.inSeconds}秒' : ''}');
 
       // 安全地获取封面URL
       String? coverUrlString;
@@ -133,18 +133,22 @@ class AudioPlayerService extends BaseAudioHandler {
         album: "Hushie",
         title: audio.title,
         artist: audio.author,
-        duration: audio.durationMs != null
-            ? Duration(milliseconds: audio.durationMs!)
-            : Duration.zero,
+        duration: audio.duration ?? Duration.zero,
         artUri: coverUrlString != null ? Uri.parse(coverUrlString) : null,
         extras: audio.toMap(),
       );
 
       mediaItem.add(mediaItemData);
 
-      // 加载音频文件，使用 setAudioSource
+      // 加载音频文件，使用 setAudioSource 的 initialPosition 参数
       final audioSource = AudioSource.uri(Uri.parse(audioUrl));
-      await _audioPlayer.setAudioSource(audioSource);
+      if (initialPosition != null) {
+        await _audioPlayer.setAudioSource(audioSource, initialPosition: initialPosition);
+        debugPrint('音频加载完成，初始位置: ${initialPosition.inSeconds}秒');
+      } else {
+        await _audioPlayer.setAudioSource(audioSource);
+        debugPrint('音频加载完成');
+      }
     } catch (e) {
       debugPrint('装载音频时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
@@ -152,19 +156,23 @@ class AudioPlayerService extends BaseAudioHandler {
   }
 
   // 加载并播放音频
-  Future<void> playAudio(AudioItem audio) async {
+  Future<void> playAudio(AudioItem audio, {Duration? initialPosition}) async {
     try {
-      // 只有当音频ID不同时才重新加载，避免不必要的buffering
+      // 检查是否需要加载新音频或重新设置初始位置
       final currentAudio = _currentAudioSubject.value;
       if (currentAudio == null || currentAudio.id != audio.id) {
         debugPrint('加载新音频: ${audio.title} (ID: ${audio.id})');
-        await loadAudio(audio);
+        await loadAudio(audio, initialPosition: initialPosition);
+      } else if (initialPosition != null) {
+        // 如果是同一个音频但指定了新的初始位置，重新加载
+        debugPrint('相同音频但需要设置初始位置，重新加载: ${audio.title}');
+        await loadAudio(audio, initialPosition: initialPosition);
       } else {
         debugPrint('相同音频，跳过重新加载: ${audio.title} (ID: ${audio.id})');
       }
       
       await _audioPlayer.play();
-      debugPrint('音频播放开始成功');
+      debugPrint('音频播放开始成功${initialPosition != null ? '，从${initialPosition.inSeconds}秒开始' : ''}');
     } catch (e) {
       debugPrint('播放音频时出错: $e');
       await stop();

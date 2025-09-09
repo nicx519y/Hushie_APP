@@ -16,14 +16,14 @@ class UserHistoryService {
   /// 提交用户播放进度
   static Future<List<AudioItem>> submitPlayProgress({
     required String audioId,
-    required int playDurationMs,
-    required int playProgressMs,
+    required Duration playDuration,
+    required Duration playProgress,
     bool isFirst = false,
   }) async {
     return _submitRealPlayProgress(
       audioId: audioId,
-      playDurationMs: playDurationMs,
-      playProgressMs: playProgressMs,
+      playDuration: playDuration,
+      playProgress: playProgress,
       isFirst: isFirst,
     );
   }
@@ -93,8 +93,8 @@ class UserHistoryService {
   /// 真实接口 - 提交用户播放进度
   static Future<List<AudioItem>> _submitRealPlayProgress({
     required String audioId,
-    required int playDurationMs,
-    required int playProgressMs,
+    required Duration playDuration,
+    required Duration playProgress,
     bool isFirst = false,
   }) async {
     try {
@@ -107,8 +107,8 @@ class UserHistoryService {
         body: {
           'id': audioId,
           'is_first': isFirst,
-          'play_duration_ms': playDurationMs,
-          'play_progress_ms': playProgressMs,
+          'play_duration_ms': playDuration.inMilliseconds,
+      'play_progress_ms': playProgress.inMilliseconds,
           'cid': audioId, // 暂时和id保持一致
           'count': 10000, // 默认全返回
         },

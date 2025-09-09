@@ -154,6 +154,44 @@ class AudioManager {
 
   }
 
+  Duration _transformPosition(Duration position) {
+    // 如果不能播放全部时长，直接返回原位置
+    if (!_canPlayAllDurationSubject.value) {
+      return position;
+    }
+    
+    final currentAudio = _currentAudioSubject.value;
+    if (currentAudio == null) {
+      return position;
+    }
+    
+    final previewStart = currentAudio.previewStart;
+    final previewDuration = currentAudio.previewDuration;
+    
+    // 检查预览参数是否有效
+    if (previewStart == null || previewStart < Duration.zero ||
+        previewDuration == null || previewDuration <= Duration.zero) {
+      return position;
+    }
+    
+    // 计算预览区间的结束位置
+    final previewEnd = previewStart + previewDuration;
+    
+    // 如果位置在预览区间内，直接返回
+    if (position >= previewStart && position <= previewEnd) {
+      return position;
+    }
+    
+    // 如果位置在预览区间外，返回最近的边界位置
+    if (position < previewStart) {
+      // 位置在预览开始之前，返回预览开始位置
+      return previewStart;
+    } else {
+      // 位置在预览结束之后，返回预览结束位置
+      return previewEnd;
+    }
+  }
+
   /// 检查播放是否完成并自动播放下一首
   void _checkPlaybackCompletion(PlayerState playerState) {
     final canAutoPlayNext = _canAutoPlayNextSubject.value;
@@ -267,13 +305,24 @@ class AudioManager {
 
   // 播放音频
   Future<void> playAudio(AudioItem audio) async {
+    // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
+    final currentAudio = _currentAudioSubject.value;
 
-    debugPrint('playAudio: ${audio.bgImage?.urls.x1 ?? "无背景图片"}');
+    if (currentAudio != null && currentAudio.id == audio.id) {
+      debugPrint('相同音频正在播放，跳过: ${audio.title} (ID: ${audio.id})');
+      return;
+    }
+
+    // 2. 从历史列表获取新音频的播放进度，作为起始播放进度
+    final position = AudioHistoryManager.instance.getPlaybackPosition(audio.id);
+    
+    // 3. 通过 _transformPosition 过滤 initialPosition 得到正确的 initialPosition
+    final transformedPosition = _transformPosition(position);
 
     try {
       // await _ensureInitialized();
       if (_audioService != null) {
-        await _audioService!.playAudio(audio);
+        await _audioService!.playAudio(audio, initialPosition: transformedPosition);
         
 
       } else {
@@ -303,10 +352,6 @@ class AudioManager {
 
       // 2. 设置当前播放索引
       playlist.setCurrentIndex(currentAudioId);
-
-      debugPrint("管理播放列表：当前ID: $currentAudioId");
-      debugPrint("管理播放列表：是否最后一条：${playlist.isLastAudio(currentAudioId)}");
-      debugPrint("管理播放列表：下一首ID: ${playlist.getNextAudio(currentAudioId)?.id}");
 
       // 3. 检查是否是最后一条，如果是则补充播放列表
       if (playlist.isLastAudio(currentAudioId)) {
@@ -374,42 +419,10 @@ class AudioManager {
   Future<void> seek(Duration position) async {
     // await _ensureInitialized();
     if (_audioService != null) {
-      final currentAudio = _currentAudioSubject.value;
-      final canPlayAllDuration = _canPlayAllDurationSubject.value;
-      final totalDuration = _durationSubject.value.totalDuration;
+      // 使用 _transformPosition 方法处理位置转换
+      final seekPosition = _transformPosition(position);
+      debugPrint('AudioManager: seek到位置 $seekPosition (原始位置: $position)');
       
-      Duration seekPosition = position;
-      
-      // 如果不能播放完整时长，需要检查边界
-      if (!canPlayAllDuration && currentAudio != null) {
-        final previewStart = currentAudio.previewStart ?? Duration.zero;
-        final previewDuration = currentAudio.previewDuration ?? Duration.zero;
-        
-        if (previewStart >= Duration.zero && previewDuration > Duration.zero) {
-          final previewEnd = previewStart + previewDuration;
-          
-          // 限制在预览区间内
-          if (seekPosition < previewStart) {
-            seekPosition = previewStart;
-            debugPrint('seek位置小于预览开始位置，调整到预览开始: $previewStart');
-          } else if (seekPosition > previewEnd) {
-            seekPosition = previewEnd;
-            debugPrint('seek位置超过预览结束位置，调整到预览结束: $previewEnd');
-          }
-           return await _audioService!.seek(seekPosition);
-        }
-      } 
-      
-      // 可以播放完整时长时，限制在总时长内
-      if (seekPosition < Duration.zero) {
-        seekPosition = Duration.zero;
-        debugPrint('seek位置小于0，调整到0');
-      } else if (seekPosition > totalDuration) {
-        seekPosition = totalDuration;
-        debugPrint('seek位置超过总时长，调整到总时长: $totalDuration');
-      }
-      
-
       return await _audioService!.seek(seekPosition);
     }
   }

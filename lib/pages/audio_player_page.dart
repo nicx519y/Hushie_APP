@@ -100,9 +100,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _localIsLiked = _isLiked;
           _localLikesCount = _currentAudio?.likesCount ?? 0;
           
-          _totalDuration = audio?.durationMs != null 
-              ? Duration(milliseconds: audio!.durationMs!) 
-              : Duration.zero;
+          _totalDuration = audio?.duration ?? Duration.zero;
           
           // 清理背景图缓存，确保新音频的背景图能正确加载
           _cachedBgImageUrl = null;
