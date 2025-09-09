@@ -82,7 +82,7 @@ class _ProfilePageState extends State<ProfilePage>
     _authSubscription?.cancel(); // 取消之前的订阅
 
     _authSubscription = AuthService.authStatusChanges.listen((event) async {
-      print('👤 [PROFILE] 收到认证状态变化事件: ${event.status}');
+      debugPrint('👤 [PROFILE] 收到认证状态变化事件: ${event.status}');
       
       // 根据状态变化刷新数据
       switch (event.status) {
@@ -102,7 +102,7 @@ class _ProfilePageState extends State<ProfilePage>
       }
     });
 
-    print('👤 [PROFILE] 已订阅认证状态变化事件');
+    debugPrint('👤 [PROFILE] 已订阅认证状态变化事件');
   }
 
   /// 订阅音频流变化事件
@@ -117,34 +117,34 @@ class _ProfilePageState extends State<ProfilePage>
       }
     });
 
-    print('🎵 [PROFILE] 已订阅音频流变化事件');
+    debugPrint('🎵 [PROFILE] 已订阅音频流变化事件');
   }
 
   /// 登录后加载数据
   Future<void> _loadDataAfterLogin() async {
-    print('👤 [PROFILE] 用户已登录，重新加载页面数据');
+    debugPrint('👤 [PROFILE] 用户已登录，重新加载页面数据');
 
     // 检查认证状态
     final token = await AuthService.getAccessToken();
-    print('👤 [PROFILE] 当前访问令牌: ${token != null ? "存在(${token.length}字符)" : "不存在"}');
+    debugPrint('👤 [PROFILE] 当前访问令牌: ${token != null ? "存在(${token.length}字符)" : "不存在"}');
     
     final isSignedIn = await AuthService.isSignedIn();
-    print('👤 [PROFILE] 登录状态检查: $isSignedIn');
+    debugPrint('👤 [PROFILE] 登录状态检查: $isSignedIn');
 
     // 并行加载历史和喜欢数据
     await Future.wait([
       _loadLikedAudios(),
-      // AudioHistoryManager.instance.refreshHistory(),
+      AudioHistoryManager.instance.refreshHistory(),
       () async {
         try {
-          print('🎵 [HISTORY] 开始调用 UserHistoryService.getUserHistoryList()');
+          debugPrint('🎵 [HISTORY] 开始调用 UserHistoryService.getUserHistoryList()');
           final value = await UserHistoryService.getUserHistoryList();
-          print('🎵 [HISTORY] 刷新用户播放历史成功: $value');
+          debugPrint('🎵 [HISTORY] 刷新用户播放历史成功: $value');
         } catch (error) {
-          print('🎵 [HISTORY] 获取用户播放历史失败: $error');
-          print('🎵 [HISTORY] 错误类型: ${error.runtimeType}');
+          debugPrint('🎵 [HISTORY] 获取用户播放历史失败: $error');
+          debugPrint('🎵 [HISTORY] 错误类型: ${error.runtimeType}');
           if (error is Exception) {
-            print('🎵 [HISTORY] 异常详情: ${error.toString()}');
+            debugPrint('🎵 [HISTORY] 异常详情: ${error.toString()}');
           }
         }
       }()
@@ -153,7 +153,7 @@ class _ProfilePageState extends State<ProfilePage>
 
   /// 登出后清空页面数据
   Future<void> _clearDataAfterLogout() async {
-    print('👤 [PROFILE] 用户已登出，清空页面数据');
+    debugPrint('👤 [PROFILE] 用户已登出，清空页面数据');
 
     if (mounted) {
       setState(() {
@@ -179,7 +179,7 @@ class _ProfilePageState extends State<ProfilePage>
         await _loadDataAfterLogin();
       }
     } catch (e) {
-      print('初始化认证状态失败: $e');
+      debugPrint('初始化认证状态失败: $e');
     }
   }
 
@@ -233,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage>
         }
       }
     } catch (e) {
-      print('刷新认证状态失败: $e');
+      debugPrint('刷新认证状态失败: $e');
     } finally {
       _isRefreshingAuth = false;
     }
@@ -243,14 +243,14 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _refreshUserInfo() async {
     try {
       final user = await AuthService.getCurrentUser();
-      print('👤 [PROFILE] 刷新用户信息: ${user?.displayName}');
+      debugPrint('👤 [PROFILE] 刷新用户信息: ${user?.displayName}');
       if (mounted) {
         setState(() {
           userName = user?.displayName ?? '';
         });
       }
     } catch (e) {
-      print('刷新用户信息失败: $e');
+      debugPrint('刷新用户信息失败: $e');
     }
   }
 
@@ -260,13 +260,13 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       await AudioHistoryManager.instance.refreshHistory();
     } catch (e) {
-      print('刷新历史数据失败: $e');
+      debugPrint('刷新历史数据失败: $e');
     }
   }
 
   // 加载喜欢数据
   Future<void> _loadLikedAudios() async {
-    print('👤 [PROFILE] 加载喜欢数据, _isLoadingLiked: ${_isLoadingLiked}, isLoggedIn: ${isLoggedIn}');
+    debugPrint('👤 [PROFILE] 加载喜欢数据, _isLoadingLiked: ${_isLoadingLiked}, isLoggedIn: ${isLoggedIn}');
     if (_isLoadingLiked || !isLoggedIn) return;
 
     setState(() {
@@ -283,7 +283,7 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     } catch (e) {
-      print('加载喜欢数据失败: $e');
+      debugPrint('加载喜欢数据失败: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -313,7 +313,7 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     } catch (e) {
-      print('刷新喜欢数据失败: $e');
+      debugPrint('刷新喜欢数据失败: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -346,7 +346,7 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     } catch (e) {
-      print('加载更多喜欢数据失败: $e');
+      debugPrint('加载更多喜欢数据失败: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -356,7 +356,7 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  void _onAudioListItemTap(AudioItem audio) {
+  void _onAudioListItemTap(AudioItem audio) async {
     AudioManager.instance.playAudio(audio);
     NavigationUtils.navigateToAudioPlayer(context);
   }

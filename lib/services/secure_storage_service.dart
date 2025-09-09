@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 /// 安全存储服务
 /// 用于存储敏感信息，如访问令牌、刷新令牌等
@@ -32,7 +33,7 @@ class SecureStorageService {
       await _storage.write(key: _accessTokenKey, value: token);
       return true;
     } catch (e) {
-      print('保存访问令牌失败: $e');
+      debugPrint('保存访问令牌失败: $e');
       return false;
     }
   }
@@ -42,7 +43,7 @@ class SecureStorageService {
     try {
       return await _storage.read(key: _accessTokenKey);
     } catch (e) {
-      print('获取访问令牌失败: $e');
+      debugPrint('获取访问令牌失败: $e');
       return null;
     }
   }
@@ -53,7 +54,7 @@ class SecureStorageService {
       await _storage.write(key: _refreshTokenKey, value: token);
       return true;
     } catch (e) {
-      print('保存刷新令牌失败: $e');
+      debugPrint('保存刷新令牌失败: $e');
       return false;
     }
   }
@@ -63,7 +64,7 @@ class SecureStorageService {
     try {
       return await _storage.read(key: _refreshTokenKey);
     } catch (e) {
-      print('获取刷新令牌失败: $e');
+      debugPrint('获取刷新令牌失败: $e');
       return null;
     }
   }
@@ -77,7 +78,7 @@ class SecureStorageService {
       );
       return true;
     } catch (e) {
-      print('保存令牌过期时间失败: $e');
+      debugPrint('保存令牌过期时间失败: $e');
       return false;
     }
   }
@@ -88,7 +89,7 @@ class SecureStorageService {
       final value = await _storage.read(key: _tokenExpiresAtKey);
       return value != null ? int.tryParse(value) : null;
     } catch (e) {
-      print('获取令牌过期时间失败: $e');
+      debugPrint('获取令牌过期时间失败: $e');
       return null;
     }
   }
@@ -99,7 +100,7 @@ class SecureStorageService {
       await _storage.write(key: _userInfoKey, value: userInfo);
       return true;
     } catch (e) {
-      print('保存用户信息失败: $e');
+      debugPrint('保存用户信息失败: $e');
       return false;
     }
   }
@@ -109,7 +110,7 @@ class SecureStorageService {
     try {
       return await _storage.read(key: _userInfoKey);
     } catch (e) {
-      print('获取用户信息失败: $e');
+      debugPrint('获取用户信息失败: $e');
       return null;
     }
   }
@@ -120,7 +121,7 @@ class SecureStorageService {
       await _storage.write(key: _deviceIdKey, value: deviceId);
       return true;
     } catch (e) {
-      print('保存设备ID失败: $e');
+      debugPrint('保存设备ID失败: $e');
       return false;
     }
   }
@@ -130,7 +131,7 @@ class SecureStorageService {
     try {
       return await _storage.read(key: _deviceIdKey);
     } catch (e) {
-      print('获取设备ID失败: $e');
+      debugPrint('获取设备ID失败: $e');
       return null;
     }
   }
@@ -141,7 +142,7 @@ class SecureStorageService {
       await _storage.delete(key: _accessTokenKey);
       return true;
     } catch (e) {
-      print('删除访问令牌失败: $e');
+      debugPrint('删除访问令牌失败: $e');
       return false;
     }
   }
@@ -152,7 +153,7 @@ class SecureStorageService {
       await _storage.delete(key: _refreshTokenKey);
       return true;
     } catch (e) {
-      print('删除刷新令牌失败: $e');
+      debugPrint('删除刷新令牌失败: $e');
       return false;
     }
   }
@@ -163,7 +164,7 @@ class SecureStorageService {
       await _storage.delete(key: _tokenExpiresAtKey);
       return true;
     } catch (e) {
-      print('删除令牌过期时间失败: $e');
+      debugPrint('删除令牌过期时间失败: $e');
       return false;
     }
   }
@@ -174,7 +175,7 @@ class SecureStorageService {
       await _storage.delete(key: _userInfoKey);
       return true;
     } catch (e) {
-      print('删除用户信息失败: $e');
+      debugPrint('删除用户信息失败: $e');
       return false;
     }
   }
@@ -185,7 +186,7 @@ class SecureStorageService {
       await _storage.delete(key: _deviceIdKey);
       return true;
     } catch (e) {
-      print('删除设备ID失败: $e');
+      debugPrint('删除设备ID失败: $e');
       return false;
     }
   }
@@ -201,7 +202,7 @@ class SecureStorageService {
       ]);
       return true;
     } catch (e) {
-      print('清除认证数据失败: $e');
+      debugPrint('清除认证数据失败: $e');
       return false;
     }
   }
@@ -212,7 +213,7 @@ class SecureStorageService {
       await _storage.deleteAll();
       return true;
     } catch (e) {
-      print('清除所有数据失败: $e');
+      debugPrint('清除所有数据失败: $e');
       return false;
     }
   }
@@ -222,7 +223,7 @@ class SecureStorageService {
     try {
       return await _storage.containsKey(key: key);
     } catch (e) {
-      print('检查键存在失败: $e');
+      debugPrint('检查键存在失败: $e');
       return false;
     }
   }
@@ -232,7 +233,7 @@ class SecureStorageService {
     try {
       return await _storage.readAll().then((map) => map.keys.toList());
     } catch (e) {
-      print('获取所有键失败: $e');
+      debugPrint('获取所有键失败: $e');
       return [];
     }
   }

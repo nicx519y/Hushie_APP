@@ -196,7 +196,7 @@ class _AudioListState extends State<AudioList> {
                     try {
                       imageUrl = audio.cover.getBestResolution(70).url;
                     } catch (e) {
-                      print('获取封面图片失败: $e');
+                      debugPrint('获取封面图片失败: $e');
                       imageUrl = null;
                     }
 

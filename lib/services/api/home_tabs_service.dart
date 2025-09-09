@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../../models/tab_item.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// 首页Tabs服务
 class HomeTabsService {
@@ -15,7 +16,7 @@ class HomeTabsService {
   /// 真实接口 - 获取首页tabs
   static Future<List<TabItemModel>> _getRealHomeTabs() async {
     try {
-      print("开始获取 tabs 数据");
+      debugPrint("开始获取 tabs 数据");
 
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.homeTabs));
 
@@ -23,14 +24,14 @@ class HomeTabsService {
         uri,
         timeout: _defaultTimeout,
       );
-      print("获取 tabs 数据完成 $response");
+      debugPrint("获取 tabs 数据完成 $response");
 
       if (response.statusCode != 200) {
         throw Exception('HTTP failed: ${response.statusCode}');
       }
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      print("Home tabs service : $jsonData");
+      debugPrint("Home tabs service : $jsonData");
 
       final int errNo = jsonData['errNo'] ?? -1;
       if (errNo != 0) {
@@ -48,7 +49,7 @@ class HomeTabsService {
           .toList();
       return tabs;
     } catch (e) {
-      print("tabs 数据获取失败 $e");
+      debugPrint("tabs 数据获取失败 $e");
       if (e is Exception) {
         rethrow;
       }

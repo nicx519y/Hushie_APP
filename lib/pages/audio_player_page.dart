@@ -100,7 +100,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _localIsLiked = _isLiked;
           _localLikesCount = _currentAudio?.likesCount ?? 0;
           
-          _totalDuration = Duration(milliseconds: audio!.durationMs!);
+          _totalDuration = audio?.durationMs != null 
+              ? Duration(milliseconds: audio!.durationMs!) 
+              : Duration.zero;
+          
+          // 清理背景图缓存，确保新音频的背景图能正确加载
+          _cachedBgImageUrl = null;
+          _cachedBackgroundImage = null;
 
         });
       }
@@ -115,22 +121,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       }
     });
 
-    // 监听音频播放状态
-    // _audioManager.isPlayingStream.listen((isPlaying) {
-    //   if (mounted) {
-    //     setState(() {
-    //       _isPlaying = isPlaying;
-    //     });
-    //   }
-    // });
-
     // 监听播放位置 - 使用防抖动技术减少更新频率
     _audioManager.positionStream
     // .debounceTime(const Duration(milliseconds: 200)) // 添加200ms的防抖动
     .listen((position) {
       if (mounted) {
         setState(() {
-          // print('audio_player_page 播放位置更新: $position');
+          // debugPrint('audio_player_page 播放位置更新: $position');
           _currentPosition = position;
         });
       }
@@ -182,7 +179,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   void _togglePlay() {
     // 如果正在加载metadata，不允许播放
-    print('点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id');
+    debugPrint('点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id');
     if (_isAudioLoading) return;
 
     if (!_isPlaying) {
@@ -207,6 +204,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   void _onLikeButtonPressed() async {
+
+    if(_isLikeRequesting == true) {
+      return;
+    }
+
     final isLogin = await AuthService.isSignedIn();
     if (!isLogin) {
       // 打开登录页
@@ -220,28 +222,27 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     // 如果当前音频为空，直接返回
     if (_currentAudio == null) return;
 
-    // 设置请求状态
+    // 先立即更新本地状态
+    final newIsLiked = !_localIsLiked;
+    final newLikesCount = newIsLiked ? _localLikesCount + 1 : _localLikesCount - 1;
+    
     setState(() {
-      _isLikeRequesting = true;
+      _localIsLiked = newIsLiked;
+      _localLikesCount = newLikesCount;
+      _isLikeRequesting = true; // 设置请求状态
     });
 
     try {
       // 调用API
-      final response = await AudioLikeService.likeAudio(
+      await AudioLikeService.likeAudio(
         audioId: _currentAudio!.id,
-        isLiked: !_localIsLiked,
+        isLiked: newIsLiked,
       );
-
-      final finalIsLiked = response['is_liked'];
-      final finalLikesCount = response['likes_count'];
-
-      setState(() {
-        _localIsLiked = finalIsLiked;
-        _localLikesCount = finalLikesCount;
-      });
+      
+      // 请求成功，不需要再更改本地状态，保持当前状态
     } catch (e) {
       // 网络异常，回滚本地状态
-      print('点赞操作异常: $e');
+      debugPrint('点赞操作异常: $e');
     } finally {
       // 重置请求状态
       setState(() {
@@ -532,17 +533,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             ),
             minimumSize: const Size(40, 40),
           ),
-          onPressed: _isLikeRequesting ? null : _onLikeButtonPressed, // 请求中禁用按钮
-          icon: _isLikeRequesting
-              ? const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : Transform.translate(
+          onPressed: _onLikeButtonPressed, // 请求中禁用按钮
+          icon: Transform.translate(
                   offset: const Offset(0, -1),
                   child: Icon(
                     CustomIcons.likes,
@@ -599,7 +591,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             children: [_buildPlayPauseButton()],
           ),
         ),
-        const SizedBox(width: 19.5), // 占位按钮保持对称
+        const SizedBox(width: 20), // 占位按钮保持对称
       ],
     );
   }

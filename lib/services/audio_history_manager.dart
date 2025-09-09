@@ -52,7 +52,7 @@ class AudioHistoryManager {
     // 取消之前的监听
     _stopPlaybackListening();
 
-    print('🎵 [HISTORY] 开始监听音频播放状态变化');
+    debugPrint('🎵 [HISTORY] 开始监听音频播放状态变化');
 
     // 监听当前播放音频变化
     _currentAudioSubscription = _audioService!.currentAudioStream.listen((
@@ -83,12 +83,12 @@ class AudioHistoryManager {
     _positionSubscription?.cancel();
     _positionSubscription = null;
 
-    print('🎵 [HISTORY] 已停止监听音频播放状态变化');
+    debugPrint('🎵 [HISTORY] 已停止监听音频播放状态变化');
   }
 
   /// 当前播放音频变化回调
   void _onCurrentAudioChanged(AudioItem? audio) {
-    print('🎵 [HISTORY] 当前播放音频变化: ${audio?.id ?? 'null'}');
+    debugPrint('🎵 [HISTORY] 当前播放音频变化: ${audio?.id ?? 'null'}');
 
     _currentPlayingAudio = audio;
     _lastRecordedPosition = Duration.zero;
@@ -100,7 +100,7 @@ class AudioHistoryManager {
 
   /// 播放状态变化回调
   void _onPlayingStateChanged(bool isPlaying) {
-    print('🎵 [HISTORY] 播放状态变化: $isPlaying');
+    debugPrint('🎵 [HISTORY] 播放状态变化: $isPlaying');
 
     final wasPlaying = _isCurrentlyPlaying;
     _isCurrentlyPlaying = isPlaying;
@@ -151,7 +151,7 @@ class AudioHistoryManager {
       final bool isLogin = await AuthService.isSignedIn();
       if (!isLogin) return;
 
-      print(
+      debugPrint(
         '🎵 [HISTORY] 定时记录播放进度(${timeSinceLastRecord}秒): ${_currentPlayingAudio!.title} -> ${_formatDuration(_lastRecordedPosition)}',
       );
 
@@ -164,7 +164,7 @@ class AudioHistoryManager {
       _updateLocalCache(updatedHistory);
       _lastProgressRecordTime = now;
     } catch (e) {
-      print('🎵 [HISTORY] 记录播放进度失败: $e');
+      debugPrint('🎵 [HISTORY] 记录播放进度失败: $e');
     } finally {
       _isRecordingProgress = false; // 无论成功失败都要重置标志
     }
@@ -178,7 +178,7 @@ class AudioHistoryManager {
       final bool isLogin = await AuthService.isSignedIn();
       if (!isLogin) return;
 
-      print('🎵 [HISTORY] 记录播放开始: ${_currentPlayingAudio!.title}  id: ${_currentPlayingAudio!.id}');
+      debugPrint('🎵 [HISTORY] 记录播放开始: ${_currentPlayingAudio!.title}  id: ${_currentPlayingAudio!.id}');
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
@@ -191,7 +191,7 @@ class AudioHistoryManager {
       // 重置进度记录时间，确保30秒后才开始定时上报
       _lastProgressRecordTime = DateTime.now();
     } catch (e) {
-      print('🎵 [HISTORY] 记录播放开始失败: $e');
+      debugPrint('🎵 [HISTORY] 记录播放开始失败: $e');
     }
   }
 
@@ -203,7 +203,7 @@ class AudioHistoryManager {
       final bool isLogin = await AuthService.isSignedIn();
       if (!isLogin) return;
 
-      print('🎵 [HISTORY] 记录播放停止: ${_currentPlayingAudio!.title}');
+      debugPrint('🎵 [HISTORY] 记录播放停止: ${_currentPlayingAudio!.title}');
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
@@ -215,7 +215,7 @@ class AudioHistoryManager {
       // 停止播放时清除进度记录时间
       _lastProgressRecordTime = null;
     } catch (e) {
-      print('🎵 [HISTORY] 记录播放停止失败: $e');
+      debugPrint('🎵 [HISTORY] 记录播放停止失败: $e');
     }
   }
 
@@ -224,7 +224,7 @@ class AudioHistoryManager {
     if (_isInitialized) return;
 
     try {
-      print('🎵 [HISTORY] 开始初始化音频历史管理器');
+      debugPrint('🎵 [HISTORY] 开始初始化音频历史管理器');
 
       // 订阅认证状态变化事件
       _subscribeToAuthChanges();
@@ -239,9 +239,9 @@ class AudioHistoryManager {
       await _reinitializeAfterLogin();
       _isInitialized = true;
 
-      print('🎵 [HISTORY] 初始化完成，缓存了 ${_historyCache.length} 条历史记录');
+      debugPrint('🎵 [HISTORY] 初始化完成，缓存了 ${_historyCache.length} 条历史记录');
     } catch (e) {
-      print('🎵 [HISTORY] 初始化失败: $e');
+      debugPrint('🎵 [HISTORY] 初始化失败: $e');
       _historyCache = [];
       _historyNotifier.value = [];
       _isInitialized = true; // 即使失败也标记为已初始化
@@ -263,7 +263,7 @@ class AudioHistoryManager {
     _authSubscription?.cancel(); // 取消之前的订阅
 
     _authSubscription = AuthService.authStatusChanges.listen((event) {
-      print('🎵 [HISTORY] 收到认证状态变化事件: ${event.status}');
+      debugPrint('🎵 [HISTORY] 收到认证状态变化事件: ${event.status}');
 
       switch (event.status) {
         case AuthStatus.authenticated:
@@ -280,21 +280,21 @@ class AudioHistoryManager {
       }
     });
 
-    print('🎵 [HISTORY] 已订阅认证状态变化事件');
+    debugPrint('🎵 [HISTORY] 已订阅认证状态变化事件');
   }
 
   /// 登录后重新初始化
   Future<void> _reinitializeAfterLogin() async {
     try {
-      print('🎵 [HISTORY] 用户已登录，重新初始化历史数据');
+      debugPrint('🎵 [HISTORY] 用户已登录，重新初始化历史数据');
 
       // 从服务端拉取最新的历史列表
       final historyList = await UserHistoryService.getUserHistoryList();
       _updateLocalCache(historyList);
 
-      print('🎵 [HISTORY] 登录后重新初始化完成，缓存了 ${_historyCache.length} 条历史记录');
+      debugPrint('🎵 [HISTORY] 登录后重新初始化完成，缓存了 ${_historyCache.length} 条历史记录');
     } catch (e) {
-      print('🎵 [HISTORY] 登录后重新初始化失败: $e');
+      debugPrint('🎵 [HISTORY] 登录后重新初始化失败: $e');
       // 初始化失败，清空缓存
       _historyCache = [];
       _historyNotifier.value = [];
@@ -303,7 +303,7 @@ class AudioHistoryManager {
 
   /// 登出后清空缓存并停止追踪
   void _clearCacheAfterLogout() {
-    print('🎵 [HISTORY] 用户已登出，清空历史缓存并停止进度追踪');
+    debugPrint('🎵 [HISTORY] 用户已登出，清空历史缓存并停止进度追踪');
 
     // 清空缓存
     _historyCache.clear();
@@ -315,17 +315,17 @@ class AudioHistoryManager {
     try {
       // 如果强制刷新或缓存为空，从服务端拉取
       if (forceRefresh || _historyCache.isEmpty) {
-        print('🎵 [HISTORY] 从服务端拉取历史数据');
+        debugPrint('🎵 [HISTORY] 从服务端拉取历史数据');
         final historyList = await UserHistoryService.getUserHistoryList();
         _updateLocalCache(historyList);
         return _historyCache;
       }
 
       // 返回缓存数据
-      print('🎵 [HISTORY] 返回缓存历史数据: ${_historyCache.length} 条');
+      debugPrint('🎵 [HISTORY] 返回缓存历史数据: ${_historyCache.length} 条');
       return _historyCache;
     } catch (e) {
-      print('🎵 [HISTORY] 获取音频历史失败: $e');
+      debugPrint('🎵 [HISTORY] 获取音频历史失败: $e');
       return _historyCache; // 返回缓存数据作为降级方案
     }
   }
@@ -359,11 +359,11 @@ class AudioHistoryManager {
       try {
         return _historyCache.firstWhere((item) => item.id == audioId);
       } catch (e) {
-        print('🎵 [HISTORY] 在历史记录中未找到音频: $audioId');
+        debugPrint('🎵 [HISTORY] 在历史记录中未找到音频: $audioId');
         return null;
       }
     } catch (e) {
-      print('🎵 [HISTORY] 搜索播放历史失败: $e');
+      debugPrint('🎵 [HISTORY] 搜索播放历史失败: $e');
       return null;
     }
   }
@@ -373,7 +373,7 @@ class AudioHistoryManager {
     _historyCache = List.from(newHistory);
     // 通知状态变更
     _historyNotifier.value = List.from(_historyCache);
-    print('🎵 [HISTORY] 本地缓存已更新: ${_historyCache.length} 条记录');
+    debugPrint('🎵 [HISTORY] 本地缓存已更新: ${_historyCache.length} 条记录');
   }
 
   /// 格式化时长为字符串
@@ -381,34 +381,6 @@ class AudioHistoryManager {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds.remainder(60);
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  /// 解析时长字符串为Duration
-  Duration _parseDuration(String durationStr) {
-    try {
-      // 支持格式: "3:24", "1:23:45", "120" (秒)
-      final parts = durationStr.split(':');
-
-      if (parts.length == 1) {
-        // 只有秒数
-        return Duration(seconds: int.parse(parts[0]));
-      } else if (parts.length == 2) {
-        // 分钟:秒钟
-        final minutes = int.parse(parts[0]);
-        final seconds = int.parse(parts[1]);
-        return Duration(minutes: minutes, seconds: seconds);
-      } else if (parts.length == 3) {
-        // 小时:分钟:秒钟
-        final hours = int.parse(parts[0]);
-        final minutes = int.parse(parts[1]);
-        final seconds = int.parse(parts[2]);
-        return Duration(hours: hours, minutes: minutes, seconds: seconds);
-      }
-    } catch (e) {
-      print('解析时长失败: $durationStr, 错误: $e');
-    }
-
-    return Duration.zero;
   }
 
   /// 清理资源
@@ -431,6 +403,6 @@ class AudioHistoryManager {
     _isCurrentlyPlaying = false;
     _audioService = null;
 
-    print('🎵 [HISTORY] 音频历史管理器资源已清理');
+    debugPrint('🎵 [HISTORY] 音频历史管理器资源已清理');
   }
 }

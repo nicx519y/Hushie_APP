@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_item.dart';
 import 'api/audio_list_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// 首页列表数据管理服务
 ///
@@ -37,7 +38,7 @@ class HomePageListService {
       _prefs = await SharedPreferences.getInstance();
 
       // 清除之前的缓存数据
-      print('清除之前的缓存数据');
+      debugPrint('清除之前的缓存数据');
       _tabDataCache.clear();
       _tabLastCidCache.clear();
 
@@ -45,9 +46,9 @@ class HomePageListService {
       await _prefs?.remove(_storageKey);
 
       _isInitialized = true;
-      print('HomePageListService 初始化完成，缓存已清除');
+      debugPrint('HomePageListService 初始化完成，缓存已清除');
     } catch (error) {
-      print('HomePageListService 初始化失败: $error');
+      debugPrint('HomePageListService 初始化失败: $error');
       rethrow;
     }
   }
@@ -93,14 +94,14 @@ class HomePageListService {
         _tabLastCidCache[tabId] = newLastCid;
 
         // 不使用缓存，每次都返回新数据
-        print('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: $newLastCid');
+        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: $newLastCid');
         return newItems;
       } else {
-        print('Tab $tabId 没有更多数据');
+        debugPrint('Tab $tabId 没有更多数据');
         return [];
       }
     } catch (error) {
-      print('Tab $tabId 获取数据失败: $error');
+      debugPrint('Tab $tabId 获取数据失败: $error');
       rethrow;
     }
   }
@@ -138,7 +139,7 @@ class HomePageListService {
     _ensureInitialized();
 
     // 不使用缓存，每次都获取新数据
-    print('预加载 Tab $tabId 的数据');
+    debugPrint('预加载 Tab $tabId 的数据');
     await fetchNextPageData(tabId);
   }
 
@@ -148,38 +149,6 @@ class HomePageListService {
 
     // 由于不使用缓存，返回空状态
     return {};
-  }
-
-  /// 从本地存储加载数据
-  Future<void> _loadDataFromStorage() async {
-    try {
-      final dataJson = _prefs?.getString(_storageKey);
-      if (dataJson != null) {
-        final data = json.decode(dataJson) as Map<String, dynamic>;
-
-        // 恢复tab数据缓存
-        final tabDataMap = data['tabData'] as Map<String, dynamic>? ?? {};
-        tabDataMap.forEach((tabId, itemsJson) {
-          final items = (itemsJson as List)
-              .map((item) => AudioItem.fromMap(item))
-              .toList();
-          _tabDataCache[tabId] = items;
-        });
-
-        // 恢复lastCid缓存
-        final lastCidMap = data['lastCid'] as Map<String, dynamic>? ?? {};
-        lastCidMap.forEach((tabId, lastCid) {
-          _tabLastCidCache[tabId] = lastCid as String?;
-        });
-
-        print('从本地存储恢复数据: ${_tabDataCache.length} 个tab');
-      }
-    } catch (error) {
-      print('从本地存储恢复数据失败: $error');
-      // 恢复失败时清空缓存
-      _tabDataCache.clear();
-      _tabLastCidCache.clear();
-    }
   }
 
   /// 保存数据到本地存储
@@ -200,9 +169,9 @@ class HomePageListService {
       final dataJson = json.encode(data);
       await _prefs?.setString(_storageKey, dataJson);
 
-      print('数据已保存到本地存储');
+      debugPrint('数据已保存到本地存储');
     } catch (error) {
-      print('保存数据到本地存储失败: $error');
+      debugPrint('保存数据到本地存储失败: $error');
     }
   }
 

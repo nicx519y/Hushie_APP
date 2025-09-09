@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../../models/audio_item.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// 用户播放历史服务
 class UserHistoryService {
@@ -138,10 +139,10 @@ class UserHistoryService {
         itemsData = historyData;
       } else if (historyData is int) {
         // 如果返回的是int类型（可能表示数量或错误码），则返回空列表
-        print('🎵 [HISTORY] 提交进度API返回的history字段是int类型: $historyData，返回空列表');
+        debugPrint('🎵 [HISTORY] 提交进度API返回的history字段是int类型: $historyData，返回空列表');
         itemsData = [];
       } else {
-        print('🎵 [HISTORY] 提交进度API返回的history字段类型异常: ${historyData.runtimeType}，返回空列表');
+        debugPrint('🎵 [HISTORY] 提交进度API返回的history字段类型异常: ${historyData.runtimeType}，返回空列表');
         itemsData = [];
       }
       

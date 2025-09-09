@@ -49,7 +49,7 @@ _audioPlayer.bufferedPositionStream.listen((buffered) {
   final total = _audioPlayer.duration ?? Duration.zero;
   if (total > Duration.zero) {
     final bufferedPercent = (buffered.inMilliseconds / total.inMilliseconds * 100).round();
-    print('音频已缓冲: ${buffered.inSeconds}秒 (${bufferedPercent}%)');
+    debugPrint('音频已缓冲: ${buffered.inSeconds}秒 (${bufferedPercent}%)');
   }
 });
 ```

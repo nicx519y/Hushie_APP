@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'secure_storage_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// 设备信息服务
 class DeviceInfoService {
@@ -38,7 +39,7 @@ class DeviceInfoService {
           deviceId.isNotEmpty &&
           deviceId != 'unknown_device') {
         _cachedDeviceId = deviceId;
-        print('从安全存储获取设备ID: $deviceId');
+        debugPrint('从安全存储获取设备ID: $deviceId');
         return deviceId;
       }
 
@@ -65,15 +66,15 @@ class DeviceInfoService {
       // 将获取到的设备ID保存到安全存储
       if (deviceId.isNotEmpty && deviceId != 'unknown_device') {
         await SecureStorageService.saveDeviceId(deviceId);
-        print('设备ID已保存到安全存储: $deviceId');
+        debugPrint('设备ID已保存到安全存储: $deviceId');
       }
 
       // 缓存设备ID
       _cachedDeviceId = deviceId;
-      print('设备ID获取成功: $deviceId');
+      debugPrint('设备ID获取成功: $deviceId');
       return deviceId;
     } catch (e) {
-      print('获取设备ID失败: $e');
+      debugPrint('获取设备ID失败: $e');
       // 设置默认值，避免重复失败
       _cachedDeviceId = 'unknown_device';
       return _cachedDeviceId!;
@@ -93,7 +94,7 @@ class DeviceInfoService {
     try {
       return await SecureStorageService.getDeviceId();
     } catch (e) {
-      print('从安全存储获取设备ID失败: $e');
+      debugPrint('从安全存储获取设备ID失败: $e');
       return null;
     }
   }
@@ -153,7 +154,7 @@ class DeviceInfoService {
 
       return deviceInfo;
     } catch (e) {
-      print('获取设备信息失败: $e');
+      debugPrint('获取设备信息失败: $e');
       return {
         'platform': 'Unknown',
         'version': 'Unknown',

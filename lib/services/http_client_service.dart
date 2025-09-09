@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import '../config/api_config.dart';
 import 'device_info_service.dart';
 import 'auth_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// HTTP客户端服务
 class HttpClientService {
@@ -19,43 +20,43 @@ class HttpClientService {
 
   /// 获取设备ID（带缓存）
   static Future<String> _getCachedDeviceId() async {
-    print('📱 [DEVICE] 开始获取设备ID...');
+    // debugPrint('📱 [DEVICE] 开始获取设备ID...');
     
     if (_cachedDeviceId != null) {
-      print('📱 [DEVICE] 使用缓存的设备ID: ${_cachedDeviceId!.substring(0, 8)}...');
+      // debugPrint('📱 [DEVICE] 使用缓存的设备ID: ${_cachedDeviceId!.substring(0, 8)}...');
       return _cachedDeviceId!;
     }
 
     if (_isDeviceIdInitializing) {
-      print('📱 [DEVICE] 设备ID正在初始化中，等待...');
+      debugPrint('📱 [DEVICE] 设备ID正在初始化中，等待...');
       // 等待初始化完成
       while (_isDeviceIdInitializing) {
         await Future.delayed(const Duration(milliseconds: 100));
         if (_cachedDeviceId != null) {
-          print('📱 [DEVICE] 等待完成，获得设备ID: ${_cachedDeviceId!.substring(0, 8)}...');
+          debugPrint('📱 [DEVICE] 等待完成，获得设备ID: ${_cachedDeviceId!.substring(0, 8)}...');
           return _cachedDeviceId!;
         }
       }
     }
 
-    print('📱 [DEVICE] 开始初始化设备ID...');
+    debugPrint('📱 [DEVICE] 开始初始化设备ID...');
     _isDeviceIdInitializing = true;
 
     try {
-      print('📱 [DEVICE] 调用DeviceInfoService.getDeviceId()...');
+      debugPrint('📱 [DEVICE] 调用DeviceInfoService.getDeviceId()...');
       final deviceId = await DeviceInfoService.getDeviceId();
       _cachedDeviceId = deviceId;
-      print('📱 [DEVICE] 设备ID获取成功: ${deviceId.substring(0, 8)}...');
+      debugPrint('📱 [DEVICE] 设备ID获取成功: ${deviceId.substring(0, 8)}...');
       return deviceId;
     } catch (e) {
-      print('📱 [DEVICE] 获取设备ID失败: $e');
-      print('📱 [DEVICE] 异常类型: ${e.runtimeType}');
+      debugPrint('📱 [DEVICE] 获取设备ID失败: $e');
+      debugPrint('📱 [DEVICE] 异常类型: ${e.runtimeType}');
       _cachedDeviceId = 'unknown_device';
-      print('📱 [DEVICE] 使用默认设备ID: unknown_device');
+      debugPrint('📱 [DEVICE] 使用默认设备ID: unknown_device');
       return _cachedDeviceId!;
     } finally {
       _isDeviceIdInitializing = false;
-      print('📱 [DEVICE] 设备ID初始化完成');
+      debugPrint('📱 [DEVICE] 设备ID初始化完成');
     }
   }
 
@@ -71,7 +72,7 @@ class HttpClientService {
     Map<String, String>? headers,
     Duration? timeout,
   }) async {
-    print('🌐 [HTTP] 开始GET请求: $uri');
+    debugPrint('🌐 [HTTP] 开始GET请求: $uri');
     
     try {
       final requestHeaders = await _buildRequestHeaders(
@@ -86,8 +87,8 @@ class HttpClientService {
       
       return response;
     } catch (e) {
-      print('🌐 [HTTP] HTTP GET请求异常: $e');
-      print('🌐 [HTTP] 异常类型: ${e.runtimeType}');
+      debugPrint('🌐 [HTTP] HTTP GET请求异常: $e');
+      debugPrint('🌐 [HTTP] 异常类型: ${e.runtimeType}');
       rethrow;
     }
   }
@@ -191,30 +192,29 @@ class HttpClientService {
     Map<String, String>? customHeaders,
     Object? body,
   }) async {
-    print('🔧 [HTTP] 开始构建请求头，方法: $method，路径: $path');
     final headers = <String, String>{};
 
     // 添加基础请求头
-    print('🔧 [HTTP] 添加基础请求头...');
+    // debugPrint('🔧 [HTTP] 添加基础请求头...');
     headers.addAll(ApiConfig.getDefaultHeaders());
-    print('🔧 [HTTP] 基础请求头添加完成，包含 ${headers.length} 个字段');
+    // debugPrint('🔧 [HTTP] 基础请求头添加完成，包含 ${headers.length} 个字段');
 
     // 添加自定义请求头
     if (customHeaders != null) {
-      print('🔧 [HTTP] 添加自定义请求头，包含 ${customHeaders.length} 个字段');
+      // debugPrint('🔧 [HTTP] 添加自定义请求头，包含 ${customHeaders.length} 个字段');
       headers.addAll(customHeaders);
     } else {
-      print('🔧 [HTTP] 无自定义请求头');
+      // debugPrint('🔧 [HTTP] 无自定义请求头');
     }
 
     // 自动添加设备ID（使用缓存）
     try {
-      print('🔧 [HTTP] 开始获取设备ID...');
+      // debugPrint('🔧 [HTTP] 开始获取设备ID...');
       final deviceId = await _getCachedDeviceId();
       headers['X-Device-ID'] = deviceId;
-      print('🔧 [HTTP] 设备ID获取成功: ${deviceId.substring(0, 8)}...');
+      // debugPrint('🔧 [HTTP] 设备ID获取成功: ${deviceId.substring(0, 8)}...');
     } catch (e) {
-      print('🔧 [HTTP] 获取设备ID失败: $e');
+      // debugPrint('🔧 [HTTP] 获取设备ID失败: $e');
       headers['X-Device-ID'] = 'unknown_device';
     }
 
@@ -222,26 +222,26 @@ class HttpClientService {
     // 注意：对于Token刷新请求，跳过Token获取以避免循环依赖
     if (!path.contains('/auth/google/refresh')) {
       try {
-        print('🔐 [HTTP] 开始获取访问令牌');
+        // debugPrint('🔐 [HTTP] 开始获取访问令牌');
         final accessToken = await AuthService.getAccessToken();
         if (accessToken != null && accessToken.isNotEmpty) {
           headers['Authorization'] = 'Bearer $accessToken';
-          print('🔐 [HTTP] 成功添加 Authorization 头，令牌长度: ${accessToken.length}');
+          // debugPrint('🔐 [HTTP] 成功添加 Authorization 头，令牌长度: ${accessToken.length}');
         } else {
-          print('🔐 [HTTP] 访问令牌为空，跳过 Authorization 头');
+          debugPrint('🔐 [HTTP] 访问令牌为空，跳过 Authorization 头');
         }
       } catch (e) {
-        print('🔐 [HTTP] 获取access token失败: $e');
-        print('🔐 [HTTP] 异常类型: ${e.runtimeType}');
+        debugPrint('🔐 [HTTP] 获取access token失败: $e');
+        debugPrint('🔐 [HTTP] 异常类型: ${e.runtimeType}');
         // 不添加Authorization头
       }
     } else {
-      print('🔐 [HTTP] Token刷新请求，跳过Authorization头以避免循环依赖');
+      // debugPrint('🔐 [HTTP] Token刷新请求，跳过Authorization头以避免循环依赖');
     }
     
-    print('🔧 [HTTP] 请求头构建完成，最终包含 ${headers.length} 个字段');
+    // debugPrint('🔧 [HTTP] 请求头构建完成，最终包含 ${headers.length} 个字段');
 
-    // print("Authorization 成功 ${headers['Authorization']}");
+    // debugPrint("Authorization 成功 ${headers['Authorization']}");
     try {
       // 生成API签名
       final signature = await _generateSignature(
@@ -254,10 +254,10 @@ class HttpClientService {
       );
       headers['X-Signature'] = signature;
     } catch (e) {
-      print("生成签名失败: $e");
+      debugPrint("生成签名失败: $e");
     }
 
-    // print("X-Signature 成功 ${headers['X-Signature']}");
+    // debugPrint("X-Signature 成功 ${headers['X-Signature']}");
 
     return headers;
   }
@@ -315,7 +315,7 @@ class HttpClientService {
 
       return digest.toString();
     } catch (e) {
-      print('生成签名失败: $e');
+      debugPrint('生成签名失败: $e');
       return '';
     }
   }
@@ -414,7 +414,7 @@ class HttpClientService {
 
       return calculatedSignature == expectedSignature;
     } catch (e) {
-      print('验证响应签名失败: $e');
+      debugPrint('验证响应签名失败: $e');
       return false;
     }
   }

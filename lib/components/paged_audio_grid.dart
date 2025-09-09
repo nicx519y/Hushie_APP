@@ -41,7 +41,7 @@ import 'audio_card.dart';
 ///   initDataFetcher: initData,
 ///   refreshDataFetcher: refreshData,
 ///   loadMoreDataFetcher: loadMoreData,
-///   onItemTap: (item) => print('点击了: ${item.title}'),
+///   onItemTap: (item) => debugPrint('点击了: ${item.title}'),
 /// )
 /// ```
 // 数据获取函数类型定义
@@ -160,11 +160,11 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
         }
       }
 
-      // 确保 newItems 不为 null
-      if (newItems == null) {
-        newItems = [];
+      if(newItems.isEmpty){
+        _pagingController.appendLastPage([]);
+        return;
       }
-
+      
       final isLastPage = newItems.length < _pageSize;
 
       if (isLastPage) {

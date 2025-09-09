@@ -33,14 +33,14 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     // 确保状态正确标记为已打开
-    print('🔐 [LOGIN] LoginPage initState');
+    debugPrint('🔐 [LOGIN] LoginPage initState');
   }
 
   @override
   void dispose() {
     // 页面销毁时重置状态
     NavigationUtils.resetLoginPageState();
-    print('🔐 [LOGIN] LoginPage dispose');
+    debugPrint('🔐 [LOGIN] LoginPage dispose');
     super.dispose();
   }
 
@@ -267,7 +267,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (result.errNo == 0 && result.data != null) {
         // 登录成功
-        _showSnackBar('登录成功！');
+        _showSnackBar('Login success!');
 
         // 延迟一下让用户看到成功消息，然后关闭登录页面
         await Future.delayed(const Duration(milliseconds: 500));
@@ -283,8 +283,8 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       // 处理异常
-      print('Google登录异常: $e');
-      _showSnackBar('登录过程中发生错误，请重试');
+      debugPrint('Google登录异常: $e');
+      _showSnackBar('Login failed, retry please.');
     } finally {
       // 隐藏加载状态
       if (mounted) {
@@ -296,17 +296,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showTermsOfUse() {
-    _showSnackBar('打开服务条款页面');
+    _showSnackBar('Open Terms of Use page.');
     // 这里可以导航到服务条款页面
   }
 
   void _showLicenseAgreement() {
-    _showSnackBar('打开用户许可协议页面');
+    _showSnackBar('Open End User License Agreement page.');
     // 这里可以导航到许可协议页面
   }
 
   void _showPrivacyPolicy() {
-    _showSnackBar('打开隐私政策页面');
+    _showSnackBar('Open Privacy Policy page.');
     // 这里可以导航到隐私政策页面
   }
 
@@ -315,7 +315,7 @@ class _LoginPageState extends State<LoginPage> {
       SnackBar(
         content: Text(message),
         duration: const Duration(seconds: 2),
-        backgroundColor: const Color(0xFF4A90E2),
+        backgroundColor: const Color(0xFFFF2050),
       ),
     );
   }
@@ -324,15 +324,15 @@ class _LoginPageState extends State<LoginPage> {
   String _getErrorMessage(int errNo) {
     switch (errNo) {
       case -1:
-        return '登录失败，请重试';
+        return 'Login failed, retry please.';
       case 1:
-        return '用户取消登录';
+        return 'User cancelled login.';
       case 2:
-        return '网络连接失败';
+        return 'Network connection failed.';
       case 3:
-        return 'Google服务不可用';
+        return 'Google service unavailable.';
       default:
-        return '登录失败，错误码: $errNo';
+        return 'Login failed, error code: $errNo';
     }
   }
 }

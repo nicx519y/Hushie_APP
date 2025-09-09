@@ -54,7 +54,7 @@ dependencies:
   shared_preferences: ^2.2.2
   
   # 音频播放
-  just_audio: ^0.9.36
+  just_audio: ^0.10.4
   
   # 音频播放媒体工具包（支持自定义缓冲大小）
   just_audio_media_kit: ^2.0.4

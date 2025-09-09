@@ -5,15 +5,14 @@ import 'pages/splash_page.dart';
 import 'config/api_config.dart';
 
 void main() async {
-  print('🚀 [MAIN] 应用启动开始');
+  debugPrint('🚀 [MAIN] 应用启动开始');
   WidgetsFlutterBinding.ensureInitialized();
-  print('🚀 [MAIN] Flutter绑定初始化完成');
+  debugPrint('🚀 [MAIN] Flutter绑定初始化完成');
 
   // 初始化 just_audio_media_kit 并配置缓冲大小
   JustAudioMediaKit.ensureInitialized();
   // 设置缓冲大小为 128MB（默认32MB）
-  JustAudioMediaKit.bufferSize = 512 * 1024 * 1024;
-  print('🚀 [MAIN] just_audio_media_kit 初始化完成，缓冲大小: 512MB');
+  JustAudioMediaKit.bufferSize = 128 * 1024 * 1024;
 
   // 配置系统UI样式
   SystemChrome.setSystemUIOverlayStyle(
@@ -25,23 +24,23 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark, // 深色导航栏图标
     ),
   );
-  print('🚀 [MAIN] 系统UI样式配置完成');
+  debugPrint('🚀 [MAIN] 系统UI样式配置完成');
 
   // 启用Edge-to-Edge模式
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  print('🚀 [MAIN] Edge-to-Edge模式启用完成');
+  debugPrint('🚀 [MAIN] Edge-to-Edge模式启用完成');
 
   // 初始化 API 配置（同步操作，快速）
-  print('🚀 [MAIN] 开始初始化API配置');
+  debugPrint('🚀 [MAIN] 开始初始化API配置');
   ApiConfig.initialize(
     debugMode: true, // 在开发环境启用调试模式
   );
-  print('�� [MAIN] API配置初始化完成');
+  debugPrint('�� [MAIN] API配置初始化完成');
 
   // 立即启动应用，服务初始化在启动页中处理
-  print('🚀 [MAIN] 开始运行应用');
+  debugPrint('🚀 [MAIN] 开始运行应用');
   runApp(const MyApp());
-  print('🚀 [MAIN] 应用运行完成');
+  debugPrint('🚀 [MAIN] 应用运行完成');
 }
 
 class MyApp extends StatelessWidget {

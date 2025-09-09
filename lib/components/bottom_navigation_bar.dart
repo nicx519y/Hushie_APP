@@ -82,7 +82,8 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
       widget.onPlayButtonTap!();
     } else {
       if (_isPlaying) {
-        await _audioManager.pause();
+        NavigationUtils.navigateToAudioPlayer(context);
+        // await _audioManager.pause();
       } else {
         NavigationUtils.navigateToAudioPlayer(context);
         await _audioManager.play();
@@ -190,7 +191,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
         coverImageUrl = bestResolution.url;
       }
     } catch (e) {
-      print('获取封面图片失败: $e');
+      debugPrint('获取封面图片失败: $e');
       coverImageUrl = null;
     }
 

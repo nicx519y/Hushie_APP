@@ -30,13 +30,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void initState() {
-    print('🏠 [HOME_PAGE] HomePage initState开始');
+    debugPrint('🏠 [HOME_PAGE] HomePage initState开始');
     super.initState();
-    print('🏠 [HOME_PAGE] 开始初始化tabs');
+    debugPrint('🏠 [HOME_PAGE] 开始初始化tabs');
     _initTabs();
-    print('🏠 [HOME_PAGE] 开始初始化列表服务');
+    debugPrint('🏠 [HOME_PAGE] 开始初始化列表服务');
     _initListService();
-    print('🏠 [HOME_PAGE] HomePage initState完成');
+    debugPrint('🏠 [HOME_PAGE] HomePage initState完成');
   }
 
   @override
@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       });
       _setupControllers();
     } catch (e) {
-      print('初始化tabs失败: $e');
+      debugPrint('初始化tabs失败: $e');
       _initDefaultTabs();
     }
   }
@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _initListService() async {
     try {
       await _listService.initialize();
-      print('HomePageListService 初始化成功');
+      debugPrint('HomePageListService 初始化成功');
 
       // 预加载当前tab的数据
       if (_tabItems.isNotEmpty) {
@@ -73,7 +73,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       // 打印初始状态
       _printServiceStatus();
     } catch (error) {
-      print('HomePageListService 初始化失败: $error');
+      debugPrint('HomePageListService 初始化失败: $error');
     }
   }
 
@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _syncPageViewToTab(int tabIndex) {
     if (_isUpdatingFromTab) return; // 防止循环调用
 
-    print('Syncing PageView to tab: $tabIndex'); // 调试信息
+    debugPrint('Syncing PageView to tab: $tabIndex'); // 调试信息
 
     _isUpdatingFromTab = true;
 
@@ -125,7 +125,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (tabIndex < _tabItems.length) {
       final tabId = _tabItems[tabIndex].id;
       _listService.preloadTabData(tabId).catchError((error) {
-        print('预加载Tab $tabId 数据失败: $error');
+        debugPrint('预加载Tab $tabId 数据失败: $error');
       });
     }
   }
@@ -136,7 +136,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // 初始化数据获取方法
   Future<List<AudioItem>> _initAudioData({String? tag}) async {
     try {
-      print('初始化音频数据: tag=$tag');
+      debugPrint('初始化音频数据: tag=$tag');
 
       // 使用HomePageListService获取数据
       final tabId = tag ?? 'for_you';
@@ -144,15 +144,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       // 检查缓存数据
       final cachedData = _listService.getTabData(tabId);
       if (cachedData.isNotEmpty) {
-        print('使用缓存数据: ${cachedData.length} 条');
+        debugPrint('使用缓存数据: ${cachedData.length} 条');
         return cachedData;
       }
 
       // 如果没有缓存数据，则获取新数据
-      print('缓存为空，获取新数据');
+      debugPrint('缓存为空，获取新数据');
       return await _listService.fetchNextPageData(tabId);
     } catch (error) {
-      print('初始化数据失败: $error');
+      debugPrint('初始化数据失败: $error');
       rethrow;
     }
   }
@@ -160,13 +160,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // 刷新数据获取方法（上拉刷新）
   Future<List<AudioItem>> _refreshAudioData({String? tag}) async {
     try {
-      print('刷新音频数据: tag=$tag');
+      debugPrint('刷新音频数据: tag=$tag');
 
       // 使用HomePageListService刷新数据
       final tabId = tag ?? 'for_you';
       return await _listService.fetchNextPageData(tabId);
     } catch (error) {
-      print('刷新数据失败: $error');
+      debugPrint('刷新数据失败: $error');
       rethrow;
     }
   }
@@ -178,13 +178,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     int? count,
   }) async {
     try {
-      print('加载更多音频数据: tag=$tag, pageKey=$pageKey, count=$count');
+      debugPrint('加载更多音频数据: tag=$tag, pageKey=$pageKey, count=$count');
 
       // 使用HomePageListService获取下一页数据
       final tabId = tag ?? 'for_you';
       return await _listService.fetchNextPageData(tabId);
     } catch (error) {
-      print('加载更多数据失败: $error');
+      debugPrint('加载更多数据失败: $error');
       rethrow;
     }
   }
@@ -192,7 +192,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _onPageChanged(int pageIndex) {
     if (_isUpdatingFromTab) return; // 如果是从Tab点击触发的，不处理PageView变化
 
-    print('Page changed: $pageIndex, current: $_currentTabIndex'); // 调试信息
+    debugPrint('Page changed: $pageIndex, current: $_currentTabIndex'); // 调试信息
 
     setState(() {
       _currentTabIndex = pageIndex;
@@ -226,15 +226,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final status = _getServiceStatus();
     final tabsStatus = _getAllTabsStatus();
 
-    print('=== HomePageListService 状态 ===');
-    print('服务状态: $status');
-    print('Tabs状态: $tabsStatus');
-    print('===============================');
+    debugPrint('=== HomePageListService 状态 ===');
+    debugPrint('服务状态: $status');
+    debugPrint('Tabs状态: $tabsStatus');
+    debugPrint('===============================');
   }
 
   void _onAudioTap(AudioItem item) {
     // 先开始播放音频，然后跳转到播放页面
-    print('点击音频: ${item.title} ${item.id}');
+    debugPrint('点击音频: ${item.title} ${item.id}');
     _playAudio(item);
 
     // 使用播放器页面的标准打开方式（包含上滑动画）
@@ -246,7 +246,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       // 通过音频管理器播放指定 ID 的音频
       await AudioManager.instance.playAudio(item);
     } catch (e) {
-      print('播放音频失败: $e');
+      debugPrint('播放音频失败: $e');
     }
   }
 

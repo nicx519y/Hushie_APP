@@ -28,7 +28,7 @@ class _SettingPageState extends State<SettingPage> {
         _isLoggedIn = token != null && token.isNotEmpty;
       });
     } catch (e) {
-      print('Check login status failed: $e');
+      debugPrint('Check login status failed: $e');
       setState(() {
         _isLoggedIn = false;
       });

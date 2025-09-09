@@ -69,9 +69,9 @@ final result = await AuthService.signInWithGoogle();
 if (result.errNo == 0) {
   // 登录成功，UserLikesManager和AudioHistoryManager会自动收到通知
   // 并重新初始化它们的缓存数据
-  print('登录成功');
+  debugPrint('登录成功');
 } else {
-  print('登录失败');
+  debugPrint('登录失败');
 }
 ```
 

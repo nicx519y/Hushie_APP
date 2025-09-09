@@ -24,7 +24,7 @@ class _HistoryListState extends State<HistoryList> {
     try {
       await AudioHistoryManager.instance.refreshHistory();
     } catch (e) {
-      print('刷新历史记录失败: $e');
+      debugPrint('刷新历史记录失败: $e');
     }
   }
 
@@ -117,7 +117,7 @@ Widget _buildEmptyWidget() {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'No listening history',
+      'No listening history',
           style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
         SizedBox(height: 8),

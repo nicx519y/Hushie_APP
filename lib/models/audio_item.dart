@@ -1,5 +1,4 @@
 import 'dart:ffi';
-import 'dart:math';
 
 import 'image_model.dart';
 

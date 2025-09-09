@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../models/audio_item.dart';
+import 'package:flutter/foundation.dart';
 
 /// 音频播放列表管理器
 /// 负责管理有序的音频播放列表，提供通过 ID 查找音频的功能
@@ -44,7 +45,7 @@ class AudioPlaylist {
       // 重建索引映射
       _rebuildIndexMap();
 
-      print('播放列表中已存在同ID音频，已删除: ${audio.id}');
+      debugPrint('播放列表中已存在同ID音频，已删除: ${audio.id}');
     }
 
     // 从后面添加新的音频
@@ -124,7 +125,7 @@ class AudioPlaylist {
       // 更新当前索引
       _currentIndex = 0;
 
-      print('已清理播放列表中当前音频之前的 $currentIndex 个音频');
+      debugPrint('已清理播放列表中当前音频之前的 $currentIndex 个音频');
     }
   }
 
@@ -137,13 +138,13 @@ class AudioPlaylist {
   /// 获取下一个音频
   AudioItem? getNextAudio(String currentAudioId) {
     final currentIndex = _audioIndexMap[currentAudioId];
-    print(
+    debugPrint(
       "getNextAudio: currentIndex: $currentIndex; length: ${_playlist.length}",
     );
     if (currentIndex != null && currentIndex < _playlist.length - 1) {
       return _playlist[currentIndex + 1];
     } else {
-      print(
+      debugPrint(
         'currentAudioId: $currentAudioId, all audio: ${_playlist.map((audio) => audio.id).join(', ')}',
       );
     }
@@ -168,41 +169,6 @@ class AudioPlaylist {
     }
   }
 
-  /// 解析时长字符串为 Duration
-  Duration _parseDuration(String durationStr) {
-    try {
-      // 支持格式: "3:24", "1:23:45", "120" (秒)
-      final parts = durationStr.split(':');
-
-      if (parts.length == 1) {
-        // 只有秒数
-        return Duration(seconds: int.parse(parts[0]));
-      } else if (parts.length == 2) {
-        // 分钟:秒钟
-        final minutes = int.parse(parts[0]);
-        final seconds = int.parse(parts[1]);
-        return Duration(minutes: minutes, seconds: seconds);
-      } else if (parts.length == 3) {
-        // 小时:分钟:秒钟
-        final hours = int.parse(parts[0]);
-        final minutes = int.parse(parts[1]);
-        final seconds = int.parse(parts[2]);
-        return Duration(hours: hours, minutes: minutes, seconds: seconds);
-      }
-    } catch (e) {
-      print('解析时长失败: $durationStr, 错误: $e');
-    }
-
-    return Duration.zero;
-  }
-
-  /// 格式化时长为字符串
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds.remainder(60);
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
   /// 获取播放列表统计信息
   Map<String, dynamic> getPlaylistStats() {
     return {
@@ -215,10 +181,10 @@ class AudioPlaylist {
 
   /// 调试信息
   void printPlaylistInfo() {
-    print('=== 音频播放列表信息 ===');
-    print('播放列表数量: ${_playlist.length}');
-    print('当前播放索引: $_currentIndex');
-    print('音频列表: ${_playlist.map((audio) => audio.title).join(', ')}');
-    print('==================');
+    debugPrint('=== 音频播放列表信息 ===');
+    debugPrint('播放列表数量: ${_playlist.length}');
+    debugPrint('当前播放索引: $_currentIndex');
+    debugPrint('音频列表: ${_playlist.map((audio) => audio.title).join(', ')}');
+    debugPrint('==================');
   }
 }

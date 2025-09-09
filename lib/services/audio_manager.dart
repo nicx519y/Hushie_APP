@@ -8,6 +8,7 @@ import 'audio_service.dart';
 import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
 import 'api/audio_list_service.dart';
+import 'package:flutter/foundation.dart';
 
 class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
@@ -62,7 +63,7 @@ class AudioManager {
       // 初始化成功后，设置流监听
       _setupStreamListeners();
     } catch (e) {
-      print('AudioService初始化失败: $e');
+      debugPrint('AudioService初始化失败: $e');
       _audioService = null;
     }
   }
@@ -107,7 +108,7 @@ class AudioManager {
           && audio.previewStart! > Duration.zero 
           && audio.previewDuration != null 
           && audio.previewDuration! > Duration.zero) {
-          print('音频改变，需要从预览开始位置播放');
+          debugPrint('音频改变，需要从预览开始位置播放');
           // 等待音频加载完成后再seek到预览开始位置
           _waitForAudioLoadedAndSeek(audio.previewStart!);
         }
@@ -183,7 +184,7 @@ class AudioManager {
         // 如果播放位置超过预览区间末尾，则停止播放
         if (position >= previewEnd) {
           pause();
-          print('预览时长限制：播放到预览区间末尾，停止播放');
+          debugPrint('预览时长限制：播放到预览区间末尾，停止播放');
         }
       }
     }
@@ -199,14 +200,14 @@ class AudioManager {
       if (nextAudio != null) {
         final nextAudioItem = playlist.getAudioItemById(nextAudio.id);
         if (nextAudioItem != null) {
-          print('自动播放下一首: ${nextAudio.title}');
+          debugPrint('自动播放下一首: ${nextAudio.title}');
           await playAudio(nextAudioItem);
         }
       } else {
-        print('没有找到下一首音频');
+        debugPrint('没有找到下一首音频');
       }
     } catch (e) {
-      print('自动播放下一首失败: $e');
+      debugPrint('自动播放下一首失败: $e');
     }
   }
 
@@ -214,14 +215,14 @@ class AudioManager {
   Future<void> init() async {
     // 先初始化音频历史管理器（确保数据库可用）
     await AudioHistoryManager.instance.initialize();
-    print('AudioManager: AudioHistoryManager 初始化完成');
+    debugPrint('AudioManager: AudioHistoryManager 初始化完成');
 
     // 初始化AudioPlaylist
     await AudioPlaylist.instance.initialize();
-    print('AudioManager: AudioPlaylist 初始化完成');
+    debugPrint('AudioManager: AudioPlaylist 初始化完成');
 
     await _ensureInitialized();
-    print('AudioManager: AudioService 初始化完成');
+    debugPrint('AudioManager: AudioService 初始化完成');
 
     // 设置音频服务，开启播放历史记录
     AudioHistoryManager.instance.setAudioService(_audioService!);
@@ -229,10 +230,10 @@ class AudioManager {
     // 从播放历史列表中获取最后一条播放记录
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
     if (lastHistory.isNotEmpty) {
-      print('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
+      debugPrint('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
       AudioPlaylist.instance.addAudio(lastHistory.first);
     } else {
-      print('AudioManager: 没有播放历史记录');
+      debugPrint('AudioManager: 没有播放历史记录');
     }
 
     // 播放最后的音频并暂停
@@ -255,7 +256,7 @@ class AudioManager {
         }
       }
     } catch (e) {
-      print('播放最后音频失败: $e');
+      debugPrint('播放最后音频失败: $e');
     }
   }
 
@@ -266,6 +267,9 @@ class AudioManager {
 
   // 播放音频
   Future<void> playAudio(AudioItem audio) async {
+
+    debugPrint('playAudio: ${audio.bgImage?.urls.x1 ?? "无背景图片"}');
+
     try {
       // await _ensureInitialized();
       if (_audioService != null) {
@@ -273,11 +277,11 @@ class AudioManager {
         
 
       } else {
-        print('音频服务未初始化，无法播放音频');
+        debugPrint('音频服务未初始化，无法播放音频');
         throw Exception('音频服务未初始化');
       }
     } catch (e) {
-      print('播放音频失败: $e');
+      debugPrint('播放音频失败: $e');
       rethrow;
     }
   }
@@ -300,17 +304,17 @@ class AudioManager {
       // 2. 设置当前播放索引
       playlist.setCurrentIndex(currentAudioId);
 
-      print("管理播放列表：当前ID: $currentAudioId");
-      print("管理播放列表：是否最后一条：${playlist.isLastAudio(currentAudioId)}");
-      print("管理播放列表：下一首ID: ${playlist.getNextAudio(currentAudioId)?.id}");
+      debugPrint("管理播放列表：当前ID: $currentAudioId");
+      debugPrint("管理播放列表：是否最后一条：${playlist.isLastAudio(currentAudioId)}");
+      debugPrint("管理播放列表：下一首ID: ${playlist.getNextAudio(currentAudioId)?.id}");
 
       // 3. 检查是否是最后一条，如果是则补充播放列表
       if (playlist.isLastAudio(currentAudioId)) {
-        print('_managePlaylist: isLastAudio: true');
+        debugPrint('_managePlaylist: isLastAudio: true');
         await _supplementPlaylist();
       }
     } catch (e) {
-      print('管理播放列表失败: $e');
+      debugPrint('管理播放列表失败: $e');
     }
   }
 
@@ -329,12 +333,12 @@ class AudioManager {
       if (response.isNotEmpty) {
         // 添加新音频到播放列表
         playlist.addAudioList(response);
-        print('成功补充播放列表: ${response.length} 首音频');
+        debugPrint('成功补充播放列表: ${response.length} 首音频');
       } else {
-        print('补充播放列表失败: 没有更多数据');
+        debugPrint('补充播放列表失败: 没有更多数据');
       }
     } catch (e) {
-      print('补充播放列表失败: $e');
+      debugPrint('补充播放列表失败: $e');
     }
   }
 
@@ -387,10 +391,10 @@ class AudioManager {
           // 限制在预览区间内
           if (seekPosition < previewStart) {
             seekPosition = previewStart;
-            print('seek位置小于预览开始位置，调整到预览开始: $previewStart');
+            debugPrint('seek位置小于预览开始位置，调整到预览开始: $previewStart');
           } else if (seekPosition > previewEnd) {
             seekPosition = previewEnd;
-            print('seek位置超过预览结束位置，调整到预览结束: $previewEnd');
+            debugPrint('seek位置超过预览结束位置，调整到预览结束: $previewEnd');
           }
            return await _audioService!.seek(seekPosition);
         }
@@ -399,10 +403,10 @@ class AudioManager {
       // 可以播放完整时长时，限制在总时长内
       if (seekPosition < Duration.zero) {
         seekPosition = Duration.zero;
-        print('seek位置小于0，调整到0');
+        debugPrint('seek位置小于0，调整到0');
       } else if (seekPosition > totalDuration) {
         seekPosition = totalDuration;
-        print('seek位置超过总时长，调整到总时长: $totalDuration');
+        debugPrint('seek位置超过总时长，调整到总时长: $totalDuration');
       }
       
 
@@ -522,12 +526,12 @@ class AudioManager {
   // 设置状态
   void setCanPlayAllDuration(bool canPlay) {
     _canPlayAllDurationSubject.add(canPlay);
-    print('设置canPlayAllDuration: $canPlay');
+    debugPrint('设置canPlayAllDuration: $canPlay');
   }
 
   void setCanAutoPlayNext(bool canAutoPlay) {
     _canAutoPlayNextSubject.add(canAutoPlay);
-    print('设置canAutoPlayNext: $canAutoPlay');
+    debugPrint('设置canAutoPlayNext: $canAutoPlay');
   }
 
   /// 等待音频加载完成后进行seek操作
@@ -544,9 +548,9 @@ class AudioManager {
         Timer(const Duration(milliseconds: 100), () async {
           try {
             await _audioService?.seek(seekPosition);
-            print('音频加载完成后seek到预览开始位置: $seekPosition');
+            debugPrint('音频加载完成后seek到预览开始位置: $seekPosition');
           } catch (e) {
-            print('延迟seek操作失败: $e');
+            debugPrint('延迟seek操作失败: $e');
           }
         });
       }

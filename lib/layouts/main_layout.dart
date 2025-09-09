@@ -39,32 +39,18 @@ class _MainLayoutState extends State<MainLayout> {
 
     switch (index) {
       case 0:
-        print('切换到Home页面');
+        debugPrint('切换到Home页面');
         break;
       case 1:
-        print('切换到Me页面');
+        debugPrint('切换到Me页面');
         break;
     }
   }
 
-  // 处理返回键逻辑
-  void _handleBackPress() {
-    // 检查当前导航器是否可以返回
-    final navigator = Navigator.of(context);
-    if (navigator.canPop()) {
-      // 如果有页面可以返回，则返回上一页
-      navigator.pop();
-      print('🔙 [MAIN_LAYOUT] 返回上一页');
-    } else {
-      // 如果没有页面可以返回，则退出应用
-      print('🔙 [MAIN_LAYOUT] 返回键被按下，退出应用');
-      SystemNavigator.pop(); // 退出应用
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    print('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
+    debugPrint('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
     return Navigator(
       observers: [globalRouteObserver],
       onGenerateRoute: (settings) {

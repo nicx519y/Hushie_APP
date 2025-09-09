@@ -2,6 +2,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/audio_item.dart';
+import 'package:flutter/foundation.dart';
+import 'exoplayer_config_service.dart';
 
 class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -49,6 +51,9 @@ class AudioPlayerService extends BaseAudioHandler {
   }
 
   void _init() {
+    // 配置 Android ExoPlayer 缓冲参数
+    _configureExoPlayerBuffer();
+    
     // 监听播放状态变化
     _audioPlayer.playingStream.listen((playing) {
       _isPlayingSubject.add(playing);
@@ -98,16 +103,27 @@ class AudioPlayerService extends BaseAudioHandler {
         throw Exception('音频URL为空');
       }
 
-      print('loadAudio url: $audioUrl');
+      debugPrint('loadAudio url: $audioUrl');
 
       // 安全地获取封面URL
       String? coverUrlString;
       try {
         final bestResolution = audio.cover.getBestResolution(80);
-        coverUrlString = bestResolution.url;
-        print('loadAudio cover url: $coverUrlString');
+        final url = bestResolution.url;
+        
+        // 验证URL有效性，避免设置无效的artUri
+        if (url.isNotEmpty && 
+            url.startsWith('http') && 
+            !url.contains('/default.jpg') && 
+            !url.contains('placeholder')) {
+          coverUrlString = url;
+          debugPrint('loadAudio cover url: $coverUrlString');
+        } else {
+          debugPrint('loadAudio 封面URL无效或为默认图片: $url，跳过artUri设置');
+          coverUrlString = null;
+        }
       } catch (e) {
-        print('获取封面URL失败: $e，使用默认封面');
+        debugPrint('获取封面URL失败: $e，使用默认封面');
         coverUrlString = null;
       }
 
@@ -126,40 +142,13 @@ class AudioPlayerService extends BaseAudioHandler {
 
       mediaItem.add(mediaItemData);
 
-      // 加载音频文件
-      await _audioPlayer.setUrl(audioUrl);
+      // 加载音频文件，使用 setAudioSource
+      final audioSource = AudioSource.uri(Uri.parse(audioUrl));
+      await _audioPlayer.setAudioSource(audioSource);
     } catch (e) {
-      print('装载音频时出错: $e');
+      debugPrint('装载音频时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
     }
-  }
-
-  /// 解析时长字符串为Duration
-  Duration _parseDuration(String durationStr) {
-    try {
-      // 支持格式: "3:24", "1:23:45", "120" (秒)
-      final parts = durationStr.split(':');
-
-      if (parts.length == 1) {
-        // 只有秒数
-        return Duration(seconds: int.parse(parts[0]));
-      } else if (parts.length == 2) {
-        // 分钟:秒钟
-        final minutes = int.parse(parts[0]);
-        final seconds = int.parse(parts[1]);
-        return Duration(minutes: minutes, seconds: seconds);
-      } else if (parts.length == 3) {
-        // 小时:分钟:秒钟
-        final hours = int.parse(parts[0]);
-        final minutes = int.parse(parts[1]);
-        final seconds = int.parse(parts[2]);
-        return Duration(hours: hours, minutes: minutes, seconds: seconds);
-      }
-    } catch (e) {
-      print('解析时长失败: $durationStr, 错误: $e');
-    }
-
-    return Duration.zero;
   }
 
   // 加载并播放音频
@@ -168,48 +157,18 @@ class AudioPlayerService extends BaseAudioHandler {
       // 只有当音频ID不同时才重新加载，避免不必要的buffering
       final currentAudio = _currentAudioSubject.value;
       if (currentAudio == null || currentAudio.id != audio.id) {
-        print('加载新音频: ${audio.title} (ID: ${audio.id})');
+        debugPrint('加载新音频: ${audio.title} (ID: ${audio.id})');
         await loadAudio(audio);
       } else {
-        print('相同音频，跳过重新加载: ${audio.title} (ID: ${audio.id})');
+        debugPrint('相同音频，跳过重新加载: ${audio.title} (ID: ${audio.id})');
       }
       
       await _audioPlayer.play();
-      print('音频播放开始成功');
+      debugPrint('音频播放开始成功');
     } catch (e) {
-      print('播放音频时出错: $e');
+      debugPrint('播放音频时出错: $e');
       await stop();
     }
-  }
-
-  /// 清理和验证URL
-  String? _cleanAndValidateUrl(String url) {
-    if (url.isEmpty) return null;
-
-    // 移除首尾空白字符
-    String cleaned = url.trim();
-
-    // 检查是否包含无效字符
-    if (cleaned.contains(' ')) {
-      // 如果包含空格，尝试编码
-      cleaned = cleaned.replaceAll(' ', '%20');
-    }
-
-    // 检查是否以有效的协议开头
-    if (cleaned.startsWith('http://') ||
-        cleaned.startsWith('https://') ||
-        cleaned.startsWith('file://') ||
-        cleaned.startsWith('content://')) {
-      return cleaned;
-    }
-
-    // 如果没有协议，检查是否是有效的域名或路径
-    if (cleaned.contains('.') || cleaned.startsWith('/')) {
-      return cleaned;
-    }
-
-    // 如果都不符合，返回null表示无效
-    return null;
   }
 
   // 私有方法：停止并重置播放器
@@ -221,7 +180,7 @@ class AudioPlayerService extends BaseAudioHandler {
       // 添加小延迟确保资源完全释放
       await Future.delayed(const Duration(milliseconds: 100));
     } catch (e) {
-      print('停止播放器时出错: $e');
+      debugPrint('停止播放器时出错: $e');
     }
   }
 
@@ -241,7 +200,7 @@ class AudioPlayerService extends BaseAudioHandler {
     try {
       await _audioPlayer.stop();
     } catch (e) {
-      print('停止播放时出错: $e');
+      debugPrint('停止播放时出错: $e');
     } finally {
       _currentAudioSubject.add(null);
       mediaItem.add(null);
@@ -327,6 +286,20 @@ class AudioPlayerService extends BaseAudioHandler {
   Future<void> onTaskRemoved() async {
     // 当任务被移除时的处理
     await stop();
+  }
+
+  // 配置 ExoPlayer 缓冲参数（仅 Android 平台）
+  Future<void> _configureExoPlayerBuffer() async {
+    try {
+      final result = await ExoPlayerConfigService.configureOptimalBuffer();
+      if (kDebugMode) {
+        debugPrint('ExoPlayer buffer configuration result: $result');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Failed to configure ExoPlayer buffer: $e');
+      }
+    }
   }
 
   // 清理资源

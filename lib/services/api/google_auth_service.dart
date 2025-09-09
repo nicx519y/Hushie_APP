@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../models/api_response.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// Google认证服务
 class GoogleAuthService {
@@ -55,16 +56,16 @@ class GoogleAuthService {
 
       if (googleUser == null) {
         // 用户取消登录
-        print('google 登录失败. googleUser is null.');
+        debugPrint('google 登录失败. googleUser is null.');
         return ApiResponse.error(errNo: -2);
       }
-      print('Google用户信息: ${googleUser}');
+      debugPrint('Google用户信息: ${googleUser}');
 
       // 获取认证信息
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      print('Google认证信息: ${googleAuth}');
+      debugPrint('Google认证信息: ${googleAuth}');
 
       // 在标准OAuth 2.0流程中，这里应该获取授权码
       // 但Google Sign-In Flutter插件直接返回tokens
@@ -74,13 +75,13 @@ class GoogleAuthService {
       final String? idToken = googleAuth.idToken;
 
       if (authorizationCode == null && idToken == null) {
-        print(
+        debugPrint(
           'google 授权码或者idToken为null. authorizationCode: ${authorizationCode}, idToken: ${idToken}',
         );
         return ApiResponse.error(errNo: -3);
       }
 
-      print(
+      debugPrint(
         'google 授权码或者idToken不为null. authorizationCode: ${authorizationCode}, idToken: ${idToken}',
       );
 
@@ -95,11 +96,11 @@ class GoogleAuthService {
         authType: authorizationCode != null ? 'authorization_code' : 'id_token',
       );
 
-      print('Google登录成功: ${googleAuthResponse}');
+      debugPrint('Google登录成功: ${googleAuthResponse}');
 
       return ApiResponse.success(data: googleAuthResponse, errNo: 0);
     } catch (e) {
-      print('Google登录失败: $e');
+      debugPrint('Google登录失败: $e');
       return ApiResponse.error(errNo: -1);
     }
   }
@@ -141,46 +142,46 @@ class GoogleAuthService {
     required String refreshToken,
   }) async {
     try {
-      print('🔐 [GOOGLE_AUTH] 开始刷新Token请求');
-      print('🔐 [GOOGLE_AUTH] RefreshToken长度: ${refreshToken.length}');
+      debugPrint('🔐 [GOOGLE_AUTH] 开始刷新Token请求');
+      debugPrint('🔐 [GOOGLE_AUTH] RefreshToken长度: ${refreshToken.length}');
       
       final uri = Uri.parse(
         ApiConfig.getFullUrl(ApiEndpoints.googleRefreshToken),
       );
-      print('🔐 [GOOGLE_AUTH] 请求URL: $uri');
+      debugPrint('🔐 [GOOGLE_AUTH] 请求URL: $uri');
 
       final requestBody = {'refresh_token': refreshToken, 'grant_type': 'refresh_token'};
-      print('🔐 [GOOGLE_AUTH] 请求体: ${requestBody.keys.toList()}');
+      debugPrint('🔐 [GOOGLE_AUTH] 请求体: ${requestBody.keys.toList()}');
       
-      print('🔐 [GOOGLE_AUTH] 发送HTTP请求...');
+      debugPrint('🔐 [GOOGLE_AUTH] 发送HTTP请求...');
       final response = await HttpClientService.postJson(
         uri,
         body: requestBody,
         timeout: _defaultTimeout,
       );
 
-      print('🔐 [GOOGLE_AUTH] HTTP响应状态码: ${response.statusCode}');
-      print('🔐 [GOOGLE_AUTH] HTTP响应体长度: ${response.body.length}');
+      debugPrint('🔐 [GOOGLE_AUTH] HTTP响应状态码: ${response.statusCode}');
+      debugPrint('🔐 [GOOGLE_AUTH] HTTP响应体长度: ${response.body.length}');
       
       if (response.statusCode == 200) {
-        print('🔐 [GOOGLE_AUTH] 开始解析JSON响应...');
+        debugPrint('🔐 [GOOGLE_AUTH] 开始解析JSON响应...');
         final Map<String, dynamic> jsonData = json.decode(response.body);
-        print('🔐 [GOOGLE_AUTH] JSON解析成功，errNo: ${jsonData['errNo']}');
+        debugPrint('🔐 [GOOGLE_AUTH] JSON解析成功，errNo: ${jsonData['errNo']}');
 
         final apiResponse = ApiResponse.fromJson(
           jsonData,
           (dataJson) => AccessTokenResponse.fromMap(dataJson),
         );
-        print('🔐 [GOOGLE_AUTH] Token刷新API调用完成，errNo: ${apiResponse.errNo}');
+        debugPrint('🔐 [GOOGLE_AUTH] Token刷新API调用完成，errNo: ${apiResponse.errNo}');
         return apiResponse;
       } else {
-        print('🔐 [GOOGLE_AUTH] HTTP请求失败，状态码: ${response.statusCode}');
-        print('🔐 [GOOGLE_AUTH] 错误响应体: ${response.body}');
+        debugPrint('🔐 [GOOGLE_AUTH] HTTP请求失败，状态码: ${response.statusCode}');
+        debugPrint('🔐 [GOOGLE_AUTH] 错误响应体: ${response.body}');
         return ApiResponse.error(errNo: response.statusCode);
       }
     } catch (e) {
-      print('🔐 [GOOGLE_AUTH] Token刷新请求异常: $e');
-      print('🔐 [GOOGLE_AUTH] 异常类型: ${e.runtimeType}');
+      debugPrint('🔐 [GOOGLE_AUTH] Token刷新请求异常: $e');
+      debugPrint('🔐 [GOOGLE_AUTH] 异常类型: ${e.runtimeType}');
       return ApiResponse.error(errNo: -1);
     }
   }
@@ -221,7 +222,7 @@ class GoogleAuthService {
     try {
       await _googleSignIn.signOut();
     } catch (e) {
-      print('Google登出失败: $e');
+      debugPrint('Google登出失败: $e');
     }
   }
 
@@ -240,7 +241,7 @@ class GoogleAuthService {
     try {
       return await _googleSignIn.isSignedIn();
     } catch (e) {
-      print('检查Google登录状态失败: $e');
+      debugPrint('检查Google登录状态失败: $e');
       return false;
     }
   }
@@ -250,7 +251,7 @@ class GoogleAuthService {
     try {
       return await _googleSignIn.currentUser;
     } catch (e) {
-      print('获取当前Google用户失败: $e');
+      debugPrint('获取当前Google用户失败: $e');
       return null;
     }
   }

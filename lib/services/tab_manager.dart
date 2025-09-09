@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/tab_item.dart';
 import 'api/home_tabs_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// Tab管理器
 class TabManager {
@@ -34,7 +35,7 @@ class TabManager {
       // 3. 使用默认tabs
       return _combineWithDefaultTab(_getDefaultTabs());
     } catch (e) {
-      print('获取tabs失败: $e');
+      debugPrint('获取tabs失败: $e');
       return _combineWithDefaultTab(_getDefaultTabs());
     }
   }
@@ -56,7 +57,7 @@ class TabManager {
       // 如果服务器没有数据，使用默认tabs
       return _combineWithDefaultTab(_getDefaultTabs());
     } catch (e) {
-      print('刷新tabs失败: $e');
+      debugPrint('刷新tabs失败: $e');
       return _combineWithDefaultTab(_getDefaultTabs());
     }
   }
@@ -67,7 +68,7 @@ class TabManager {
       final tabs = await HomeTabsService.getHomeTabs();
       return tabs;
     } catch (e) {
-      print('从服务器获取tabs失败: $e');
+      debugPrint('从服务器获取tabs失败: $e');
       return [];
     }
   }
@@ -93,7 +94,7 @@ class TabManager {
 
       return tabsList.map((item) => TabItemModel.fromMap(item)).toList();
     } catch (e) {
-      print('从缓存获取tabs失败: $e');
+      debugPrint('从缓存获取tabs失败: $e');
       return [];
     }
   }
@@ -109,7 +110,7 @@ class TabManager {
 
       await prefs.setString(_cacheKey, json.encode(cacheData));
     } catch (e) {
-      print('保存tabs到缓存失败: $e');
+      debugPrint('保存tabs到缓存失败: $e');
     }
   }
 
@@ -119,7 +120,7 @@ class TabManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_cacheKey);
     } catch (e) {
-      print('清除缓存失败: $e');
+      debugPrint('清除缓存失败: $e');
     }
   }
 

@@ -40,6 +40,7 @@ class CustomAppBar extends StatelessWidget {
                   onSearchChanged: onSearchChanged,
                   onSearchSubmitted: onSearchSubmitted,
                   onTap: onSearchTap,
+                  canFocus: false,
                 ),
               ),
             ],

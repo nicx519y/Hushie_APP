@@ -277,6 +277,7 @@ class _SearchPageState extends State<SearchPage> {
                       hintText: '',
                       controller: _searchController,
                       focusNode: _searchFocusNode,
+                      canFocus: true,
                       onSearchChanged: (value) {
                         // 可以在这里实现实时搜索建议
                       },

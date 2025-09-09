@@ -78,6 +78,12 @@ class FallbackImage extends StatelessWidget {
       return _buildFallbackImage();
     }
 
+    // 验证URL格式，如果无效则使用备用图片
+    if (!_isValidUrl(imageUrl!)) {
+      debugPrint('🖼️ 无效的图片URL: $imageUrl，使用备用图片');
+      return _buildFallbackImage();
+    }
+
     // 如果是网络图片，使用CachedNetworkImage处理错误
     if (imageUrl!.startsWith('http')) {
       return CachedNetworkImage(
@@ -86,7 +92,7 @@ class FallbackImage extends StatelessWidget {
         fadeInDuration: fadeInDuration,
         placeholder: (context, url) => _buildPlaceholder(),
         errorWidget: (context, url, error) {
-          print('🖼️ 网络图片加载失败: ，使用备用图片');
+          debugPrint('🖼️ 网络图片加载失败: $url，使用备用图片');
           return _buildFallbackImage();
         },
       );
@@ -97,7 +103,7 @@ class FallbackImage extends StatelessWidget {
       imageUrl!,
       fit: fit,
       errorBuilder: (context, error, stackTrace) {
-        print('🖼️ 本地图片加载失败: ，使用备用图片');
+        debugPrint('🖼️ 本地图片加载失败: $imageUrl，使用备用图片');
         return _buildFallbackImage();
       },
     );
@@ -109,7 +115,7 @@ class FallbackImage extends StatelessWidget {
       fallbackImage,
       fit: fit,
       errorBuilder: (context, error, stackTrace) {
-        print('🖼️ 备用图片也加载失败: ');
+        debugPrint('🖼️ 备用图片也加载失败: $fallbackImage');
         return _buildErrorWidget();
       },
     );
@@ -143,5 +149,23 @@ class FallbackImage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 验证URL是否有效
+  bool _isValidUrl(String url) {
+    if (url.isEmpty) return false;
+    
+    // 检查是否是有效的HTTP/HTTPS URL
+    if (url.startsWith('http')) {
+      try {
+        final uri = Uri.parse(url);
+        return uri.hasScheme && uri.hasAuthority;
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    // 对于本地资源，简单检查是否包含文件扩展名
+    return url.contains('.');
   }
 }

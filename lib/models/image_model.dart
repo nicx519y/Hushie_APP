@@ -10,7 +10,7 @@ class ImageModel {
   ImageResolution getBestResolution(double logicalWidth) {
     // 安全检查 - 如果 x1 URL 为空，返回默认值而不是抛出异常
     if (urls.x1.url.isEmpty) {
-      print('ImageModel: x1 分辨率的 URL 为空，使用默认图片');
+      debugPrint('ImageModel: x1 分辨率的 URL 为空，使用默认图片');
       return ImageResolution(
         url: 'assets/images/logo.png',
         width: 400,
@@ -164,19 +164,29 @@ class ImageResolution {
   factory ImageResolution.fromJson(Map<String, dynamic> json) {
     final url = json['url'] ?? '';
 
-    // 验证 URL 格式
+    // 验证 URL 格式和有效性
+    String finalUrl = 'assets/images/backup.png'; // 默认使用本地图片
+    
     if (url.isNotEmpty) {
       try {
-        // 尝试解析 URL，如果失败则抛出异常
-        Uri.parse(url);
+        // 尝试解析 URL
+        final uri = Uri.parse(url);
+        
+        // 检查是否是有效的HTTP/HTTPS URL或本地资源
+        if ((uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https') && uri.hasAuthority) ||
+            (!uri.hasScheme && url.contains('assets/'))) {
+          // 额外检查：避免明显无效的URL（如包含default.jpg的404链接）
+          if (!url.contains('/default.jpg') && !url.contains('placeholder')) {
+            finalUrl = url;
+          }
+        }
       } catch (e) {
-        print('警告: 无效的图片URL格式: $url');
-        // 不抛出异常，而是使用空字符串，让调用者处理
+        // debugPrint('🖼️ URL解析失败: $url，错误: $e，使用本地备用图片');
       }
     }
 
     return ImageResolution(
-      url: url.isNotEmpty ? url : 'assets/images/logo.png',
+      url: finalUrl,
       width: json['width'] ?? 400,
       height: json['height'] ?? 600,
     );
