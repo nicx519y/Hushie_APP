@@ -74,7 +74,14 @@ class _SplashPageState extends State<SplashPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(color: Colors.white),
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/luster_bg.png'),
+            colorFilter: ColorFilter.mode(Colors.transparent, BlendMode.color),
+            fit: BoxFit.fill,
+            alignment: Alignment.topCenter,
+          ),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -86,21 +93,21 @@ class _SplashPageState extends State<SplashPage> {
             ),
             const SizedBox(height: 40),
             // 加载指示器
-            if (!_servicesInitialized)
-              Column(
-                children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFFF359AA),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Initializing services...',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
+            // if (!_servicesInitialized)
+            //   Column(
+            //     children: [
+            //       const CircularProgressIndicator(
+            //         valueColor: AlwaysStoppedAnimation<Color>(
+            //           Color(0xFFF359AA),
+            //         ),
+            //       ),
+            //       const SizedBox(height: 16),
+            //       Text(
+            //         'Initializing services...',
+            //         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            //       ),
+            //     ],
+            //   ),
           ],
         ),
       ),

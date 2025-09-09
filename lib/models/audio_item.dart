@@ -17,12 +17,9 @@ class AudioItem {
   final DateTime? createdAt;
   final List<String>? tags;
   final bool isLiked;
-  final int? lastPlayedAtS; // 最后播放时间 单位：秒
+  final DateTime? lastPlayedAt; // 最后播放时间 单位：秒
   final Duration? playDuration; // 播放时长
   final Duration? playProgress; // 播放进度
-
-  // 播放进度相关字段
-  final DateTime? lastPlayedAt; // 最后播放时间
 
   // 预览相关字段
   final Duration? previewStart; // 可预览开始时间点
@@ -72,7 +69,6 @@ class AudioItem {
     this.previewStart, // 可预览开始时间点
     this.previewDuration, // 可预览时长
     this.isLiked = false, // 是否点赞
-    this.lastPlayedAtS, // 最后播放时间 单位：秒
     this.playDuration, // 播放时长
     this.playProgress, // 播放进度
   });
@@ -93,11 +89,11 @@ class AudioItem {
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
       tags: map['tags'] != null ? List<String>.from(map['tags']) : null,
-      bgImage: map['bg_image'] != null
-          ? ImageModel.fromJson(map['bg_image'])
+      bgImage: (map['bg_image'] ?? map['bgImage']) != null
+          ? ImageModel.fromJson(map['bg_image'] ?? map['bgImage'])
           : null,
-      lastPlayedAt: map['last_played_at'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['last_played_at'])
+      lastPlayedAt: map['last_played_at_s'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['last_played_at_s'] * 1000) 
           : null,
       previewStart: map['preview_start_ms'] != null
           ? Duration(milliseconds: map['preview_start_ms'])
@@ -106,7 +102,6 @@ class AudioItem {
           ? Duration(milliseconds: map['preview_duration_ms'])
           : null,
       isLiked: map['is_liked'] ?? false,
-      lastPlayedAtS: map['last_play_at_s'] ?? 0,
       playDuration: map['play_duration_ms'] != null ? Duration(milliseconds: map['play_duration_ms']) : null,
       playProgress: map['play_progress_ms'] != null ? Duration(milliseconds: map['play_progress_ms']) : null,
     );
@@ -131,7 +126,7 @@ class AudioItem {
       'preview_start_ms': previewStart?.inMilliseconds,
       'preview_duration_ms': previewDuration?.inMilliseconds,
       'is_liked': isLiked,
-      'last_play_at_s': lastPlayedAtS,
+      'last_play_at_s': lastPlayedAt != null ? (lastPlayedAt!.millisecondsSinceEpoch / 1000) : 0,
       'play_duration_ms': playDuration?.inMilliseconds,
       'play_progress_ms': playProgress?.inMilliseconds,
     };
@@ -178,7 +173,6 @@ class AudioItem {
       previewStart: previewStart ?? this.previewStart,
       previewDuration: previewDuration ?? this.previewDuration,
       isLiked: isLiked ?? this.isLiked,
-      lastPlayedAtS: lastPlayedAtS ?? this.lastPlayedAtS,
       playDuration: playDuration ?? this.playDuration,
       playProgress: playProgress ?? this.playProgress,
     );

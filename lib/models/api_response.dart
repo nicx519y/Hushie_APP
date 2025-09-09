@@ -134,9 +134,11 @@ class UserHistoryResponse {
     return UserHistoryResponse(
       history: history
         ..sort(
-          (a, b) =>
-              (b.lastPlayedAt?.compareTo(a.lastPlayedAt ?? DateTime.now()) ??
-              0),
+          (a, b) {
+            final aTime = a.lastPlayedAt ?? DateTime.now();
+            final bTime = b.lastPlayedAt ?? DateTime.now();
+            return bTime.compareTo(aTime);
+          },
         ),
     );
   }

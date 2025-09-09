@@ -236,17 +236,13 @@ class AudioPlayerService extends BaseAudioHandler {
     playbackState.add(
       PlaybackState(
         controls: [
-          MediaControl.rewind,
           if (playing) MediaControl.pause else MediaControl.play,
-          MediaControl.fastForward,
           MediaControl.stop,
         ],
         systemActions: {
           MediaAction.seek,
-          MediaAction.seekForward,
-          MediaAction.seekBackward,
         },
-        androidCompactActionIndices: const [0, 1, 3],
+        androidCompactActionIndices: const [0, 1],
         processingState: processingState,
         playing: playing,
         updatePosition: _audioPlayer.position,

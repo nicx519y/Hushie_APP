@@ -28,9 +28,9 @@ class ApiConfig {
   static const int nonceLength = 16;
   static const int maxTimestampDrift = 300; // 5分钟时间戳漂移容忍度（秒）
 
-  static const String WebviewAboutUsUrl = 'https://hushie.ai/about-us';
+  static const String WebviewAboutUsUrl = 'assets/html/about.html';
   static const String AccountDeletionAgreement =
-      'https://hushie.ai/account-deletion-agreement';
+      'assets/html/account_deletion_agreement.html';
 
   /// 获取应用密钥（安全方式）
   /// 在实际项目中，这里应该实现更安全的密钥获取方式

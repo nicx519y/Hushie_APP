@@ -74,7 +74,7 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
 
     return GestureDetector(
       onTap: widget.onTap,
-      child: Container(
+      child: SizedBox(
         width: widget.size,
         height: widget.size,
         child: Stack(
@@ -88,7 +88,7 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
                 painter: _CircularProgressPainter(
                   progress: widget.progress,
                   progressColor: widget.progressColor,
-                  backgroundColor: widget.backgroundColor.withOpacity(0.2),
+                  backgroundColor: widget.backgroundColor.withAlpha(60),
                   strokeWidth: widget.strokeWidth,
                 ),
               ),
@@ -109,7 +109,7 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withAlpha(25),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -162,11 +162,11 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
           radius: 1.0,
           stops: [0.0, 0.08, 0.4, 0.9, 1.0],
           colors: [
-            widget.progressColor.withOpacity(0.0),
-            widget.progressColor.withOpacity(0.0),
-            widget.progressColor.withOpacity(0.5),
-            widget.progressColor.withOpacity(1.0),
-            widget.progressColor.withOpacity(1.0),
+            widget.progressColor.withAlpha(0),
+            widget.progressColor.withAlpha(0),
+            widget.progressColor.withAlpha(128),
+            widget.progressColor.withAlpha(255),
+            widget.progressColor.withAlpha(255),
           ],
         ),
       ),

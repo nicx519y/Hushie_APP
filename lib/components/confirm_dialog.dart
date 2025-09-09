@@ -157,20 +157,17 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // 标题
-                SizedBox(
+                Container(
                   width: double.infinity,
-                  height: 60,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF333333),
-                      ),
-                      textAlign: TextAlign.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF333333),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
 

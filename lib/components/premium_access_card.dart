@@ -41,8 +41,8 @@ class PremiumAccessCard extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    primaryColor!.withOpacity(1),
-                    secondaryColor!.withOpacity(1),
+                    primaryColor!.withAlpha(255),
+                    secondaryColor!.withAlpha(255),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),

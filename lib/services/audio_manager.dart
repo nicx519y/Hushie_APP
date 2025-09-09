@@ -49,14 +49,15 @@ class AudioManager {
     if (_audioService != null) return;
 
     try {
+
       _audioService = await AudioService.init(
         builder: () => AudioPlayerService(),
         config: const AudioServiceConfig(
-          androidNotificationChannelId: 'com.hushie.audio',
-          androidNotificationChannelName: 'Hushie Audio',
+          androidNotificationChannelId: 'com.hushie.ai',
+          androidNotificationChannelName: 'Hushie.AI',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
-          androidNotificationIcon: 'mipmap/logo',
+          androidNotificationIcon: 'drawable/ic_notification',
         ),
       );
 
@@ -79,16 +80,8 @@ class AudioManager {
 
     // 监听当前音频
     _audioService!.currentAudioStream.listen((audio) {
-      _currentAudioSubject.add(audio);
 
-      // 更新时长信息
-      final currentDurationInfo = _durationSubject.value;
-      final newDurationInfo = AudioDurationInfo.withValidation(
-        totalDuration: currentDurationInfo.totalDuration,
-        previewStart: audio?.previewStart,
-        previewDuration: audio?.previewDuration,
-      );
-      _durationSubject.add(newDurationInfo);
+      _currentAudioSubject.add(audio);
 
       // 管理播放列表
       if (audio != null) {
@@ -99,25 +92,20 @@ class AudioManager {
           AudioPlaylist.instance.addAudio(audio);
         }
 
-        _managePlaylist(audio.id);
+        _managePlaylist(audio.id); // 管理播放列表，将当前音频添加到播放列表，如果当前音频是播放列表最后一条，则继续补充下面的播放列表
         
-        // 检查是否需要从预览开始位置播放
-        final canPlayAllDuration = _canPlayAllDurationSubject.value;
-        if (!canPlayAllDuration 
-          && audio.previewStart != null 
-          && audio.previewStart! > Duration.zero 
-          && audio.previewDuration != null 
-          && audio.previewDuration! > Duration.zero) {
-          debugPrint('音频改变，需要从预览开始位置播放');
-          // 等待音频加载完成后再seek到预览开始位置
-          _waitForAudioLoadedAndSeek(audio.previewStart!);
-        }
       }
     });
 
     // 监听播放位置
     _audioService!.positionStream.listen((position) {
       _positionSubject.add(position);
+
+      // debugPrint('播放位置变化 position: $position');
+      // 检查是否超出预览区间 超出就暂停播放
+      if(_checkWillOutPreview(position)) {
+        pause();
+      }
     });
 
     // 监听播放时长
@@ -137,9 +125,9 @@ class AudioManager {
     });
 
     // 监听播放位置，检查预览区间限制
-    _positionSubject.stream.listen((position) {
-      _checkPreviewDurationLimit(position);
-    });
+    // _positionSubject.stream.listen((position) {
+    //   _checkPreviewDurationLimit(position);
+    // });
 
     // 监听播放器状态变化
     _audioService!.playerStateStream.listen((playerState) {
@@ -152,6 +140,21 @@ class AudioManager {
       _bufferedPositionSubject.add(bufferedPosition);
     });
 
+  }
+
+  // 检查是否超出预览区间
+  bool _checkWillOutPreview(Duration position) {
+
+    if(currentAudio == null || !_isPlayingSubject.value || _canPlayAllDurationSubject.value) return false;
+
+    final previewStart = currentAudio!.previewStart ?? Duration.zero;
+    final previewDuration = currentAudio!.previewDuration ?? Duration.zero;
+    final hasPreview = previewStart >= Duration.zero && previewDuration > Duration.zero;
+
+    if(hasPreview && position >= previewStart + previewDuration) {
+      return true;
+    }
+    return false;
   }
 
   Duration _transformPosition(Duration position) {
@@ -205,29 +208,6 @@ class AudioManager {
     }
   }
 
-  /// 检查预览时长限制
-  void _checkPreviewDurationLimit(Duration position) {
-    final currentAudio = _currentAudioSubject.value;
-    final canPlayAllDuration = _canPlayAllDurationSubject.value;
-    final isPlaying = _isPlayingSubject.value;
-
-    if (!canPlayAllDuration && currentAudio != null && isPlaying) {
-      final previewStart = currentAudio.previewStart ?? Duration.zero;
-      final previewDuration = currentAudio.previewDuration ?? Duration.zero;
-      
-      // 当previewStart > 0 && previewDuration > 0时，检查是否超出预览区间
-      if (previewStart > Duration.zero && previewDuration > Duration.zero) {
-        final previewEnd = previewStart + previewDuration;
-        
-        // 如果播放位置超过预览区间末尾，则停止播放
-        if (position >= previewEnd) {
-          pause();
-          debugPrint('预览时长限制：播放到预览区间末尾，停止播放');
-        }
-      }
-    }
-  }
-
   /// 播放下一首音频
   Future<void> _playNextAudio(String currentAudioId) async {
     try {
@@ -269,34 +249,16 @@ class AudioManager {
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
     if (lastHistory.isNotEmpty) {
       debugPrint('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
-      AudioPlaylist.instance.addAudio(lastHistory.first);
+      playAudio(lastHistory.first, autoPlay: false); 
     } else {
       debugPrint('AudioManager: 没有播放历史记录');
     }
-
-    // 播放最后的音频并暂停
-    await _loadLastAudio();
 
     // 不在这里强制初始化AudioService，而是标记为可以初始化
     // 实际初始化将在第一次使用时进行
     return;
   }
 
-  /// 播放最后的音频并暂停
-  Future<void> _loadLastAudio() async {
-    try {
-      final lastAudio = AudioPlaylist.instance.getLastLoadedAudio();
-      if (lastAudio != null) {
-        final audioItem = AudioPlaylist.instance.getAudioItemById(lastAudio.id);
-        if (audioItem != null) {
-          // await _ensureInitialized();
-          await _audioService!.loadAudio(audioItem);
-        }
-      }
-    } catch (e) {
-      debugPrint('播放最后音频失败: $e');
-    }
-  }
 
   // 获取音频服务实例
   AudioPlayerService? get audioService {
@@ -304,9 +266,10 @@ class AudioManager {
   }
 
   // 播放音频
-  Future<void> playAudio(AudioItem audio) async {
+  Future<void> playAudio(AudioItem audio, { bool? autoPlay = true }) async {
     // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
     final currentAudio = _currentAudioSubject.value;
+    final bool _auto = autoPlay ?? true;
 
     if (currentAudio != null && currentAudio.id == audio.id) {
       debugPrint('相同音频正在播放，跳过: ${audio.title} (ID: ${audio.id})');
@@ -322,8 +285,12 @@ class AudioManager {
     try {
       // await _ensureInitialized();
       if (_audioService != null) {
-        await _audioService!.playAudio(audio, initialPosition: transformedPosition);
-        
+
+        if(_auto == true) {
+          await _audioService!.playAudio(audio, initialPosition: transformedPosition);
+        } else {
+          await _audioService!.loadAudio(audio, initialPosition: transformedPosition);
+        }
 
       } else {
         debugPrint('音频服务未初始化，无法播放音频');
@@ -545,30 +512,6 @@ class AudioManager {
   void setCanAutoPlayNext(bool canAutoPlay) {
     _canAutoPlayNextSubject.add(canAutoPlay);
     debugPrint('设置canAutoPlayNext: $canAutoPlay');
-  }
-
-  /// 等待音频加载完成后进行seek操作
-  void _waitForAudioLoadedAndSeek(Duration seekPosition) {
-    // 监听播放器状态，等待音频加载完成
-    StreamSubscription? subscription;
-    subscription = _playerStateSubject.stream.listen((playerState) {
-      // 当音频加载完成且不是loading状态时，进行seek操作
-      if (playerState.processingState == ProcessingState.ready ||
-          playerState.processingState == ProcessingState.buffering) {
-        subscription?.cancel();
-        
-        // 延迟一小段时间确保音频完全准备好
-        Timer(const Duration(milliseconds: 100), () async {
-          try {
-            await _audioService?.seek(seekPosition);
-            debugPrint('音频加载完成后seek到预览开始位置: $seekPosition');
-          } catch (e) {
-            debugPrint('延迟seek操作失败: $e');
-          }
-        });
-      }
-    });
-    
   }
 
   // 清理资源

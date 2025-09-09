@@ -36,7 +36,7 @@ class _HistoryListState extends State<HistoryList> {
         alignment: Alignment.bottomCenter,
         child: Material(
           color: Colors.white,
-          child: Container(
+          child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.7,
             child: Column(
               children: [
@@ -138,7 +138,7 @@ Future<void> showHistoryListWithAnimation(
   Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder(
       opaque: false, // 设置为非不透明，允许背景透明
-      barrierColor: Colors.black.withOpacity(0.5), // 设置半透明黑色背景
+      barrierColor: Colors.black.withAlpha(128), // 设置半透明黑色背景
       pageBuilder: (context, animation, secondaryAnimation) => HistoryList(
         onItemTap: onItemTap,
         onClose: () {

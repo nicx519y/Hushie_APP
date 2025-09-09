@@ -38,7 +38,12 @@ class _CustomWebViewState extends State<CustomWebView> {
     // 只有当URL发生变化时才重新加载
     if (oldWidget.url != widget.url) {
       _currentUrl = widget.url;
-      _controller.loadRequest(Uri.parse(widget.url));
+      // 检查是否为本地assets文件
+      if (widget.url.startsWith('assets/')) {
+        _controller.loadFlutterAsset(widget.url);
+      } else {
+        _controller.loadRequest(Uri.parse(widget.url));
+      }
     }
     
     // 更新背景色（如果发生变化）
@@ -71,8 +76,14 @@ class _CustomWebViewState extends State<CustomWebView> {
             }
           },
         ),
-      )
-      ..loadRequest(Uri.parse(_currentUrl!));
+      );
+    
+    // 检查是否为本地assets文件
+    if (_currentUrl!.startsWith('assets/')) {
+      _controller.loadFlutterAsset(_currentUrl!);
+    } else {
+      _controller.loadRequest(Uri.parse(_currentUrl!));
+    }
   }
 
   @override

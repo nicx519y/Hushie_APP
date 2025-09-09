@@ -8,7 +8,7 @@
     <application
         android:label="hushie_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/logo"
+        android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
@@ -47,6 +47,9 @@
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
+            <meta-data
+                android:name="com.ryanheise.audioservice.smallIcon"
+                android:resource="@drawable/ic_notification" />
         </service>
         
         <!-- 媒体按钮接收器 -->

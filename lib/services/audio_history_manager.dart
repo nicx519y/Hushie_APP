@@ -39,6 +39,35 @@ class AudioHistoryManager {
   /// 获取历史缓存状态通知器
   ValueNotifier<List<AudioItem>> get historyNotifier => _historyNotifier;
 
+  /// 初始化历史管理器 - 从服务端拉取历史列表并缓存到本地内存
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      debugPrint('🎵 [HISTORY] 开始初始化音频历史管理器');
+
+      // 订阅认证状态变化事件
+      _subscribeToAuthChanges();
+
+      // 检查用户登录状态
+      final bool isLogin = await AuthService.isSignedIn();
+      if (!isLogin) {
+        _clearCacheAfterLogout();
+        return;
+      }
+
+      await _reinitializeAfterLogin();
+      _isInitialized = true;
+
+      debugPrint('🎵 [HISTORY] 初始化完成，缓存了 ${_historyCache.length} 条历史记录');
+    } catch (e) {
+      debugPrint('🎵 [HISTORY] 初始化失败: $e');
+      _historyCache = [];
+      _historyNotifier.value = [];
+      _isInitialized = true; // 即使失败也标记为已初始化
+    }
+  }
+
   /// 设置音频播放服务并开始监听
   void setAudioService(AudioPlayerService audioService) {
     _audioService = audioService;
@@ -203,8 +232,6 @@ class AudioHistoryManager {
       final bool isLogin = await AuthService.isSignedIn();
       if (!isLogin) return;
 
-      debugPrint('🎵 [HISTORY] 记录播放停止: ${_currentPlayingAudio!.title}');
-
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
         playDuration: Duration.zero, // 这里可以计算实际播放时长
@@ -219,34 +246,7 @@ class AudioHistoryManager {
     }
   }
 
-  /// 初始化历史管理器 - 从服务端拉取历史列表并缓存到本地内存
-  Future<void> initialize() async {
-    if (_isInitialized) return;
-
-    try {
-      debugPrint('🎵 [HISTORY] 开始初始化音频历史管理器');
-
-      // 订阅认证状态变化事件
-      _subscribeToAuthChanges();
-
-      // 检查用户登录状态
-      final bool isLogin = await AuthService.isSignedIn();
-      if (!isLogin) {
-        _clearCacheAfterLogout();
-        return;
-      }
-
-      await _reinitializeAfterLogin();
-      _isInitialized = true;
-
-      debugPrint('🎵 [HISTORY] 初始化完成，缓存了 ${_historyCache.length} 条历史记录');
-    } catch (e) {
-      debugPrint('🎵 [HISTORY] 初始化失败: $e');
-      _historyCache = [];
-      _historyNotifier.value = [];
-      _isInitialized = true; // 即使失败也标记为已初始化
-    }
-  }
+  
 
   Future<void> refreshHistory() async {
     final bool isLogin = await AuthService.isSignedIn();
@@ -290,6 +290,32 @@ class AudioHistoryManager {
 
       // 从服务端拉取最新的历史列表
       final historyList = await UserHistoryService.getUserHistoryList();
+
+      // 打印历史列表详细信息
+      debugPrint('🎵 [HISTORY] 从服务端拉取到的历史列表数量: ${historyList.length}');
+      // for (int i = 0; i < historyList.length; i++) {
+        // final audio = historyList[i];
+      //   debugPrint('🎵 [HISTORY] 历史记录[$i] - 完整信息: \n'
+      //       'ID: ${audio.id}, \n'
+      //       'Title: ${audio.title}, \n'
+      //       'Desc: ${audio.desc}, \n'
+      //       'Author: ${audio.author}, \n'
+      //       'Avatar: ${audio.avatar}, \n'
+      //       'PlayTimes: ${audio.playTimes}, \n'
+      //       'LikesCount: ${audio.likesCount}, \n'
+      //       'IsLiked: ${audio.isLiked}, \n'
+      //       'AudioUrl: ${audio.audioUrl}, \n'
+      //       'Duration: ${audio.duration}, \n'
+      //       'PlayDuration: ${audio.playDuration}, \n'
+      //       'PlayProgress: ${audio.playProgress}, \n'
+      //       'CreatedAt: ${audio.createdAt}, \n'
+      //       'LastPlayedAt: ${audio.lastPlayedAt}, \n'
+      //       'PreviewStart: ${audio.previewStart}, \n'
+      //       'PreviewDuration: ${audio.previewDuration}, \n'
+      //       'Cover: [ID: ${audio.cover?.id}, x1: ${audio.cover?.urls.x1.url} (${audio.cover?.urls.x1.width}x${audio.cover?.urls.x1.height}), x2: ${audio.cover?.urls.x2?.url} (${audio.cover?.urls.x2?.width}x${audio.cover?.urls.x2?.height}), x3: ${audio.cover?.urls.x3?.url} (${audio.cover?.urls.x3?.width}x${audio.cover?.urls.x3?.height})], \n'
+      //       'BgImage: [ID: ${audio.bgImage?.id}, x1: ${audio.bgImage?.urls.x1.url} (${audio.bgImage?.urls.x1.width}x${audio.bgImage?.urls.x1.height}), x2: ${audio.bgImage?.urls.x2?.url} (${audio.bgImage?.urls.x2?.width}x${audio.bgImage?.urls.x2?.height}), x3: ${audio.bgImage?.urls.x3?.url} (${audio.bgImage?.urls.x3?.width}x${audio.bgImage?.urls.x3?.height})]');
+      // }
+
       _updateLocalCache(historyList);
 
       debugPrint('🎵 [HISTORY] 登录后重新初始化完成，缓存了 ${_historyCache.length} 条历史记录');

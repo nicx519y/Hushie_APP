@@ -120,17 +120,10 @@ class _AudioListState extends State<AudioList> {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: widget.isLoadingMore
-            ? const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  SizedBox(width: 8),
-                  Text('加载中...', style: TextStyle(color: Colors.grey)),
-                ],
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Text('上拉加载更多', style: TextStyle(color: Colors.grey)),
       ),

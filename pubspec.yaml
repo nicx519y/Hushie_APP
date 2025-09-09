@@ -98,6 +98,10 @@ dev_dependencies:
   # 原生启动页配置
   flutter_native_splash: ^2.3.10
 
+  # 自动生成app icon
+  # 命令：flutter pub run flutter_launcher_icons:main
+  flutter_launcher_icons: ^0.13.1  # 检查最新版本
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -113,6 +117,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/html/
 
   # Custom fonts configuration
   fonts:
@@ -145,3 +150,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_icons:
+  android: "ic_launcher"  # 生成的图标名称（可选）
+  image_path: "assets/icons/applogo.png"  # 你的原始图标路径（建议放在 assets 目录）
+  adaptive_icon:
+    foreground_image_path: "assets/icons/applogo_foreground.png"  # 前景图路径
+    background_color: "#FFFFFF"  # 背景色

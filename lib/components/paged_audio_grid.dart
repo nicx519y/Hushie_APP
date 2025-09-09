@@ -160,11 +160,11 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
         }
       }
 
-      if(newItems.isEmpty){
+      if (newItems.isEmpty) {
         _pagingController.appendLastPage([]);
         return;
       }
-      
+
       final isLastPage = newItems.length < _pageSize;
 
       if (isLastPage) {
@@ -238,6 +238,7 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
             mainAxisSpacing: 4,
             crossAxisSpacing: 8,
             padding: const EdgeInsets.only(left: 13, right: 13, bottom: 60),
+            showNewPageProgressIndicatorAsGridChild: false,
             builderDelegate: PagedChildBuilderDelegate<AudioItem>(
               itemBuilder: (context, item, index) {
                 final itemMap = item.toMap();
@@ -259,9 +260,15 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
               ),
               firstPageProgressIndicatorBuilder: (context) =>
                   const Center(child: CircularProgressIndicator()),
-              newPageProgressIndicatorBuilder: (context) => const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Center(child: CircularProgressIndicator()),
+              newPageProgressIndicatorBuilder: (context) => const Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(30.0),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  ),
+                ),
               ),
               noItemsFoundIndicatorBuilder: (context) => const Center(
                 child: Column(
@@ -298,7 +305,7 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: onRetry, child: const Text('重试')),
+            ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),

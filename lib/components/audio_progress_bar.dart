@@ -150,15 +150,12 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             child: Slider( 
               value: progress.clamp(0.0, 1.0),
               onChanged: widget.disabled ? null : (value) async {
+
+                final isOutPreview = value < previewStart || value > previewEnd;
+
                 // 如果需要限制在预览区域内
-                if (_showPreview()) {
+                if (_showPreview() && isOutPreview) {
                   // 检查是否超出预览区域边界
-                  if (value < previewStart || value > previewEnd) {
-                    // 触发边界回调
-                    widget.onOutPreview();
-                    return; // 不更新位置
-                  }
-                  // 限制在预览区域内
                   value = value.clamp(previewStart, previewEnd);
                 }
                 
@@ -171,6 +168,11 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                       .round(),
                 );
                 await widget.onSeek(newPosition);
+
+                // 超出边界执行回调
+                if(isOutPreview) {
+                  widget.onOutPreview();
+                }
               },
               onChangeEnd: (value) {
                 setState(() {
@@ -308,7 +310,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
       );
 
       final bufferedPaint = Paint()
-        ..color = bufferColor.withOpacity(bufferOpacity)
+        ..color = bufferColor.withAlpha((bufferOpacity * 255).toInt())
         ..style = PaintingStyle.fill;
 
       context.canvas.drawRRect(
@@ -334,7 +336,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
       );
 
       final previewPaint = Paint()
-        ..color = previewColor.withOpacity(previewOpacity)
+        ..color = previewColor.withAlpha((previewOpacity * 255).toInt())
         ..style = PaintingStyle.fill;
 
       // 绘制预览条
@@ -348,7 +350,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
 
       // 绘制预览条两端的圆点（半径2px）
       final circlePaint = Paint()
-        ..color = previewColor.withOpacity(previewOpacity)
+        ..color = previewColor.withAlpha((previewOpacity * 255).toInt())
         ..style = PaintingStyle.fill;
 
       final circleRadius = 2.0;

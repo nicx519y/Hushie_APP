@@ -152,7 +152,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
       onTap: () => widget.onTap(index),
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
-      child: Container(
+      child: SizedBox(
         width: double.infinity,
         height: double.infinity,
         child: Column(

@@ -149,7 +149,7 @@ class _CustomTabBarState extends State<CustomTabBar> {
                   begin: Alignment.centerLeft,
 
                   end: Alignment.centerRight,
-                  colors: [bgColor.withOpacity(1), bgColor.withOpacity(0)],
+                  colors: [bgColor.withAlpha(255), bgColor.withAlpha(0)],
                 ),
               ),
             ),
@@ -167,7 +167,7 @@ class _CustomTabBarState extends State<CustomTabBar> {
                 gradient: LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [bgColor, bgColor.withOpacity(0)],
+                  colors: [bgColor, bgColor.withAlpha(0)],
                 ),
               ),
             ),
