@@ -221,6 +221,28 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  // 清空搜索框
+  void _cleanQuery() {
+    _searchController.clear();
+    _debounceTimer?.cancel();
+    _currentSearchQuery = null;
+    _lastRenderedQuery = null;
+    setState(() {
+      _hasSearched = false;
+      _searchResults = [];
+      _isSearching = false;
+      _isLoadingMore = false;
+      _hasMoreData = true;
+      _lastCid = null;
+    });
+  }
+
+  // 关闭搜索页
+  void _closeSearch() {
+    _cleanQuery();
+    Navigator.pop(context);
+  }
+
   // 点击搜索历史项
   void _onHistoryItemTap(String keyword) {
     _searchController.text = keyword;
@@ -274,50 +296,29 @@ class _SearchPageState extends State<SearchPage> {
                   Expanded(
                     child: // 搜索栏
                     SearchBox(
-                      hintText: '',
+                      hintText: 'Search Creation',
                       controller: _searchController,
                       focusNode: _searchFocusNode,
                       canFocus: true,
-                      onSearchChanged: (value) {
-                        // 可以在这里实现实时搜索建议
-                      },
-                      onSearchSubmitted: () {
-                        // 获取搜索框的当前文本
-                        final currentText = _searchController.text;
-                        if (currentText.isNotEmpty) {
-                          _performSearch(currentText);
-                        }
-                      },
+                      showClearButton: true,
+                      onClear: _cleanQuery,
                     ),
                   ),
                   const SizedBox(width: 10),
                   // 清除搜索按钮
-                  IconButton(
-                    onPressed: () {
-                      _searchController.clear();
-                      _debounceTimer?.cancel();
-                      _currentSearchQuery = null;
-                      _lastRenderedQuery = null;
-                      setState(() {
-                        _hasSearched = false;
-                        _searchResults = [];
-                        _isSearching = false;
-                        _isLoadingMore = false;
-                        _hasMoreData = true;
-                        _lastCid = null;
-                      });
-                      // 重新获得焦点
-                      _searchFocusNode.requestFocus();
-                    },
-                    icon: const Icon(Icons.close, color: Colors.grey),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFE9EAEB),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(21),
+                  InkWell(
+                    onTap: _closeSearch,
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w300,
+                        color: Color(0xFF2A4EFF),
+                        height: 1.3,
                       ),
-                      minimumSize: const Size(42, 42),
-                    ),
+                    )
                   ),
+                  const SizedBox(width: 4),
                 ],
               ),
             ),

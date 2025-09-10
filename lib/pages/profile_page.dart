@@ -411,6 +411,11 @@ class _ProfilePageState extends State<ProfilePage>
               PremiumAccessCard(
                 onSubscribe: () {
                   // 订阅逻辑
+                  if (!isLoggedIn) {
+                    NavigationUtils.navigateToLogin(context);
+                  } else {
+                    // .. todo
+                  }
                 },
               ),
 
@@ -552,7 +557,7 @@ class _ProfilePageState extends State<ProfilePage>
                       side: const BorderSide(color: Color(0xFF333333)),
                     ),
                     onPressed: () {
-                      LoginPage.show(context);
+                      NavigationUtils.navigateToLogin(context);
                     },
                     child: const Text(
                       'Log in / Sign up',

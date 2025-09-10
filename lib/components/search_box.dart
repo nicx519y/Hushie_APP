@@ -10,6 +10,8 @@ class SearchBox extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onFocusGained;
   final bool canFocus;
+  final bool showClearButton;
+  final VoidCallback? onClear;
 
   const SearchBox({
     super.key,
@@ -21,6 +23,8 @@ class SearchBox extends StatelessWidget {
     this.onTap,
     this.onFocusGained,
     this.canFocus = false,
+    this.showClearButton = false,
+    this.onClear,
   });
 
   @override
@@ -70,7 +74,23 @@ class SearchBox extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            if (showClearButton)
+              InkWell(
+                onTap: onClear,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Color(0x55000000),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.clear,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            const SizedBox(width: 10),
           ],
         ),
       ),

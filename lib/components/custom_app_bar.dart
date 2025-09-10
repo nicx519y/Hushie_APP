@@ -26,11 +26,11 @@ class CustomAppBar extends StatelessWidget {
           Row(
             children: [
               SizedBox(
-                width: 85,
+                width: 100,
                 child: SvgPicture.asset(
                   'assets/icons/logo.svg',
-                  width: 93,
-                  height: 25,
+                  width: 100,
+                  // height: 25,
                 ),
               ),
               // 搜索框

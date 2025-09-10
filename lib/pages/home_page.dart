@@ -257,7 +257,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       body: Column(
         children: [
           // 自定义顶部栏
-          CustomAppBar(onSearchTap: _onSearchTap),
+          CustomAppBar(onSearchTap: _onSearchTap, hintText: 'Search Creation',),
           // IconButton(
           //   onPressed: () {
           //     _initTabs();

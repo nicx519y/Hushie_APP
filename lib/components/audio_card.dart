@@ -78,7 +78,7 @@ class AudioCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withAlpha(153),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
@@ -113,7 +113,7 @@ class AudioCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withAlpha(153),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
@@ -186,7 +186,7 @@ class AudioCard extends StatelessWidget {
                       // 头像
                       Icon(
                         CustomIcons.user,
-                        color: Color(0xff333333),
+                        color: Color(0xff666666),
                         size: 12,
                       ),
                       const SizedBox(width: 8),
@@ -197,7 +197,7 @@ class AudioCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 12,
                             height: 1.4,
-                            color: Color(0xff333333),
+                            color: Color(0xff666666),
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 1,

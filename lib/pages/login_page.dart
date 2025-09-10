@@ -70,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
                     padding: EdgeInsets.zero,
                     onPressed: () => Navigator.of(context).pop(),
                     style: IconButton.styleFrom(
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       backgroundColor: const Color(0x66000000),
                       minimumSize: const Size(40, 40),
                       shape: RoundedRectangleBorder(
