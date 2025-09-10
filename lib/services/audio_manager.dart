@@ -158,8 +158,8 @@ class AudioManager {
   }
 
   Duration _transformPosition(Duration position) {
-    // 如果不能播放全部时长，直接返回原位置
-    if (!_canPlayAllDurationSubject.value) {
+    // 如果能播放全部时长，直接返回原位置
+    if (_canPlayAllDurationSubject.value) {
       return position;
     }
     
@@ -273,15 +273,18 @@ class AudioManager {
 
     if (currentAudio != null && currentAudio.id == audio.id) {
       debugPrint('相同音频正在播放，跳过: ${audio.title} (ID: ${audio.id})');
+      if(!isPlaying && autoPlay == true) {
+        play();
+      }
       return;
     }
 
     // 2. 从历史列表获取新音频的播放进度，作为起始播放进度
     final position = AudioHistoryManager.instance.getPlaybackPosition(audio.id);
-    
+    debugPrint('playAudio: 从历史记录获取的播放位置: $position');
     // 3. 通过 _transformPosition 过滤 initialPosition 得到正确的 initialPosition
     final transformedPosition = _transformPosition(position);
-
+    debugPrint('playAudio: 转换后的播放位置: $transformedPosition');
     try {
       // await _ensureInitialized();
       if (_audioService != null) {
