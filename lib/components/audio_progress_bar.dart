@@ -127,10 +127,10 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               trackHeight: 2.0,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.0),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
-              activeTrackColor: Color(0xFF999999).withAlpha(200),
-              inactiveTrackColor: Color(0xFF999999).withAlpha(200),
+              activeTrackColor: Color(0xFF999999)/*.withAlpha(200)*/,
+              inactiveTrackColor: Color(0xFF999999)/*.withAlpha(200)*/,
               thumbColor: Colors.white,
-              overlayColor: Colors.white.withAlpha(64),
+              overlayColor: Colors.white/*.withAlpha(64)*/,
               // 自定义轨道形状，传递预览区域参数
               trackShape: CustomTrackShape(
                 previewStart: previewStart,
@@ -310,7 +310,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
       );
 
       final bufferedPaint = Paint()
-        ..color = bufferColor.withAlpha((bufferOpacity * 255).toInt())
+        ..color = bufferColor/*.withAlpha((bufferOpacity * 255).toInt())*/
         ..style = PaintingStyle.fill;
 
       context.canvas.drawRRect(
@@ -336,7 +336,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
       );
 
       final previewPaint = Paint()
-        ..color = previewColor.withAlpha((previewOpacity * 255).toInt())
+        ..color = previewColor/*.withAlpha((previewOpacity * 255).toInt())*/
         ..style = PaintingStyle.fill;
 
       // 绘制预览条
@@ -350,7 +350,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
 
       // 绘制预览条两端的圆点（半径2px）
       final circlePaint = Paint()
-        ..color = previewColor.withAlpha((previewOpacity * 255).toInt())
+        ..color = previewColor/*.withAlpha((previewOpacity * 255).toInt())*/
         ..style = PaintingStyle.fill;
 
       final circleRadius = 2.0;

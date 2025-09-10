@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:hushie_app/models/image_model.dart';
 import 'package:hushie_app/services/auth_service.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
@@ -329,20 +331,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         children: [
           // 背景图片层 - 使用RepaintBoundary避免频繁重绘
           RepaintBoundary(child: _buildBackgroundImage(bgImageUrl)),
-          // 渐变遮罩层
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withAlpha(77),
-                  Colors.black.withAlpha(180),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -350,13 +338,38 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建背景图片，包含备用图片逻辑和缓存机制
   Widget _buildBackgroundImage(String? imageUrl) {
+    // 如果 imageUrl 为空，直接返回备用图片
+    // if (imageUrl == null || imageUrl.isEmpty) {
+    //   return Image.asset(
+    //     'assets/images/backup.png',
+    //     fit: BoxFit.cover,
+    //     width: double.infinity,
+    //     height: double.infinity,
+    //   );
+    // }
+
+    // return CachedNetworkImage(
+    //   imageUrl: imageUrl,
+    //   fit: BoxFit.cover,
+    //   width: double.infinity,
+    //   height: double.infinity,
+    //   errorWidget: (context, url, error) => Image.asset(
+    //     'assets/images/backup.png',
+    //     fit: BoxFit.cover,
+    //     width: double.infinity,
+    //     height: double.infinity,
+    //   ),
+    //   // fadeInDuration: const Duration(milliseconds: 300),
+    // );
+
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return FallbackImage(
-      imageUrl: imageUrl,
-      fallbackImage: 'assets/images/backup.png',
       fit: BoxFit.cover,
-      width: double.infinity,
+      width: screenWidth,
       height: double.infinity,
-      fadeInDuration: const Duration(milliseconds: 300),
+      imageResource: _currentAudio?.bgImage,
+      fallbackImage: 'assets/images/backup.png',
     );
   }
 
@@ -384,42 +397,44 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       left: 0,
       right: 0,
       bottom: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            stops: [0, 0.2, 1],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black.withAlpha(100),
-              Colors.black.withAlpha(180),
-            ],
-          ),
-        ),
-        padding: EdgeInsets.only(
-          top: 40,
-          left: 28,
-          right: 28,
-          bottom: MediaQuery.of(context).padding.bottom + 20,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildAudioInfo(),
-            const SizedBox(height: 30),
-
-            Row(
-              children: [
-                Expanded(child: _buildProgressBar()),
-                const SizedBox(width: 10),
-                _buildUnlockFullAccessTip(),
+      child: RepaintBoundary(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              stops: [0, 0.2, 1],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.black.withAlpha(100),
+                Colors.black.withAlpha(180),
               ],
             ),
-            const SizedBox(height: 20),
-            _buildPlaybackControls(),
-            const SizedBox(height: 40),
-          ],
+          ),
+          padding: EdgeInsets.only(
+            top: 40,
+            left: 28,
+            right: 28,
+            bottom: MediaQuery.of(context).padding.bottom + 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildAudioInfo(),
+              const SizedBox(height: 30),
+
+              Row(
+                children: [
+                  Expanded(child: _buildProgressBar()),
+                  const SizedBox(width: 10),
+                  _buildUnlockFullAccessTip(),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildPlaybackControls(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
@@ -511,6 +526,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     return InkWell(
       onTap: _onReadMoreTap,
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             desc,
@@ -602,9 +619,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     //   return const SizedBox(height: 40); // 保持布局高度
     // }
 
-    return AnimatedOpacity(
-      opacity: 1.0,
-      duration: const Duration(milliseconds: 300),
+    return RepaintBoundary(
       child: AudioProgressBar(
         disabled: _progressBarDisabled,
         currentPosition: _currentPosition,

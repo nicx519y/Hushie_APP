@@ -134,7 +134,7 @@ class _CustomTabBarState extends State<CustomTabBar> {
     return Stack(
       children: [
         // 主要的TabBar
-        _buildTabBar(),
+        RepaintBoundary( child: _buildTabBar() ),
 
         // 左侧渐变遮罩
         if (_showLeftGradient)

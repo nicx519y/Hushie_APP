@@ -257,8 +257,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       body: Column(
         children: [
           // 自定义顶部栏
-          CustomAppBar(onSearchTap: _onSearchTap, hintText: 'Search Creation',),
-          
+          CustomAppBar(onSearchTap: _onSearchTap, hintText: 'Search Creation'),
+
           if (_tabItems.isNotEmpty)
             CustomTabBar(
               tabItems: _tabItems,
@@ -279,13 +279,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       final tabItem = _tabItems[index];
                       final tag = tabItem.id != 'for_you' ? tabItem.id : null;
 
-                      return PagedAudioGrid(
-                        key: ValueKey('tab_$index'),
-                        tag: tag,
-                        initDataFetcher: _initAudioData,
-                        refreshDataFetcher: _refreshAudioData,
-                        loadMoreDataFetcher: _loadMoreAudioData,
-                        onItemTap: _onAudioTap,
+                      return RepaintBoundary(
+                        child: PagedAudioGrid(
+                          key: ValueKey('tab_$index'),
+                          tag: tag,
+                          initDataFetcher: _initAudioData,
+                          refreshDataFetcher: _refreshAudioData,
+                          loadMoreDataFetcher: _loadMoreAudioData,
+                          onItemTap: _onAudioTap,
+                        ),
                       );
                     },
                   ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'fallback_image.dart';
+import 'package:hushie_app/components/fallback_image.dart';
+// import 'fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../utils/custom_icons.dart';
 import '../models/image_model.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AudioCard extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -55,11 +57,13 @@ class AudioCard extends StatelessWidget {
                 // 图片
                 AspectRatio(
                   aspectRatio: 0.9, // 0.9 的宽高比，确保合适的显示比例
-                  child: FallbackImage(
-                    imageUrl: _getImageUrl(item['cover'], imageWidth),
-                    borderRadius: 8,
-                    fit: BoxFit.cover,
-                  ),
+                    child: FallbackImage(
+                      fit: BoxFit.cover,
+                      width: imageWidth,
+                      imageResource: item['cover'],
+                      fallbackImage: 'assets/images/backup.png',
+                      borderRadius: 8.0,
+                    ),
                 ),
                 // 播放按钮和统计信息覆盖层
                 Positioned(

@@ -110,7 +110,10 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
                       : 'assets/icons/home_default.svg',
                   width: 24,
                   height: 24,
-                  color: widget.currentIndex == 0 ? activeColor : inactiveColor,
+                  colorFilter: ColorFilter.mode(
+                    widget.currentIndex == 0 ? activeColor : inactiveColor,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 label: 'Home',
                 isSelected: widget.currentIndex == 0,
@@ -118,7 +121,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             ),
 
             // 中间播放按钮
-            _buildPlayButton(),
+            RepaintBoundary( child: _buildPlayButton() ),
 
             // Profile Tab
             Expanded(
@@ -130,7 +133,10 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
                       : 'assets/icons/me_default.svg',
                   width: 24,
                   height: 24,
-                  color: widget.currentIndex == 1 ? activeColor : inactiveColor,
+                  colorFilter: ColorFilter.mode(
+                    widget.currentIndex == 1 ? activeColor : inactiveColor,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 label: 'Me',
                 isSelected: widget.currentIndex == 1,

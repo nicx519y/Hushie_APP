@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_stats.dart';
-import 'fallback_image.dart';
 import '../utils/custom_icons.dart';
+import '../components/fallback_image.dart';
+import '../models/image_model.dart';
 
 class AudioList extends StatefulWidget {
   final List<AudioItem> audios;
@@ -171,74 +172,52 @@ class _AudioListState extends State<AudioList> {
   Widget _buildAudioItem(AudioItem audio) {
     return InkWell(
       onTap: widget.onItemTap != null ? () => widget.onItemTap!(audio) : null,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 视频封面
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                width: 70,
-                height: 78,
-                color: const Color(0xFFF5F5F5),
-                child: Builder(
-                  builder: (context) {
-                    String? imageUrl;
-                    try {
-                      imageUrl = audio.cover.getBestResolution(70).url;
-                    } catch (e) {
-                      debugPrint('获取封面图片失败: $e');
-                      imageUrl = null;
-                    }
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 视频封面
+          FallbackImage(
+            fit: BoxFit.cover,
+            width: 70,
+            height: 78,
+            imageResource: audio.cover,
+            fallbackImage: 'assets/images/backup.png',
+            borderRadius: 8,
+          ),
+          const SizedBox(width: 12),
+          // 视频信息
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标题
+                _buildItemTitle(audio),
 
-                    return FallbackImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      fallbackImage: 'assets/images/backup.png',
-                      width: double.infinity,
-                      height: double.infinity,
-                    );
-                  },
+                const SizedBox(height: 8),
+                // 描述
+                Text(
+                  audio.tags?.join(', ') ?? '',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF666666),
+                    height: 1.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
+                const SizedBox(height: 13),
+                // 视频统计信息
+                AudioStats(
+                  playTimes: audio.playTimes,
+                  likesCount: audio.likesCount,
+                  author: audio.author,
+                  iconSize: 12,
+                  fontSize: 10,
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            // 视频信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 标题
-                  _buildItemTitle(audio),
-
-                  const SizedBox(height: 8),
-                  // 描述
-                  Text(
-                    audio.tags?.join(', ') ?? '',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF666666),
-                      height: 1.2,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 13),
-                  // 视频统计信息
-                  AudioStats(
-                    playTimes: audio.playTimes,
-                    likesCount: audio.likesCount,
-                    author: audio.author,
-                    iconSize: 12,
-                    fontSize: 10,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
