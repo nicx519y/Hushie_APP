@@ -81,6 +81,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 播放列表相关状态管理
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
 
+  bool _isDescExpended = false; // 描述是否展开
+
   @override
   void initState() {
     super.initState();
@@ -99,13 +101,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           // 初始化本地状态
           _localIsLiked = _isLiked;
           _localLikesCount = _currentAudio?.likesCount ?? 0;
-          
           _totalDuration = audio?.duration ?? Duration.zero;
-          
-          // 清理背景图缓存，确保新音频的背景图能正确加载
-          _cachedBgImageUrl = null;
-          _cachedBackgroundImage = null;
-
         });
       }
     });
@@ -150,13 +146,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       if (mounted) {
         setState(() {
           _isPlaying = playerState.playing;
-          if(playerState.processingState == ProcessingState.loading || playerState.processingState == ProcessingState.buffering) {
+          if (playerState.processingState == ProcessingState.loading ||
+              playerState.processingState == ProcessingState.buffering) {
             _isAudioLoading = true;
           } else {
             _isAudioLoading = false;
           }
 
-          if(playerState.processingState == ProcessingState.loading) {
+          if (playerState.processingState == ProcessingState.loading) {
             _progressBarDisabled = true;
           } else {
             _progressBarDisabled = false;
@@ -177,7 +174,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   void _togglePlay() {
     // 如果正在加载metadata，不允许播放
-    debugPrint('点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id');
+    debugPrint(
+      '点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id',
+    );
     if (_isAudioLoading) return;
 
     if (!_isPlaying) {
@@ -202,8 +201,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   void _onLikeButtonPressed() async {
-
-    if(_isLikeRequesting == true) {
+    if (_isLikeRequesting == true) {
       return;
     }
 
@@ -222,8 +220,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     // 先立即更新本地状态
     final newIsLiked = !_localIsLiked;
-    final newLikesCount = newIsLiked ? _localLikesCount + 1 : _localLikesCount - 1;
-    
+    final newLikesCount = newIsLiked
+        ? _localLikesCount + 1
+        : _localLikesCount - 1;
+
     setState(() {
       _localIsLiked = newIsLiked;
       _localLikesCount = newLikesCount;
@@ -236,7 +236,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         audioId: _currentAudio!.id,
         isLiked: newIsLiked,
       );
-      
+
       // 请求成功，不需要再更改本地状态，保持当前状态
     } catch (e) {
       // 网络异常，回滚本地状态
@@ -288,6 +288,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 解锁全功能提示点击事件
   void _onUnlockFullAccessTap() async {}
 
+  void _onReadMoreTap() {
+    setState(() {
+      _isDescExpended = !_isDescExpended;
+    });
+  }
+
   // void _toggleControls() {
   //   setState(() {
   //     _showControls = !_showControls;
@@ -331,8 +337,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withAlpha(77),
+                  Colors.black.withAlpha(180),
                 ],
               ),
             ),
@@ -342,21 +348,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  // 缓存当前背景图片URL
-  String? _cachedBgImageUrl;
-  // 缓存的背景图片组件
-  Widget? _cachedBackgroundImage;
-
   // 构建背景图片，包含备用图片逻辑和缓存机制
   Widget _buildBackgroundImage(String? imageUrl) {
-    // 如果图片URL没有变化，直接返回缓存的组件
-    if (_cachedBgImageUrl == imageUrl && _cachedBackgroundImage != null) {
-      return _cachedBackgroundImage!;
-    }
-
-    // 更新缓存
-    _cachedBgImageUrl = imageUrl;
-    _cachedBackgroundImage = FallbackImage(
+    return FallbackImage(
       imageUrl: imageUrl,
       fallbackImage: 'assets/images/backup.png',
       fit: BoxFit.cover,
@@ -364,8 +358,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       height: double.infinity,
       fadeInDuration: const Duration(milliseconds: 300),
     );
-
-    return _cachedBackgroundImage!;
   }
 
   // 构建状态栏
@@ -393,7 +385,20 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       right: 0,
       bottom: 0,
       child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            stops: [0, 0.2, 1],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              Colors.black.withAlpha(100),
+              Colors.black.withAlpha(180),
+            ],
+          ),
+        ),
         padding: EdgeInsets.only(
+          top: 40,
           left: 28,
           right: 28,
           bottom: MediaQuery.of(context).padding.bottom + 20,
@@ -406,9 +411,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
             Row(
               children: [
-              Expanded(child: _buildProgressBar()),
-              const SizedBox(width: 10),
-              _buildUnlockFullAccessTip()]),
+                Expanded(child: _buildProgressBar()),
+                const SizedBox(width: 10),
+                _buildUnlockFullAccessTip(),
+              ],
+            ),
             const SizedBox(height: 20),
             _buildPlaybackControls(),
             const SizedBox(height: 40),
@@ -423,7 +430,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     return IconButton(
       alignment: Alignment.center,
       style: IconButton.styleFrom(
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         backgroundColor: const Color(0x66000000),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         minimumSize: const Size(40, 40),
@@ -501,17 +508,51 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Widget _buildAudioDescription() {
     final desc = _currentAudio?.desc ?? 'No description available';
 
-    return Text(
-      desc,
-      style: const TextStyle(
-        fontSize: 12,
-        height: 1.4,
-        color: Colors.white,
-        fontWeight: FontWeight.w300,
-      ),
-      textAlign: TextAlign.left,
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
+    return Column(
+      children: [
+        Text(
+          desc,
+          style: const TextStyle(
+            fontSize: 12,
+            height: 1.4,
+            color: Colors.white,
+            fontWeight: FontWeight.w300,
+          ),
+          textAlign: TextAlign.left,
+          maxLines: _isDescExpended ? 20 : 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: _onReadMoreTap,
+          child: Row(
+            children: [
+              SizedBox(
+                width: 32,
+                child: Text(
+                  _isDescExpended ? 'Fold' : 'More',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 6),
+              Transform.scale(
+                scaleY: _isDescExpended ? -1 : 1,
+                alignment: Alignment.center, // 设置旋转中心为组件中心
+                child: Icon(
+                  CustomIcons.arrow_down,
+                  color: Colors.white,
+                  size: 9,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -522,7 +563,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         IconButton(
           style: IconButton.styleFrom(
             padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             backgroundColor: _localIsLiked
                 ? Colors.white
                 : const Color(0x66000000),
@@ -533,13 +574,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           ),
           onPressed: _onLikeButtonPressed, // 请求中禁用按钮
           icon: Transform.translate(
-                  offset: const Offset(0, -1),
-                  child: Icon(
-                    CustomIcons.likes,
-                    color: _localIsLiked ? Color(0xFFFF254E) : Colors.white,
-                    size: 14,
-                  ),
-                ),
+            offset: const Offset(0, -1),
+            child: Icon(
+              CustomIcons.likes,
+              color: _localIsLiked ? Color(0xFFFF254E) : Colors.white,
+              size: 14,
+            ),
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -589,7 +630,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             children: [_buildPlayPauseButton()],
           ),
         ),
-        const SizedBox(width: 20), // 占位按钮保持对称
+        const SizedBox(width: 48), // 占位按钮保持对称
       ],
     );
   }
@@ -600,7 +641,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       style: IconButton.styleFrom(
         minimumSize: Size.zero,
         padding: EdgeInsets.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       onPressed: _onPlaylistButtonTap,
       icon: Icon(CustomIcons.menu, color: Colors.white, size: 20),
