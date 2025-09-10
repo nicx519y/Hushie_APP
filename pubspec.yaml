@@ -151,9 +151,8 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-flutter_icons:
-  android: "ic_launcher"  # 生成的图标名称（可选）
-  image_path: "assets/icons/applogo.png"  # 你的原始图标路径（建议放在 assets 目录）
-  adaptive_icon:
-    foreground_image_path: "assets/icons/applogo_foreground.png"  # 前景图路径
-    background_color: "#FFFFFF"  # 背景色
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/icons/applogo.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icons/applogo_foreground.png"

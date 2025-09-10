@@ -191,22 +191,6 @@ class SecureStorageService {
     }
   }
 
-  /// 清除所有认证相关数据
-  static Future<bool> clearAllAuthData() async {
-    try {
-      await Future.wait([
-        deleteAccessToken(),
-        deleteRefreshToken(),
-        deleteTokenExpiresAt(),
-        deleteUserInfo(),
-      ]);
-      return true;
-    } catch (e) {
-      debugPrint('清除认证数据失败: $e');
-      return false;
-    }
-  }
-
   /// 清除所有数据
   static Future<bool> clearAll() async {
     try {
@@ -235,6 +219,28 @@ class SecureStorageService {
     } catch (e) {
       debugPrint('获取所有键失败: $e');
       return [];
+    }
+  }
+
+  /// 批量读取认证相关数据
+  /// 返回包含accessToken、refreshToken、expiresAt的Map
+  static Future<Map<String, String?>> getAllAuthData() async {
+    try {
+      final allData = await _storage.readAll();
+      return {
+        'accessToken': allData[_accessTokenKey],
+        'refreshToken': allData[_refreshTokenKey],
+        'expiresAt': allData[_tokenExpiresAtKey],
+        'userInfo': allData[_userInfoKey],
+      };
+    } catch (e) {
+      debugPrint('批量获取认证数据失败: $e');
+      return {
+        'accessToken': null,
+        'refreshToken': null,
+        'expiresAt': null,
+        'userInfo': null,
+      };
     }
   }
 }

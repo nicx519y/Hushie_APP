@@ -14,10 +14,17 @@ class HistoryList extends StatefulWidget {
 }
 
 class _HistoryListState extends State<HistoryList> {
-  void _closeWithAnimation() {
+  void _closeDialog() {
+    Navigator.of(context, rootNavigator: true).pop();
+  }
+
+  @override
+  void dispose() {
+    // 在组件销毁时调用 onClose 回调
     if (widget.onClose != null) {
       widget.onClose!();
     }
+    super.dispose();
   }
 
   Future<void> _refreshHistory() async {
@@ -66,7 +73,7 @@ class _HistoryListState extends State<HistoryList> {
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: _closeWithAnimation,
+                              onPressed: _closeDialog,
                               icon: const Icon(
                                 Icons.close,
                                 size: 28,
@@ -94,7 +101,7 @@ class _HistoryListState extends State<HistoryList> {
                         onItemTap: (audio) {
                           if (widget.onItemTap != null) {
                             widget.onItemTap!(audio);
-                            _closeWithAnimation();
+                            _closeDialog();
                           }
                         },
                         hasMoreData: false,
@@ -141,10 +148,7 @@ Future<void> showHistoryListWithAnimation(
       barrierColor: Colors.black.withAlpha(128), // 设置半透明黑色背景
       pageBuilder: (context, animation, secondaryAnimation) => HistoryList(
         onItemTap: onItemTap,
-        onClose: () {
-          Navigator.of(context, rootNavigator: true).pop();
-          onClose?.call();
-        },
+        onClose: onClose,
       ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         // 从下往上滑动的动画

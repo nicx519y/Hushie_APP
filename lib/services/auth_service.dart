@@ -91,7 +91,8 @@ class AuthService {
       return _currentUser;
     }
 
-    await _loadUserFromStorage();
+    // 用户信息已在_loadTokenFromStorage中一起加载
+    await _loadTokenFromStorage();
     return _currentUser;
   }
 
@@ -144,8 +145,9 @@ class AuthService {
       await GoogleAuthService.logout();
 
       // 清除本地数据
-      await _clearTokenFromSecureStorage();
-      await _clearUserFromSecureStorage();
+      // await _clearTokenFromSecureStorage();
+      // await _clearUserFromSecureStorage();
+      await SecureStorageService.clearAll();
 
       _currentToken = null;
       _currentUser = null;
@@ -153,10 +155,12 @@ class AuthService {
       // 通知登出状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
     } catch (e) {
-      debugPrint('登出失败: $e');
+      debugPrint('登出失败，但是强行登出: $e');
       // 即使服务器登出失败，也要清除本地数据
-      await _clearTokenFromSecureStorage();
-      await _clearUserFromSecureStorage();
+      // await _clearTokenFromSecureStorage();
+      // await _clearUserFromSecureStorage();
+      await SecureStorageService.clearAll();
+
       _currentToken = null;
       _currentUser = null;
 
@@ -172,8 +176,9 @@ class AuthService {
       await GoogleAuthService.deleteAccount();
 
       // 清除本地数据
-      await _clearTokenFromSecureStorage();
-      await _clearUserFromSecureStorage();
+      // await _clearTokenFromSecureStorage();
+      // await _clearUserFromSecureStorage();
+      await SecureStorageService.clearAll();
 
       _currentToken = null;
       _currentUser = null;
@@ -181,10 +186,12 @@ class AuthService {
       // 通知账户删除状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
     } catch (e) {
-      debugPrint('删除账户失败: $e');
+      debugPrint('删除账户失败，但是强行清除本地数据: $e');
       // 即使服务器删除失败，也要清除本地数据
-      await _clearTokenFromSecureStorage();
-      await _clearUserFromSecureStorage();
+      // await _clearTokenFromSecureStorage();
+      // await _clearUserFromSecureStorage();
+      await SecureStorageService.clearAll();
+
       _currentToken = null;
       _currentUser = null;
 
@@ -235,7 +242,6 @@ class AuthService {
     try {
       debugPrint('🔐 [AUTH] 初始化认证状态');
       await _loadTokenFromStorage();
-      await _loadUserFromStorage();
 
       final isValid =
           _currentToken != null &&
@@ -261,19 +267,6 @@ class AuthService {
 
   /// 内部方法：刷新Token（如果需要）
   static Future<bool> _refreshTokenIfNeeded({bool force = false}) async {
-    if (_currentToken == null) {
-      await _loadTokenFromStorage();
-    }
-
-    if (_currentToken == null || _currentToken!.refreshToken.isEmpty) {
-      return false;
-    }
-
-    // 检查是否需要刷新
-    if (!force && !_currentToken!.isExpiringSoon) {
-      return true; // 不需要刷新
-    }
-
     // 如果已经有刷新操作在进行，直接返回该Future
     if (_refreshFuture != null) {
       debugPrint('🔐 [AUTH] Token刷新已在进行中，等待完成...');
@@ -291,6 +284,21 @@ class AuthService {
         _refreshFuture = null; // 清除异常的Future
         return false;
       }
+    }
+
+    // 没有已经在刷新的操作
+    if (_currentToken == null) {
+      await _loadTokenFromStorage();
+    }
+
+    // 没有刷新Token
+    if (_currentToken == null || _currentToken!.refreshToken.isEmpty) {
+      return false;
+    }
+
+    // 检查是否需要刷新
+    if (!force && !_currentToken!.isExpiringSoon) {
+      return true; // 不需要刷新
     }
 
     // 创建新的刷新Future
@@ -372,14 +380,20 @@ class AuthService {
     }
   }
 
-  /// 从安全存储加载Token
+  /// 从安全存储加载Token和用户信息（批量读取优化）
   static Future<void> _loadTokenFromStorage() async {
     try {
-      final accessToken = await SecureStorageService.getAccessToken();
-      final refreshToken = await SecureStorageService.getRefreshToken();
-      final expiresAtMs = await SecureStorageService.getTokenExpiresAt();
+      // 一次性读取所有认证相关数据，减少IO操作
+      final authData = await SecureStorageService.getAllAuthData();
+      
+      final accessToken = authData['accessToken'];
+      final refreshToken = authData['refreshToken'];
+      final expiresAtStr = authData['expiresAt'];
+      final userInfoJson = authData['userInfo'];
 
+      // 处理Token数据
       if (accessToken != null && refreshToken != null) {
+        final expiresAtMs = expiresAtStr != null ? int.tryParse(expiresAtStr) : null;
         _currentToken = AccessTokenResponse(
           accessToken: accessToken,
           refreshToken: refreshToken,
@@ -390,8 +404,14 @@ class AuthService {
               : (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
         );
       }
+
+      // 处理用户信息数据
+      if (userInfoJson != null) {
+        final userMap = json.decode(userInfoJson) as Map<String, dynamic>;
+        _currentUser = GoogleAuthResponse.fromMap(userMap);
+      }
     } catch (e) {
-      debugPrint('加载Token失败: $e');
+      debugPrint('加载Token和用户信息失败: $e');
     }
   }
 
@@ -422,19 +442,7 @@ class AuthService {
     }
   }
 
-  /// 从安全存储加载用户信息
-  static Future<void> _loadUserFromStorage() async {
-    try {
-      final userJson = await SecureStorageService.getUserInfo();
 
-      if (userJson != null) {
-        final userMap = json.decode(userJson) as Map<String, dynamic>;
-        _currentUser = GoogleAuthResponse.fromMap(userMap);
-      }
-    } catch (e) {
-      debugPrint('加载用户信息失败: $e');
-    }
-  }
 
   /// 保存用户信息到安全存储
   static Future<void> _saveUserToSecureStorage(GoogleAuthResponse user) async {
@@ -458,7 +466,7 @@ class AuthService {
   /// 清除所有认证数据
   static Future<void> clearAllAuthData() async {
     try {
-      await SecureStorageService.clearAllAuthData();
+      await SecureStorageService.clearAll();
       _currentToken = null;
       _currentUser = null;
 
@@ -466,34 +474,6 @@ class AuthService {
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
     } catch (e) {
       debugPrint('清除所有认证数据失败: $e');
-    }
-  }
-
-  /// 测试并发刷新（仅用于调试）
-  static Future<void> testConcurrentRefresh() async {
-    debugPrint('🔐 [AUTH] 开始测试并发刷新...');
-    final startTime = DateTime.now();
-
-    // 模拟多个并发请求
-    final futures = List.generate(5, (index) async {
-      final requestStart = DateTime.now();
-      debugPrint('🔐 [AUTH] 请求 $index 开始 (${requestStart.millisecondsSinceEpoch})');
-      
-      final result = await _refreshTokenIfNeeded(force: true);
-      
-      final requestEnd = DateTime.now();
-      final duration = requestEnd.difference(requestStart).inMilliseconds;
-      debugPrint('🔐 [AUTH] 请求 $index 完成: $result (耗时: ${duration}ms)');
-      
-      return {'index': index, 'result': result, 'duration': duration};
-    });
-
-    final results = await Future.wait(futures);
-    final totalTime = DateTime.now().difference(startTime).inMilliseconds;
-    
-    debugPrint('🔐 [AUTH] 并发测试完成，总耗时: ${totalTime}ms');
-    for (final result in results) {
-      debugPrint('🔐 [AUTH] 请求${result['index']}: ${result['result']} (${result['duration']}ms)');
     }
   }
 

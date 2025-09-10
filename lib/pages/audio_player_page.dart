@@ -508,24 +508,24 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Widget _buildAudioDescription() {
     final desc = _currentAudio?.desc ?? 'No description available';
 
-    return Column(
-      children: [
-        Text(
-          desc,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: Colors.white,
-            fontWeight: FontWeight.w300,
+    return InkWell(
+      onTap: _onReadMoreTap,
+      child: Column(
+        children: [
+          Text(
+            desc,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: Colors.white,
+              fontWeight: FontWeight.w300,
+            ),
+            textAlign: TextAlign.left,
+            maxLines: _isDescExpended ? 20 : 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.left,
-          maxLines: _isDescExpended ? 20 : 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 6),
-        InkWell(
-          onTap: _onReadMoreTap,
-          child: Row(
+          const SizedBox(height: 6),
+          Row(
             children: [
               SizedBox(
                 width: 32,
@@ -551,8 +551,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
