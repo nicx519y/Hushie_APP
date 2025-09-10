@@ -51,6 +51,11 @@ class AudioItem {
     }
   }
 
+  static List<String> parseTagsValue(dynamic tags) {
+    if (tags == null || tags is! String ||  tags == '') return [];
+    return tags.split(',').map((tag) => tag.trim()).toList();
+  }
+
   AudioItem({
     required this.id, // id
     required this.cover, // 封面
@@ -88,7 +93,7 @@ class AudioItem {
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
-      tags: map['tags'] != null ? List<String>.from(map['tags']) : null,
+      tags: (parseTagsValue(map['tags_gender']) + parseTagsValue(map['tags'])).toSet().toList(),
       bgImage: (map['bg_image'] ?? map['bgImage']) != null
           ? ImageModel.fromJson(map['bg_image'] ?? map['bgImage'])
           : null,

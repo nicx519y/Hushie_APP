@@ -170,7 +170,7 @@ class AudioCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   // 描述
                   Text(
-                    item['desc'] ?? '',
+                    item['tags'].join(', ') ?? '',
                     style: const TextStyle(
                       color: Color(0xff666666),
                       fontSize: 12,

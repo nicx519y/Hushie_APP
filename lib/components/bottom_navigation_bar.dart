@@ -163,7 +163,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 10,
                 height: 1.5,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected ? activeColor : inactiveColor,

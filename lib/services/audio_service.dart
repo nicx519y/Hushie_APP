@@ -60,10 +60,13 @@ class AudioPlayerService extends BaseAudioHandler {
       _broadcastState();
     });
 
-    // 监听播放位置变化
-    _audioPlayer.positionStream.listen((position) {
+    // 监听播放位置变化 - 添加防抖动以减少更新频率
+    _audioPlayer.positionStream
+        .debounceTime(const Duration(milliseconds: 1000))
+        .listen((position) {
       _positionSubject.add(position);
-      _broadcastState();
+      // 移除 _broadcastState() 调用，减少广播频率
+      // 位置更新不需要频繁广播状态，其他状态变化时会自动广播
     });
 
     // 监听播放时长变化

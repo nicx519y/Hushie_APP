@@ -216,7 +216,7 @@ class _AudioListState extends State<AudioList> {
                   const SizedBox(height: 8),
                   // 描述
                   Text(
-                    audio.desc,
+                    audio.tags?.join(', ') ?? '',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF666666),

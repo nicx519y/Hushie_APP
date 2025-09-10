@@ -514,7 +514,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           desc,
           style: const TextStyle(
             fontSize: 12,
-            height: 1.4,
+            height: 1.5,
             color: Colors.white,
             fontWeight: FontWeight.w300,
           ),

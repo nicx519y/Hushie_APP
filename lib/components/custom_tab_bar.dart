@@ -147,7 +147,6 @@ class _CustomTabBarState extends State<CustomTabBar> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
-
                   end: Alignment.centerRight,
                   colors: [bgColor.withAlpha(255), bgColor.withAlpha(0)],
                 ),
@@ -196,6 +195,8 @@ class _CustomTabBarState extends State<CustomTabBar> {
           tabAlignment: TabAlignment.start,
           tabs: widget.tabItems.map((tab) => Tab(text: tab.label)).toList(),
           labelColor: widget.labelColor ?? const Color(0xFF333333),
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          labelPadding: EdgeInsets.symmetric(horizontal: 12),
           unselectedLabelColor:
               widget.unselectedLabelColor ?? const Color(0xFF787878),
           indicator: UnderlineTabIndicator(
