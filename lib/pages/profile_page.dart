@@ -419,7 +419,7 @@ class _ProfilePageState extends State<ProfilePage>
                 },
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 16),
               // 内容区域
               Expanded(
                 child: isLoggedIn
@@ -554,14 +554,14 @@ class _ProfilePageState extends State<ProfilePage>
                         horizontal: 20,
                         vertical: 12,
                       ),
-                      side: const BorderSide(color: Color(0xFF333333)),
+                      side: const BorderSide(color: Color(0xFF999999)),
                     ),
                     onPressed: () {
                       NavigationUtils.navigateToLogin(context);
                     },
                     child: const Text(
                       'Log in / Sign up',
-                      style: TextStyle(fontSize: 16, color: Color(0xFF333333)),
+                      style: TextStyle(fontSize: 16, color: Color(0xFF999999)),
                     ),
                   ),
 

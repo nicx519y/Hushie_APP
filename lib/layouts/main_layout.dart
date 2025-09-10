@@ -80,7 +80,7 @@ class _MainLayoutState extends State<MainLayout> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: -30, // 考虑底部安全区域
+              bottom: -MediaQuery.of(context).padding.bottom, // 动态适配底部安全区域
               child: Stack(
                 children: [
                   // 自定义阴影
@@ -88,7 +88,7 @@ class _MainLayoutState extends State<MainLayout> {
                     painter: BottomNavShadowPainter(),
                     size: Size(
                       MediaQuery.of(context).size.width,
-                      120 + MediaQuery.of(context).padding.bottom,
+                      108 + MediaQuery.of(context).padding.bottom,
                     ),
                   ),
                   // 导航栏内容
