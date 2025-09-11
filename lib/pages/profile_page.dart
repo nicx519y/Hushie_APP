@@ -11,11 +11,11 @@ import '../services/audio_history_manager.dart';
 import '../services/auth_service.dart';
 import '../utils/custom_icons.dart';
 import 'login_page.dart';
-import '../layouts/main_layout.dart'; // 导入以使用全局RouteObserver
 import '../router/navigation_utils.dart';
 import 'dart:async';
 import 'package:hushie_app/services/api/user_history_service.dart';
 import 'package:hushie_app/services/audio_manager.dart';
+import '../components/notification_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -365,7 +365,25 @@ class _ProfilePageState extends State<ProfilePage>
     showSubscriptionDialog(
       context,
       onSubscribe: () {},
+      onClose: () {
+        // Use post-frame callback to ensure the subscription dialog is fully closed
+        // before showing the notification dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNotificationDialog(
+            context,
+            title: 'Notification',
+            message: 'Hushie Pro is active in your subscription and does not support downgrades.',
+            buttonText: 'Got It',
+          );
+        });
+      },
     );
+    // showNotificationDialog(
+    //       context,
+    //       title: 'Notification',
+    //       message: 'Hushie Pro is active in your subscription and does not support downgrades.',
+    //       buttonText: 'Got It',
+    //     );
   }
 
   @override
