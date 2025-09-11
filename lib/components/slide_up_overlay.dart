@@ -93,22 +93,25 @@ class SlideUpContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Container(
-        width: double.infinity,
-        height: height,
-        constraints: maxHeight != null
-            ? BoxConstraints(maxHeight: maxHeight!)
-            : null,
-        padding: padding ?? const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.white,
-          borderRadius: borderRadius ??
-              const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: double.infinity,
+          height: height,
+          constraints: maxHeight != null
+              ? BoxConstraints(maxHeight: maxHeight!)
+              : null,
+          padding: padding ?? const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: backgroundColor ?? Colors.white,
+            borderRadius: borderRadius ??
+                const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+          ),
+          child: child,
         ),
-        child: child,
       ),
     );
   }

@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'slide_up_overlay.dart';
+import '../utils/custom_icons.dart';
+import '../models/subscribe_model.dart';
 
 class SubscriptionDialog extends StatefulWidget {
+  final SubscribeModel subscribeModel;
   final VoidCallback? onSubscribe;
   final VoidCallback? onClose;
 
-  const SubscriptionDialog({super.key, this.onSubscribe, this.onClose});
+  const SubscriptionDialog({
+    super.key,
+    required this.subscribeModel,
+    this.onSubscribe,
+    this.onClose,
+  });
 
   @override
   State<SubscriptionDialog> createState() => _SubscriptionDialogState();
@@ -16,9 +24,14 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
 
   void _closeDialog() {
     Navigator.of(context, rootNavigator: true).pop();
+  }
+
+  @override
+  void dispose() {
     if (widget.onClose != null) {
       widget.onClose!();
     }
+    super.dispose();
   }
 
   void _onSubscribe() {
@@ -31,14 +44,21 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
   @override
   Widget build(BuildContext context) {
     return SlideUpContainer(
-      height: MediaQuery.of(context).size.height * 0.7,
+      maxHeight: MediaQuery.of(context).size.height * 0.9,
+      padding: EdgeInsets.only(
+        top: 16,
+        bottom: MediaQuery.of(context).padding.bottom + 36,
+        left: 16,
+        right: 16,
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // 关闭按钮
           Align(
             alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8, left: 8),
+            child: Transform.translate(
+              offset: const Offset(-4, -4),
               child: IconButton(
                 onPressed: _closeDialog,
                 iconSize: 24,
@@ -53,216 +73,84 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // Hushie Pro 标题
+          // 标题
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
-                width: 132,
+                width: 120,
                 child: Image.asset('assets/images/logo.png'),
               ),
-              const SizedBox(width: 8),
-              Text(
-                'Pro',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+              const SizedBox(width: 10),
+              Transform.translate(
+                offset: const Offset(0, 3),
+                child: Text(
+                  widget.subscribeModel.name ?? 'Pro',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                  ),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 30),
 
           // 功能特性列表
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              children: [
-                _buildFeatureItem('Full Access to All Creations'),
-                const SizedBox(height: 16),
-                _buildFeatureItem('Unlock Search Results'),
-                const SizedBox(height: 16),
-                _buildFeatureItem('Long History Record'),
-              ],
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              width: 290,
+              child: Column(
+                children: widget.subscribeModel.featureList
+                    .asMap()
+                    .entries
+                    .expand((entry) => [
+                          _buildFeatureItem(entry.value),
+                          if (entry.key < widget.subscribeModel.featureList.length - 1)
+                            const SizedBox(height: 13),
+                        ])
+                    .toList(),
+              ),
             ),
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 36),
 
           // 价格选项
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                // First Month 选项
-                GestureDetector(
-                  onTap: () => setState(() => _selectedPlan = 0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _selectedPlan == 0
-                          ? const Color(0xFFFFF4E6)
-                          : Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _selectedPlan == 0
-                            ? const Color(0xFF4A90E2)
-                            : Colors.transparent,
-                        width: 2,
+          Column(
+            children: widget.subscribeModel.optionList
+                .asMap()
+                .entries
+                .expand((entry) => [
+                      _buildPriceOption(
+                        planIndex: entry.value.planIndex,
+                        title: entry.value.title,
+                        price: entry.value.price,
+                        originalPrice: entry.value.originalPrice,
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _selectedPlan == 0
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: _selectedPlan == 0
-                              ? const Color(0xFF8B4513)
-                              : Colors.grey,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'First Month',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_selectedPlan == 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF6B35),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              '84% OFF',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text(
-                              '\$8.9',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                            Text(
-                              '\$49.9',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Per year 选项
-                GestureDetector(
-                  onTap: () => setState(() => _selectedPlan = 1),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _selectedPlan == 1
-                          ? const Color(0xFFFFF4E6)
-                          : Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _selectedPlan == 1
-                            ? const Color(0xFF4A90E2)
-                            : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _selectedPlan == 1
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: _selectedPlan == 1
-                              ? const Color(0xFF8B4513)
-                              : Colors.grey,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Per year',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const Spacer(),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text(
-                              '\$99',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                            Text(
-                              '\$598',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                      if (entry.key < widget.subscribeModel.optionList.length - 1)
+                        const SizedBox(height: 12),
+                    ])
+                .toList(),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 13),
 
           // 订阅按钮
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 onPressed: _onSubscribe,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE6D35A),
+                  backgroundColor: const Color(0xFFFFDE69),
                   foregroundColor: Colors.black,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -271,40 +159,48 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                 ),
                 child: const Text(
                   'Subscribe',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF502D19),
+                  ),
                 ),
               ),
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 13),
 
           // 自动续费说明
           const Text(
             'Auto-renews monthly. Cancel anytime.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: 14, color: const Color(0xFF666666)),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // 底部链接
           const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Privacy Policy',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                  decoration: TextDecoration.underline,
+              InkWell(
+                // onTap: () { },
+                child: Text(
+                  'Privacy Policy',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: const Color(0xFF666666),
+                  ),
                 ),
               ),
-              Text(
-                'Terms of Use',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                  decoration: TextDecoration.underline,
+              InkWell(
+                // onTap: () { },
+                child: Text(
+                  'Terms of Use',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: const Color(0xFF666666),
+                  ),
                 ),
               ),
             ],
@@ -317,20 +213,174 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
   Widget _buildFeatureItem(String text) {
     return Row(
       children: [
-        const Icon(Icons.check, color: Color(0xFFFF6B35), size: 24),
-        const SizedBox(width: 16),
+        const Icon(CustomIcons.check, color: Color(0xFFFF6B35), size: 16),
+        const SizedBox(width: 12),
         Text(
           text,
           style: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
+            height: 1,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF333333),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildPriceOption({
+    required int planIndex,
+    required String title,
+    required String price,
+    required String? originalPrice,
+  }) {
+    final bool isSelected = _selectedPlan == planIndex;
+
+    String? getDiscountText() {
+      if (originalPrice != null) {
+        final double originalPriceValue = double.tryParse(originalPrice!) ?? 0;
+        final double priceValue = double.tryParse(price) ?? 0;
+        if (originalPriceValue > priceValue && originalPriceValue > 0) {
+          return '${((originalPriceValue - priceValue) / originalPriceValue * 100).toStringAsFixed(0)}% OFF';
+        }
+      }
+      return null;
+    }
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPlan = planIndex),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        height: 72,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFAF1D8) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFFFAA00)
+                : const Color(0xFFCCCCCC),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              CustomIcons.checked,
+              color: isSelected
+                  ? const Color(0xFF934A06)
+                  : const Color(0xFFCCCCCC),
+              size: 16,
+            ),
+
+            const SizedBox(width: 8),
+
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+            Expanded(
+              child: isSelected
+                  ? Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF5712),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          getDiscountText() ?? '',
+                          maxLines: 1,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(),
+            ),
+
+            const SizedBox(width: 8),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      '\$',
+                      style: TextStyle(
+                        fontSize: 20,
+                        height: 1.1,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 1.6),
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        height: 1,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+                if (originalPrice != null)
+                  Text(
+                    '\$$originalPrice',
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: const Color(0xFF999999),
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
+// 假数据
+final subscribeModel = SubscribeModel(
+  name: 'Pro',
+  featureList: [
+    'Full Access to All Creations',
+    'Unlock Search Results',
+    'Long History Record',
+  ],
+  optionList: [
+    SubscriptionOption(
+      title: 'First Month',
+      price: '9.9',
+      originalPrice: '19.9',
+      planIndex: 0,
+    ),
+    SubscriptionOption(
+      title: 'Per year',
+      price: '99',
+      originalPrice: '199',
+      planIndex: 1,
+    ),
+  ],
+);
 
 // 显示订阅对话框的便捷方法
 Future<void> showSubscriptionDialog(
@@ -340,6 +390,10 @@ Future<void> showSubscriptionDialog(
 }) async {
   return SlideUpOverlay.show(
     context: context,
-    child: SubscriptionDialog(onSubscribe: onSubscribe, onClose: onClose),
+    child: SubscriptionDialog(
+      subscribeModel: subscribeModel,
+      onSubscribe: onSubscribe,
+      onClose: onClose,
+    ),
   );
 }

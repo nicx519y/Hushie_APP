@@ -74,7 +74,7 @@ class AudioCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               Text(
                                 NumberFormatter.countNumFilter(
-                                  item.playTimes ?? 0,
+                                  item.playTimes,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -110,7 +110,7 @@ class AudioCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Text(
                                 NumberFormatter.countNumFilter(
-                                  item.likesCount ?? 0,
+                                  item.likesCount,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -140,7 +140,7 @@ class AudioCard extends StatelessWidget {
                 children: [
                   // 标题
                   Text(
-                    item.title ?? '',
+                    item.title,
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
@@ -176,7 +176,7 @@ class AudioCard extends StatelessWidget {
                       // 作者名
                       Expanded(
                         child: Text(
-                          item.author ?? '',
+                          item.author,
                           style: const TextStyle(
                             fontSize: 12,
                             height: 1.4,

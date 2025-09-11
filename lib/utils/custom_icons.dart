@@ -71,4 +71,9 @@ class CustomIcons {
     fontFamily: _kFontFam,
     fontPackage: _kFontPkg,
   );
+  static const IconData check = IconData(
+    0xf00c,
+    fontFamily: _kFontFam,
+    fontPackage: _kFontPkg,
+  );
 }

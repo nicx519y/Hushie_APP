@@ -145,6 +145,12 @@
       "search": [
         "playing"
       ]
+    },
+    {
+      "uid": "3df557988823d031d4972feed89617f3",
+      "css": "check",
+      "code": 61452,
+      "src": "fontawesome5"
     }
   ]
 }
