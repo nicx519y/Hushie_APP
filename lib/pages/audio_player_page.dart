@@ -452,7 +452,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       ),
       onPressed: () => Navigator.pop(context),
       icon: Transform.translate(
-        offset: const Offset(-2, 0),
+        offset: const Offset(-2.5, 0),
         child: Icon(CustomIcons.arrow_down, color: Colors.white, size: 9),
       ),
     );
