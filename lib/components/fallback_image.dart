@@ -48,6 +48,16 @@ class FallbackImage extends StatelessWidget {
             return CachedNetworkImage(
               imageUrl: imageUrl ?? '',
               fit: fit,
+              fadeInDuration: Duration.zero, // 禁用fadeIn效果
+              placeholder: (context, url) => Container(
+                color: Colors.grey[100], // 默认背景色
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                  ),
+                ),
+              ),
               errorWidget: (context, url, error) => fallbackImage == null 
               ? Container(
                 color: Colors.grey[200],

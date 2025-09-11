@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'audio_card.dart';
+import '../models/audio_item.dart';
 
 class AudioGrid extends StatelessWidget {
   final List<Map<String, dynamic>> dataList;
@@ -59,13 +60,14 @@ class AudioGrid extends StatelessWidget {
             padding: const EdgeInsets.only(left: 13, right: 13, bottom: 60),
             itemCount: dataList.length,
             itemBuilder: (context, index) {
-              final item = dataList[index];
+              final itemData = dataList[index];
+              final item = AudioItem.fromMap(itemData);
               return AudioCard(
                 item: item,
                 imageWidth: availableWidth / 2,
-                onTap: () => onItemTap?.call(item),
-                onPlayTap: () => onPlayTap?.call(item),
-                onLikeTap: () => onLikeTap?.call(item),
+                onTap: () => onItemTap?.call(itemData),
+                onPlayTap: () => onPlayTap?.call(itemData),
+                onLikeTap: () => onLikeTap?.call(itemData),
               );
             },
           );

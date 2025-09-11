@@ -1,6 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:hushie_app/models/image_model.dart';
 import 'package:hushie_app/services/auth_service.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';

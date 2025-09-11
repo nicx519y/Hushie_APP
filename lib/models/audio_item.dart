@@ -1,5 +1,6 @@
 import 'dart:ffi';
 
+import 'package:flutter/foundation.dart';
 import 'image_model.dart';
 
 class AudioItem {
@@ -81,7 +82,7 @@ class AudioItem {
   factory AudioItem.fromMap(Map<String, dynamic> map) {
     return AudioItem(
       id: map['id'].toString(),
-      cover: ImageModel.fromJson(map['cover'] ?? {}),
+      cover: _parseImageModel(map['cover']) ?? _getDefaultImageModel(),
       title: map['title'] ?? '',
       desc: map['desc'] ?? '',
       author: map['author'] ?? '',
@@ -94,9 +95,7 @@ class AudioItem {
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
       tags: (parseTagsValue(map['tags_gender']) + parseTagsValue(map['tags'])).toSet().toList(),
-      bgImage: (map['bg_image'] ?? map['bgImage']) != null
-          ? ImageModel.fromJson(map['bg_image'] ?? map['bgImage'])
-          : null,
+      bgImage: _parseImageModel(map['bg_image'] ?? map['bgImage']),
       lastPlayedAt: map['last_played_at_s'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['last_played_at_s'] * 1000) 
           : null,
@@ -196,4 +195,35 @@ class AudioItem {
 
   @override
   int get hashCode => id.hashCode;
+
+  /// 安全地解析ImageModel，避免类型转换错误
+  static ImageModel? _parseImageModel(dynamic data) {
+    if (data == null) return null;
+    
+    try {
+      if (data is Map<String, dynamic>) {
+        return ImageModel.fromJson(data);
+      }
+      // 如果不是Map类型，返回null
+      return null;
+    } catch (e) {
+      // 解析失败时返回null
+      debugPrint('ImageModel解析失败: $e');
+      return null;
+    }
+  }
+
+  /// 获取默认的ImageModel
+  static ImageModel _getDefaultImageModel() {
+    return ImageModel(
+      id: 'default',
+      urls: ImageResolutions(
+        x1: ImageResolution(
+          url: 'assets/images/logo.png',
+          width: 400,
+          height: 600,
+        ),
+      ),
+    );
+  }
 }

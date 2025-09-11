@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hushie_app/components/fallback_image.dart';
-// import 'fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../utils/custom_icons.dart';
-import '../models/image_model.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../models/audio_item.dart';
 
 class AudioCard extends StatelessWidget {
-  final Map<String, dynamic> item;
+  final AudioItem item;
   final double imageWidth;
   final VoidCallback? onTap;
   final VoidCallback? onPlayTap;
@@ -21,25 +19,6 @@ class AudioCard extends StatelessWidget {
     this.onPlayTap,
     this.onLikeTap,
   });
-
-  /// 获取图片URL，支持ImageModel和字符串类型
-  String _getImageUrl(dynamic cover, double width) {
-    if (cover is Map<String, dynamic>) {
-      // 如果是ImageModel格式，获取最佳URL
-      try {
-        final imageModel = ImageModel.fromJson(cover);
-        return imageModel.getBestResolution(width).url; // 假设卡片宽度为200px
-      } catch (e) {
-        // 如果解析失败，尝试获取x1 URL
-        final urls = cover['urls'];
-        if (urls != null && urls['x1'] != null) {
-          return urls['x1']['url'] ?? '';
-        }
-      }
-    }
-    // 如果是字符串，直接返回
-    return cover?.toString() ?? '';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +39,7 @@ class AudioCard extends StatelessWidget {
                     child: FallbackImage(
                       fit: BoxFit.cover,
                       width: imageWidth,
-                      imageResource: item['cover'],
+                      imageResource: item.cover,
                       fallbackImage: 'assets/images/backup.png',
                       borderRadius: 8.0,
                     ),
@@ -95,7 +74,7 @@ class AudioCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               Text(
                                 NumberFormatter.countNumFilter(
-                                  item['play_times'] ?? 0,
+                                  item.playTimes ?? 0,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -131,7 +110,7 @@ class AudioCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Text(
                                 NumberFormatter.countNumFilter(
-                                  item['likes_count'] ?? 0,
+                                  item.likesCount ?? 0,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -161,7 +140,7 @@ class AudioCard extends StatelessWidget {
                 children: [
                   // 标题
                   Text(
-                    item['title'] ?? '',
+                    item.title ?? '',
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
@@ -174,7 +153,7 @@ class AudioCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   // 描述
                   Text(
-                    item['tags'].join(', ') ?? '',
+                    item.tags?.join(', ') ?? '',
                     style: const TextStyle(
                       color: Color(0xff666666),
                       fontSize: 12,
@@ -197,7 +176,7 @@ class AudioCard extends StatelessWidget {
                       // 作者名
                       Expanded(
                         child: Text(
-                          item['author'] ?? '',
+                          item.author ?? '',
                           style: const TextStyle(
                             fontSize: 12,
                             height: 1.4,

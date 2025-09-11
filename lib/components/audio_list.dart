@@ -3,7 +3,6 @@ import '../models/audio_item.dart';
 import 'audio_stats.dart';
 import '../utils/custom_icons.dart';
 import '../components/fallback_image.dart';
-import '../models/image_model.dart';
 
 class AudioList extends StatefulWidget {
   final List<AudioItem> audios;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_list.dart';
 import '../services/audio_history_manager.dart';
+import 'slide_up_overlay.dart';
 
 class HistoryList extends StatefulWidget {
   final void Function(AudioItem)? onItemTap;
@@ -37,15 +38,9 @@ class _HistoryListState extends State<HistoryList> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent, // 设置背景透明
-      body: Align(
-        alignment: Alignment.bottomCenter,
-        child: Material(
-          color: Colors.white,
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7,
-            child: Column(
+    return SlideUpContainer(
+      height: MediaQuery.of(context).size.height * 0.7,
+      child: Column(
               children: [
                 // 顶部拖拽指示器和标题
                 Container(
@@ -111,9 +106,6 @@ class _HistoryListState extends State<HistoryList> {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -142,30 +134,11 @@ Future<void> showHistoryListWithAnimation(
   void Function(AudioItem)? onItemTap,
   VoidCallback? onClose,
 }) async {
-  Navigator.of(context, rootNavigator: true).push(
-    PageRouteBuilder(
-      opaque: false, // 设置为非不透明，允许背景透明
-      barrierColor: Colors.black.withAlpha(128), // 设置半透明黑色背景
-      pageBuilder: (context, animation, secondaryAnimation) => HistoryList(
-        onItemTap: onItemTap,
-        onClose: onClose,
-      ),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        // 从下往上滑动的动画
-        const begin = Offset(0.0, 1.0); // 从底部开始
-        const end = Offset.zero; // 到正常位置
-        const curve = Curves.easeOutCubic;
-
-        var slideTween = Tween(
-          begin: begin,
-          end: end,
-        ).chain(CurveTween(curve: curve));
-
-        return SlideTransition(
-          position: animation.drive(slideTween),
-          child: child,
-        );
-      },
+  return SlideUpOverlay.show(
+    context: context,
+    child: HistoryList(
+      onItemTap: onItemTap,
+      onClose: onClose,
     ),
   );
 }

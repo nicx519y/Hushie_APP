@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hushie_app/components/subscription_dialog.dart';
 import 'package:hushie_app/services/api/user_likes_service.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
@@ -193,12 +194,6 @@ class _ProfilePageState extends State<ProfilePage>
     _audioSubscription?.cancel();
     _audioSubscription = null;
 
-    // 取消路由观察者订阅
-    final route = ModalRoute.of(context);
-    if (route != null) {
-      globalRouteObserver.unsubscribe(this);
-    }
-
     _tabController.dispose();
     super.dispose();
   }
@@ -360,6 +355,18 @@ class _ProfilePageState extends State<ProfilePage>
     AudioManager.instance.playAudio(audio);
     NavigationUtils.navigateToAudioPlayer(context);
   }
+  // 订阅按钮点击
+  void _onSubscribeTap() {
+    // if (!isLoggedIn) {
+    //   NavigationUtils.navigateToLogin(context);
+    // } else {
+    //   // .. todo
+    // }
+    showSubscriptionDialog(
+      context,
+      onSubscribe: () {},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -409,14 +416,7 @@ class _ProfilePageState extends State<ProfilePage>
 
               // Premium Access 卡片
               PremiumAccessCard(
-                onSubscribe: () {
-                  // 订阅逻辑
-                  if (!isLoggedIn) {
-                    NavigationUtils.navigateToLogin(context);
-                  } else {
-                    // .. todo
-                  }
-                },
+                onSubscribe: _onSubscribeTap,
               ),
 
               const SizedBox(height: 16),

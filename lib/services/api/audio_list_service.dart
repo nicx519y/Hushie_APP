@@ -60,6 +60,7 @@ class AudioListService {
 
       final List<dynamic> itemsData = dataJson['items'] ?? [];
       final List<AudioItem> audioItems = itemsData
+          .where((item) => item is Map<String, dynamic>)
           .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
           .toList();
 

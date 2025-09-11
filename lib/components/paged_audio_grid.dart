@@ -241,9 +241,8 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
             showNewPageProgressIndicatorAsGridChild: false,
             builderDelegate: PagedChildBuilderDelegate<AudioItem>(
               itemBuilder: (context, item, index) {
-                final itemMap = item.toMap();
                 return AudioCard(
-                  item: itemMap,
+                  item: item,
                   imageWidth: availableWidth / 2,
                   onTap: () => widget.onItemTap?.call(item),
                   onPlayTap: () => widget.onPlayTap?.call(item),
