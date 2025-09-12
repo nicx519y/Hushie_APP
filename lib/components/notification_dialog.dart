@@ -5,7 +5,6 @@ class NotificationDialog extends StatelessWidget {
   final String message;
   final String buttonText;
   final VoidCallback? onConfirm;
-  final VoidCallback? onClose;
 
   const NotificationDialog({
     super.key,
@@ -13,7 +12,6 @@ class NotificationDialog extends StatelessWidget {
     required this.message,
     this.buttonText = 'Got It',
     this.onConfirm,
-    this.onClose,
   });
 
   void _handleConfirm(BuildContext context) {
@@ -101,13 +99,6 @@ class NotificationDialog extends StatelessWidget {
       ),
     );
   }
-
-  @override
-  void dispose() {
-    if (onClose != null) {
-      onClose!();
-    }
-  }
 }
 
 // 显示通知对话框的便捷方法
@@ -117,7 +108,6 @@ Future<void> showNotificationDialog(
   required String message,
   String buttonText = 'Got It',
   VoidCallback? onConfirm,
-  VoidCallback? onClose,
 }) async {
   return showDialog<void>(
     context: context,
@@ -128,7 +118,6 @@ Future<void> showNotificationDialog(
         message: message,
         buttonText: buttonText,
         onConfirm: onConfirm,
-        onClose: onClose,
       );
     },
   );

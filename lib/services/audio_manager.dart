@@ -4,7 +4,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../models/audio_item.dart';
 import '../models/audio_duration_info.dart';
-import '../utils/throttle_helper.dart';
 import 'audio_service.dart';
 import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
@@ -41,9 +40,6 @@ class AudioManager {
   final BehaviorSubject<Duration> _bufferedPositionSubject =
       BehaviorSubject<Duration>.seeded(Duration.zero);
 
-  // 预览检查节流控制器
-  final ThrottleHelper _positionThrottle = ThrottleHelper.oneSecond();
-  final ThrottleHelper _bufferedPositionThrottle = ThrottleHelper.oneSecond();
 
   AudioManager._internal();
 

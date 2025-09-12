@@ -240,7 +240,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
 
     String? getDiscountText() {
       if (originalPrice != null) {
-        final double originalPriceValue = double.tryParse(originalPrice!) ?? 0;
+        final double originalPriceValue = double.tryParse(originalPrice) ?? 0;
         final double priceValue = double.tryParse(price) ?? 0;
         if (originalPriceValue > priceValue && originalPriceValue > 0) {
           return '${((originalPriceValue - priceValue) / originalPriceValue * 100).toStringAsFixed(0)}% OFF';

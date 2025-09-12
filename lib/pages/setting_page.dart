@@ -61,7 +61,7 @@ class _SettingPageState extends State<SettingPage> {
         Fluttertoast.showToast(
           msg: 'Logout failed: $e',
           toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
+          gravity: ToastGravity.CENTER,
         );
       }
     } finally {

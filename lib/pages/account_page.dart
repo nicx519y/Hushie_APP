@@ -47,7 +47,7 @@ class _AccountPageState extends State<AccountPage> {
             Fluttertoast.showToast(
               msg: 'Account delete failed.',
               toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.BOTTOM,
+              gravity: ToastGravity.CENTER,
             );
           }
         },
@@ -57,7 +57,7 @@ class _AccountPageState extends State<AccountPage> {
         Fluttertoast.showToast(
           msg: 'Account delete failed.',
           toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
+          gravity: ToastGravity.CENTER,
         );
       }
     }

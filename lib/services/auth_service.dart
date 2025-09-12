@@ -454,15 +454,6 @@ class AuthService {
     }
   }
 
-  /// 清除用户信息从安全存储
-  static Future<void> _clearUserFromSecureStorage() async {
-    try {
-      await SecureStorageService.deleteUserInfo();
-    } catch (e) {
-      debugPrint('清除用户信息失败: $e');
-    }
-  }
-
   /// 清除所有认证数据
   static Future<void> clearAllAuthData() async {
     try {

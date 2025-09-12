@@ -195,14 +195,14 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // 下拉刷新
-  Future<void> _onRefresh() async {
-    final currentText = _searchController.text;
-    if (currentText.isNotEmpty) {
-      _currentSearchQuery = currentText;
-      _lastRenderedQuery = currentText;
-      await _performSearch(currentText);
-    }
-  }
+  // Future<void> _onRefresh() async {
+  //   final currentText = _searchController.text;
+  //   if (currentText.isNotEmpty) {
+  //     _currentSearchQuery = currentText;
+  //     _lastRenderedQuery = currentText;
+  //     await _performSearch(currentText);
+  //   }
+  // }
 
   // 加载更多
   Future<void> _onLoadMore() async {
