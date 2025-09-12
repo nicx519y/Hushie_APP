@@ -159,11 +159,17 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
                 // 标题
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  padding: const EdgeInsets.only(
+                    top: 35,
+                    bottom: 24,
+                    left: 10,
+                    right: 10,
+                  ),
                   child: Text(
                     widget.title,
                     style: const TextStyle(
                       fontSize: 16,
+                      height: 1.5,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF333333),
                     ),

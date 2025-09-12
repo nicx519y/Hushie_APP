@@ -136,8 +136,8 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
               },
             ),
 
-            // 播放/暂停图标覆盖层
-            Transform.translate(
+            // 播放/暂停图标覆盖层 只有暂停时显示播放图标
+            !widget.isPlaying? Transform.translate(
               offset: widget.isPlaying
                   ? const Offset(0, 0)
                   : Offset(playIconSize / 10, 0),
@@ -146,7 +146,7 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
                 color: Colors.white,
                 size: playIconSize,
               ),
-            ),
+            ) : SizedBox.shrink(),
           ],
         ),
       ),
@@ -157,18 +157,7 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(
-          center: const Alignment(0.6, -0.3),
-          radius: 1.0,
-          stops: [0.0, 0.08, 0.4, 0.9, 1.0],
-          colors: [
-            widget.progressColor.withAlpha(0),
-            widget.progressColor.withAlpha(0),
-            widget.progressColor.withAlpha(128),
-            widget.progressColor.withAlpha(255),
-            widget.progressColor.withAlpha(255),
-          ],
-        ),
+        color: Colors.pink,
       ),
     );
   }

@@ -50,7 +50,7 @@ class AudioCard extends StatelessWidget {
                   left: 10,
                   right: 10,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // 播放次数
                       GestureDetector(

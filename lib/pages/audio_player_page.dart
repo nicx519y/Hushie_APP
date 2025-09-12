@@ -425,7 +425,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                 children: [
                   Expanded(child: _buildProgressBar()),
                   const SizedBox(width: 10),
-                  _buildUnlockFullAccessTip(),
+                  Transform.translate(
+                    offset: const Offset(0, -8),
+                    child: _buildUnlockFullAccessTip(),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -714,7 +717,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           ),
           const SizedBox(width: 4),
           SizedBox(
-            width: 86,
+            // width: 92,
             height: 40,
             child: ShaderMask(
               shaderCallback: (bounds) => LinearGradient(
