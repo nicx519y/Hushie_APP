@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hushie_app/components/custom_outline_button.dart';
 import '../services/auth_service.dart';
 import '../config/api_config.dart';
@@ -43,17 +44,21 @@ class _AccountPageState extends State<AccountPage> {
               Navigator.of(context).popUntil((route) => route.isFirst);
             }
           } catch (e) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Account delete failed.')));
+            Fluttertoast.showToast(
+              msg: 'Account delete failed.',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+            );
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Account delete failed.')));
+        Fluttertoast.showToast(
+          msg: 'Account delete failed.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
       }
     }
   }

@@ -447,10 +447,11 @@ class _SearchPageState extends State<SearchPage> {
     return AudioList(
       audios: _searchResults,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      onRefresh: _onRefresh,
+      // onRefresh: _onRefresh,
       onLoadMore: _onLoadMore,
       hasMoreData: _hasMoreData,
       isLoadingMore: _isLoadingMore,
+      enableRefresh: false,
       onItemTap: (audio) {
         // 保存当前搜索查询到历史
         _saveSearchHistory(_searchController.text);

@@ -18,6 +18,7 @@ class AudioList extends StatefulWidget {
   final bool hasMoreData;
   final bool isLoadingMore;
   final Widget? loadingMoreWidget;
+  final bool enableRefresh; // 控制是否启用下拉刷新
 
   // 新增的点击回调参数
   final void Function(AudioItem)? onItemTap;
@@ -35,6 +36,7 @@ class AudioList extends StatefulWidget {
     this.hasMoreData = false,
     this.isLoadingMore = false,
     this.loadingMoreWidget,
+    this.enableRefresh = true, // 默认禁用下拉刷新
     this.onItemTap,
   });
 
@@ -84,9 +86,7 @@ class _AudioListState extends State<AudioList> {
           );
     }
 
-    return RefreshIndicator(
-      onRefresh: widget.onRefresh ?? () async {},
-      child: ListView.separated(
+    Widget listView = ListView.separated(
         controller: _scrollController,
         padding: widget.padding,
         physics: widget.physics,
@@ -107,8 +107,17 @@ class _AudioListState extends State<AudioList> {
           // 添加间隔
           return const SizedBox(height: 18.0);
         },
-      ),
-    );
+      );
+
+    // 根据enableRefresh参数决定是否包装RefreshIndicator
+    if (widget.enableRefresh && widget.onRefresh != null) {
+      return RefreshIndicator(
+        onRefresh: widget.onRefresh!,
+        child: listView,
+      );
+    } else {
+      return listView;
+    }
   }
 
   Widget _buildLoadMoreIndicator() {

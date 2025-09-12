@@ -45,6 +45,8 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
   Widget build(BuildContext context) {
     return SlideUpContainer(
       maxHeight: MediaQuery.of(context).size.height * 0.9,
+      backgroundImage: 'assets/images/dailog_bg.png',
+      backgroundImageAlignment: Alignment(0.2, 0.55), // 控制背景图坐标位置
       padding: EdgeInsets.only(
         top: 16,
         bottom: MediaQuery.of(context).padding.bottom + 36,

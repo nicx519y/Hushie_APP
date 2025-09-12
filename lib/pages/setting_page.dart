@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hushie_app/components/confirm_dialog.dart';
 import '../services/auth_service.dart';
 import '../components/custom_outline_button.dart';
@@ -57,9 +58,11 @@ class _SettingPageState extends State<SettingPage> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
+        Fluttertoast.showToast(
+          msg: 'Logout failed: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
       }
     } finally {
       setState(() {

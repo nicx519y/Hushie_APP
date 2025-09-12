@@ -78,10 +78,12 @@ dependencies:
   # 安全存储
   flutter_secure_storage: ^9.0.0
   
+  # Toast消息提示
+  fluttertoast: ^8.2.4
+  
   # 加密算法（用于API签名）
   crypto: ^3.0.3
   
-  # WebView支持
   webview_flutter: ^4.4.2
 
 dev_dependencies:

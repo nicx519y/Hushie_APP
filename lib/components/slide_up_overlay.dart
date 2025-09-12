@@ -75,6 +75,8 @@ class SlideUpContainer extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
   final Color? backgroundColor;
+  final String? backgroundImage;
+  final Alignment? backgroundImageAlignment;
   final BorderRadius? borderRadius;
   final double? height;
   final double? maxHeight;
@@ -83,6 +85,8 @@ class SlideUpContainer extends StatelessWidget {
     super.key,
     required this.child,
     this.padding,
+    this.backgroundImage,
+    this.backgroundImageAlignment,
     this.backgroundColor,
     this.borderRadius,
     this.height,
@@ -103,6 +107,13 @@ class SlideUpContainer extends StatelessWidget {
               : null,
           padding: padding ?? const EdgeInsets.all(16),
           decoration: BoxDecoration(
+            image: backgroundImage != null
+                ? DecorationImage(
+                    image: AssetImage(backgroundImage!),
+                    fit: BoxFit.none,
+                    alignment: backgroundImageAlignment ?? Alignment.center,
+                  )
+                : null,
             color: backgroundColor ?? Colors.white,
             borderRadius: borderRadius ??
                 const BorderRadius.only(
