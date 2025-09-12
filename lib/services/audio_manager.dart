@@ -40,7 +40,6 @@ class AudioManager {
   final BehaviorSubject<Duration> _bufferedPositionSubject =
       BehaviorSubject<Duration>.seeded(Duration.zero);
 
-
   AudioManager._internal();
 
   // 初始化音频服务（延迟初始化）
@@ -142,8 +141,9 @@ class AudioManager {
   bool _checkWillOutPreview(Duration position) {
     if (currentAudio == null ||
         !_isPlayingSubject.value ||
-        _canPlayAllDurationSubject.value)
+        _canPlayAllDurationSubject.value) {
       return false;
+    }
 
     final previewStart = currentAudio!.previewStart ?? Duration.zero;
     final previewDuration = currentAudio!.previewDuration ?? Duration.zero;

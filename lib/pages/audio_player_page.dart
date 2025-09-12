@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:hushie_app/components/subscription_dialog.dart';
 import 'package:hushie_app/services/auth_service.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
@@ -10,6 +12,8 @@ import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:hushie_app/components/subscription_dialog.dart';
+
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -60,18 +64,14 @@ class AudioPlayerPage extends StatefulWidget {
 
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
-  Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = Duration.zero;
-  Duration _previewStartPosition = Duration.zero;
-  Duration _previewDuration = Duration.zero;
-  bool _canPlayAllDuration = true;
-  Duration _bufferedPosition = Duration.zero;
+
+  // 移除时长代理服务和渲染相关状态，现在由AudioProgressBar内部管理
+ 
 
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
   bool _isLiked = false;
   bool _isAudioLoading = false; // 是否正在加载metadata
-  bool _progressBarDisabled = false;
 
   // 点赞相关状态管理
   bool _isLikeRequesting = false; // 是否正在请求点赞
@@ -82,6 +82,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
 
   bool _isDescExpended = false; // 描述是否展开
+  
+  // StreamSubscription列表，用于在dispose时取消
+  final List<StreamSubscription> _subscriptions = [];
 
   @override
   void initState() {
@@ -93,7 +96,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   void _listenToAudioState() {
     // 监听当前音频
-    _audioManager.currentAudioStream.listen((audio) {
+    _subscriptions.add(_audioManager.currentAudioStream.listen((audio) {
+
       if (mounted) {
         setState(() {
           _currentAudio = audio;
@@ -101,48 +105,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           // 初始化本地状态
           _localIsLiked = _isLiked;
           _localLikesCount = _currentAudio?.likesCount ?? 0;
-          _totalDuration = audio?.duration ?? Duration.zero;
         });
       }
-    });
+    }));
 
-    // 是否能播放全部时长，否则只能播放预览时长
-    _audioManager.canPlayAllDurationStream.listen((canPlayAll) {
-      if (mounted) {
-        setState(() {
-          _canPlayAllDuration = canPlayAll;
-        });
-      }
-    });
-
-    // 监听播放位置 - 使用防抖动技术减少更新频率
-    _audioManager.positionStream
-    // .debounceTime(const Duration(milliseconds: 200)) // 添加200ms的防抖动
-    .listen((position) {
-      if (mounted) {
-        setState(() {
-          // debugPrint('audio_player_page 播放位置更新: $position');
-          _currentPosition = position;
-        });
-      }
-    });
-
-    // 监听播放时长
-    _audioManager.durationStream.listen((duration) {
-      if (mounted) {
-        setState(() {
-          // _totalDuration = duration.totalDuration;
-          // 如果通过音频流获取到了时长，也要结束加载状态
-          if (duration.totalDuration > Duration.zero) {
-            _totalDuration = duration.totalDuration;
-            _previewStartPosition = duration.previewStart ?? Duration.zero;
-            _previewDuration = duration.previewDuration ?? Duration.zero;
-          }
-        });
-      }
-    });
-
-    _audioManager.playerStateStream.listen((playerState) {
+    _subscriptions.add(_audioManager.playerStateStream.listen((playerState) {
       if (mounted) {
         setState(() {
           _isPlaying = playerState.playing;
@@ -152,24 +119,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           } else {
             _isAudioLoading = false;
           }
-
-          if (playerState.processingState == ProcessingState.loading) {
-            _progressBarDisabled = true;
-          } else {
-            _progressBarDisabled = false;
-          }
         });
       }
-    });
+    }));
 
-    // 监听缓冲位置
-    _audioManager.bufferedPositionStream.listen((bufferedPosition) {
-      if (mounted) {
-        setState(() {
-          _bufferedPosition = bufferedPosition;
-        });
-      }
-    });
   }
 
   void _togglePlay() {
@@ -281,12 +234,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  Future<void> _onSeek(Duration position) async {
-    await _audioManager.seek(position);
-  }
+  // 移除_createDurationProxy和_onSeek方法，现在由AudioProgressBar内部处理
 
   // 解锁全功能提示点击事件
-  void _onUnlockFullAccessTap() async {}
+  void _onUnlockFullAccessTap() async {
+    showSubscriptionDialog(context);
+  }
 
   void _onReadMoreTap() {
     setState(() {
@@ -299,6 +252,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   //     _showControls = !_showControls;
   //   });
   // }
+
+  @override
+  void dispose() {
+    // 手动取消所有StreamSubscription以避免内存泄漏
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -336,32 +299,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建背景图片，包含备用图片逻辑和缓存机制
   Widget _buildBackgroundImage(String? imageUrl) {
-    // 如果 imageUrl 为空，直接返回备用图片
-    // if (imageUrl == null || imageUrl.isEmpty) {
-    //   return Image.asset(
-    //     'assets/images/backup.png',
-    //     fit: BoxFit.cover,
-    //     width: double.infinity,
-    //     height: double.infinity,
-    //   );
-    // }
-
-    // return CachedNetworkImage(
-    //   imageUrl: imageUrl,
-    //   fit: BoxFit.cover,
-    //   width: double.infinity,
-    //   height: double.infinity,
-    //   errorWidget: (context, url, error) => Image.asset(
-    //     'assets/images/backup.png',
-    //     fit: BoxFit.cover,
-    //     width: double.infinity,
-    //     height: double.infinity,
-    //   ),
-    //   // fadeInDuration: const Duration(milliseconds: 300),
-    // );
-
     final screenWidth = MediaQuery.of(context).size.width;
-
     return FallbackImage(
       fit: BoxFit.cover,
       width: screenWidth,
@@ -622,14 +560,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     return RepaintBoundary(
       child: AudioProgressBar(
-        disabled: _progressBarDisabled,
-        currentPosition: _currentPosition,
-        totalDuration: _totalDuration,
-        bufferedPosition: _bufferedPosition,
-        onSeek: _onSeek,
-        previewStartPosition: _previewStartPosition,
-        previewDuration: _previewDuration,
-        showPreviewBar: !_canPlayAllDuration,
         onOutPreview: _onUnlockFullAccessTap,
       ),
     );
