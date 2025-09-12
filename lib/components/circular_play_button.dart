@@ -70,7 +70,7 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
     final playIconSize = widget.isPlaying
         ? widget.size *
               0.3 // 暂停图标大小
-        : widget.size * 0.36; // 播放图标大小
+        : widget.size * 0.44; // 播放图标大小
 
     return GestureDetector(
       onTap: widget.onTap,
