@@ -40,7 +40,7 @@ class AudioCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       width: imageWidth,
                       imageResource: item.cover,
-                      fallbackImage: 'assets/images/backup.png',
+                      fallbackImage: 'assets/images/cover_backup.jpg',
                       borderRadius: 8.0,
                     ),
                 ),

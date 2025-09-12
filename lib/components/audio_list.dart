@@ -189,7 +189,7 @@ class _AudioListState extends State<AudioList> {
             width: 70,
             height: 78,
             imageResource: audio.cover,
-            fallbackImage: 'assets/images/backup.png',
+            fallbackImage: 'assets/images/cover_mini_backup.jpg',
             borderRadius: 8,
           ),
           const SizedBox(width: 12),

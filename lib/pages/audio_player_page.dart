@@ -12,7 +12,6 @@ import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:hushie_app/components/subscription_dialog.dart';
 
 
 /// 音频播放器页面专用的上滑过渡效果
@@ -238,7 +237,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 解锁全功能提示点击事件
   void _onUnlockFullAccessTap() async {
-    showSubscriptionDialog(context);
+    final isLogin = await AuthService.isSignedIn();
+    if (!isLogin) {
+      // 打开登录页
+      NavigationUtils.navigateToLogin(context);
+    } else {
+      showSubscriptionDialog(context);
+    }
   }
 
   void _onReadMoreTap() {
@@ -246,12 +251,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       _isDescExpended = !_isDescExpended;
     });
   }
-
-  // void _toggleControls() {
-  //   setState(() {
-  //     _showControls = !_showControls;
-  //   });
-  // }
 
   @override
   void dispose() {
@@ -305,7 +304,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       width: screenWidth,
       height: double.infinity,
       imageResource: _currentAudio?.bgImage,
-      fallbackImage: 'assets/images/backup.png',
+      fallbackImage: 'assets/images/player_bg_backup.jpg',
     );
   }
 

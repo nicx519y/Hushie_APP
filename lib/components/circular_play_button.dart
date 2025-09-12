@@ -157,7 +157,11 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.pink,
+        // color: Colors.pink,
+        image: DecorationImage(
+          image: AssetImage('assets/images/playbtn_bg.png'),
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
