@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hushie_app/components/confirm_dialog.dart';
 import '../services/auth_service.dart';
 import '../components/custom_outline_button.dart';
 import '../router/navigation_utils.dart';
+import '../utils/toast_helper.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -58,11 +58,7 @@ class _SettingPageState extends State<SettingPage> {
       );
     } catch (e) {
       if (mounted) {
-        Fluttertoast.showToast(
-          msg: 'Logout failed: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-        );
+        ToastHelper.showError('Logout failed: $e');
       }
     } finally {
       setState(() {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import '../services/auth_service.dart';
 import '../router/navigation_utils.dart';
+import '../utils/toast_helper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -268,7 +268,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (result.errNo == 0 && result.data != null) {
         // 登录成功
-        _showSnackBar('Login success!');
+        ToastHelper.showSuccess('Login success!');
 
         // 延迟一下让用户看到成功消息，然后关闭登录页面
         await Future.delayed(const Duration(milliseconds: 500));
@@ -280,12 +280,12 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         // 登录失败
         final errorMessage = _getErrorMessage(result.errNo);
-        _showSnackBar(errorMessage);
+        ToastHelper.showError(errorMessage);
       }
     } catch (e) {
       // 处理异常
       debugPrint('Google登录异常: $e');
-      _showSnackBar('Login failed, retry please.');
+      ToastHelper.showError('Login failed, retry please.');
     } finally {
       // 隐藏加载状态
       if (mounted) {
@@ -297,29 +297,20 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showTermsOfUse() {
-    _showSnackBar('Open Terms of Use page.');
+    // ToastHelper.showSuccess('Open Terms of Use page.');
     // 这里可以导航到服务条款页面
   }
 
   void _showLicenseAgreement() {
-    _showSnackBar('Open End User License Agreement page.');
+    // ToastHelper.showSuccess('Open End User License Agreement page.');
     // 这里可以导航到许可协议页面
   }
 
   void _showPrivacyPolicy() {
-    _showSnackBar('Open Privacy Policy page.');
+    // _showSnackBar('Open Privacy Policy page.');
     // 这里可以导航到隐私政策页面
   }
 
-  void _showSnackBar(String message) {
-    Fluttertoast.showToast(
-      msg: message,
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.CENTER,
-      backgroundColor: const Color(0xFFFF2050),
-      textColor: Colors.white,
-    );
-  }
 
   /// 根据错误码获取错误消息
   String _getErrorMessage(int errNo) {

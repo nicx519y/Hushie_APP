@@ -121,7 +121,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             ),
 
             // 中间播放按钮
-            RepaintBoundary( child: _buildPlayButton() ),
+            RepaintBoundary(child: _buildPlayButton()),
 
             // Profile Tab
             Expanded(
@@ -154,28 +154,31 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     required String label,
     required bool isSelected,
   }) {
-    return InkWell(
-      onTap: () => widget.onTap(index),
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      child: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            icon, // 直接使用传入的 Widget
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                height: 1.5,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? activeColor : inactiveColor,
+    return Transform.translate(
+      offset: const Offset(0, -4), // 向上偏移10像素
+      child: InkWell(
+        onTap: () => widget.onTap(index),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              icon, // 直接使用传入的 Widget
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  height: 1.5,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? activeColor : inactiveColor,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

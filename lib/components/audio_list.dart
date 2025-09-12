@@ -80,7 +80,7 @@ class _AudioListState extends State<AudioList> {
       return widget.emptyWidget ??
           const Center(
             child: Text(
-              '暂无数据',
+              'No audio found',
               style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
           );
@@ -134,7 +134,7 @@ class _AudioListState extends State<AudioList> {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('上拉加载更多', style: TextStyle(color: Colors.grey)),
+            : const Text('Load more', style: TextStyle(color: Colors.grey)),
       ),
     );
   }

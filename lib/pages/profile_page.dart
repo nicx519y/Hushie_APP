@@ -561,25 +561,18 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   ),
                   const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Color(0xFF333333),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      side: const BorderSide(color: Color(0xFF999999)),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Color(0xFF999999),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      side: BorderSide(color: Color(0xFF999999)),
                     ),
                     onPressed: () {
                       NavigationUtils.navigateToLogin(context);
                     },
                     child: const Text(
                       'Log in / Sign up',
-                      style: TextStyle(fontSize: 16, color: Color(0xFF999999)),
+                      style: TextStyle(fontSize: 16, color: Color(0xFF333333)),
                     ),
                   ),
 
