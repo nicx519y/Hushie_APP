@@ -286,10 +286,11 @@ class _SearchPageState extends State<SearchPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
+        top: true,
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
                   // 搜索框

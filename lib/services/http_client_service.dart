@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import '../config/api_config.dart';
 import 'device_info_service.dart';
 import 'auth_service.dart';
+import 'app_signature_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// HTTP客户端服务
@@ -242,19 +243,72 @@ class HttpClientService {
     // debugPrint('🔧 [HTTP] 请求头构建完成，最终包含 ${headers.length} 个字段');
 
     // debugPrint("Authorization 成功 ${headers['Authorization']}");
+    
+    // 添加动态签名验证信息
     try {
-      // 生成API签名
-      final signature = await _generateSignature(
-        method: method,
-        path: path,
-        headers: headers,
-        body: body,
-        timestamp: _generateTimestamp(),
-        nonce: _generateNonce(),
-      );
-      headers['X-Signature'] = signature;
+      final appSignatureService = AppSignatureService();
+      
+      // 生成动态签名参数
+      final Map<String, String>? dynamicSignature = await appSignatureService.generateDynamicSignature();
+      
+      if (dynamicSignature != null) {
+        // 添加动态签名相关请求头
+        headers['X-Dynamic-Signature'] = dynamicSignature['signature'] ?? '';
+        headers['X-Timestamp'] = dynamicSignature['timestamp'] ?? '';
+        headers['X-Nonce'] = dynamicSignature['nonce'] ?? '';
+        
+        // 获取应用签名哈希
+        final signatureHash = await appSignatureService.getSignatureHash();
+        if (signatureHash != null) {
+          headers['X-App-Signature-Hash'] = signatureHash;
+        }
+        
+        // 获取完整性验证信息
+        final integrityInfo = await appSignatureService.getIntegrityInfo();
+        headers['X-App-Integrity'] = json.encode({
+          'signature_valid': integrityInfo['isSignatureValid'],
+          'trusted_source': integrityInfo['isFromTrustedSource'],
+          'debug_build': integrityInfo['isDebugBuild'],
+        });
+        
+        debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名生成成功');
+      } else {
+        debugPrint('⚠️ [DYNAMIC_SIGNATURE] 动态签名生成失败，使用备用签名');
+        
+        // 备用方案：使用旧的签名方式
+        final signature = await _generateSignature(
+          method: method,
+          path: path,
+          headers: headers,
+          body: body,
+          timestamp: _generateTimestamp(),
+          nonce: _generateNonce(),
+        );
+        headers['X-Signature'] = signature;
+        
+        // 标记为备用签名
+        headers['X-Signature-Type'] = 'fallback';
+      }
     } catch (e) {
-      debugPrint("生成签名失败: $e");
+      debugPrint('❌ [DYNAMIC_SIGNATURE] 生成动态签名失败: $e');
+      
+      // 异常处理：使用备用签名方式
+      try {
+        final signature = await _generateSignature(
+          method: method,
+          path: path,
+          headers: headers,
+          body: body,
+          timestamp: _generateTimestamp(),
+          nonce: _generateNonce(),
+        );
+        headers['X-Signature'] = signature;
+        headers['X-Signature-Type'] = 'fallback';
+        headers['X-Signature-Error'] = 'dynamic_signature_failed';
+      } catch (fallbackError) {
+        debugPrint('❌ [SIGNATURE] 备用签名也失败: $fallbackError');
+        headers['X-Signature-Error'] = 'all_signature_methods_failed';
+      }
     }
 
     // debugPrint("X-Signature 成功 ${headers['X-Signature']}");

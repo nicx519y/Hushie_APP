@@ -1,5 +1,5 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../components/bottom_navigation_bar.dart';
 
 // 全局路由观察者
@@ -48,6 +48,7 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
 
+
   @override
   Widget build(BuildContext context) {
     debugPrint('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
@@ -72,7 +73,7 @@ class _MainLayoutState extends State<MainLayout> {
             // 页面主体内容
             SafeArea(
               top: true, // 确保内容不被状态栏遮挡
-              bottom: false,
+              bottom: true,
               child: IndexedStack(index: _currentIndex, children: widget.pages),
             ),
 
@@ -80,7 +81,7 @@ class _MainLayoutState extends State<MainLayout> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: -MediaQuery.of(context).padding.bottom, // 动态适配底部安全区域
+              bottom: -36 + MediaQuery.of(context).padding.bottom, // 智能适配底部安全区域
               child: Stack(
                 children: [
                   // 自定义阴影
@@ -88,7 +89,7 @@ class _MainLayoutState extends State<MainLayout> {
                     painter: BottomNavShadowPainter(),
                     size: Size(
                       MediaQuery.of(context).size.width,
-                      108 + MediaQuery.of(context).padding.bottom,
+                      108,
                     ),
                   ),
                   // 导航栏内容
@@ -177,7 +178,7 @@ class BottomNavShadowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black.withOpacity(0.15)
+      ..color = Colors.black.withAlpha(40)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
 
     // 使用共享的路径生成函数，向上偏移2像素

@@ -98,6 +98,8 @@ HMAC-SHA256(signature_string, app_secret)
 | X-App-ID | 身份 | 应用标识 | `hushie_app_v1` |
 | X-Client-Platform | 身份 | 客户端平台 | `flutter` |
 | X-Device-ID | 身份 | 设备唯一标识 | `device_123abc456def` |
+| X-App-Signature | 安全 | 应用签名哈希 | `SHA256:a1b2c3d4e5f6...` |
+| X-App-Integrity | 安全 | 应用完整性信息 | `{"signature_valid":true,"trusted_source":true,"debug_build":false}` |
 | X-Timestamp | 安全 | Unix时间戳（毫秒） | `1703123456789` |
 | X-Nonce | 安全 | 16位随机字符串 | `Ab3X9kP2mN8QwErT` |
 | X-Request-ID | 追踪 | 请求唯一标识 | `req_1703123456_123456` |

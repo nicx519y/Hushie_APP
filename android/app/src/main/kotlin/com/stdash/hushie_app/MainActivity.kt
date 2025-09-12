@@ -4,6 +4,7 @@ import android.os.Bundle
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.ryanheise.audioservice.AudioServiceActivity
+import android.view.WindowManager.LayoutParams
 
 class MainActivity : AudioServiceActivity() {
     private val CHANNEL = "com.stdash.hushie_app/exoplayer_config"
@@ -13,9 +14,52 @@ class MainActivity : AudioServiceActivity() {
         setTheme(androidx.appcompat.R.style.Theme_AppCompat_NoActionBar)
         super.onCreate(savedInstanceState)
     }
+
+    override fun onResume() {
+        super.onResume()
+        // 严格限制刷新率不超过60Hz
+        val layoutParams = window.attributes
+        layoutParams.preferredRefreshRate = 60.0f // 设置首选刷新率为60Hz
+        
+        // 如果设备支持，强制限制最大刷新率
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            // Android 11+ 支持更精确的刷新率控制
+            try {
+                val display = display
+                val supportedModes = display?.supportedModes
+                
+                // 查找60Hz或最接近60Hz且不超过60Hz的显示模式
+                var targetMode = supportedModes?.find { mode ->
+                    mode.refreshRate <= 60.1f && mode.refreshRate >= 59.9f
+                }
+                
+                // 如果没有找到精确的60Hz，选择不超过60Hz的最高刷新率
+                if (targetMode == null) {
+                    targetMode = supportedModes?.filter { mode ->
+                        mode.refreshRate <= 60.1f
+                    }?.maxByOrNull { it.refreshRate }
+                }
+                
+                targetMode?.let { mode ->
+                    layoutParams.preferredDisplayModeId = mode.modeId
+                }
+            } catch (e: Exception) {
+                // 如果设置失败，回退到基本的刷新率设置
+                layoutParams.preferredRefreshRate = 60.0f
+            }
+        } else {
+            // Android 10及以下版本的兼容处理
+            layoutParams.preferredRefreshRate = 60.0f
+        }
+        
+        window.attributes = layoutParams
+    }
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        
+        // 注册签名验证插件
+        flutterEngine.plugins.add(SignatureVerificationPlugin())
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
