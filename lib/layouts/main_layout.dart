@@ -80,7 +80,7 @@ class _MainLayoutState extends State<MainLayout> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: -36 + MediaQuery.of(context).padding.bottom, // 智能适配底部安全区域
+              bottom: -46 + MediaQuery.of(context).padding.bottom, // 智能适配底部安全区域
               child: Stack(
                 children: [
                   // 自定义阴影
@@ -115,7 +115,7 @@ Path createBottomNavPath(Size size, {double offsetY = 0}) {
   final path = Path();
   final width = size.width;
   final height = size.height;
-  final radius = 50.0;
+  final radius = 46.0;
   final d = 18.0;
   final arcRadius = 30.0;
   final sideRadius = 20.0;

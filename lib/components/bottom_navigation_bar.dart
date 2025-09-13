@@ -155,7 +155,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     required bool isSelected,
   }) {
     return Transform.translate(
-      offset: const Offset(0, -4), // 向上偏移10像素
+      offset: const Offset(0, -6), // 向上偏移10像素
       child: InkWell(
         onTap: () => widget.onTap(index),
         splashColor: Colors.transparent,
@@ -196,7 +196,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     String? coverImageUrl;
     try {
       if (_currentAudio?.cover != null) {
-        final bestResolution = _currentAudio!.cover.getBestResolution(70.0);
+        final bestResolution = _currentAudio!.cover.getBestResolution(60.0);
         coverImageUrl = bestResolution.url;
       }
     } catch (e) {
@@ -205,9 +205,9 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     }
 
     return Transform.translate(
-      offset: const Offset(0, -11), // 向上偏移10像素
+      offset: const Offset(0, -16), // 向上偏移10像素
       child: CircularPlayButton(
-        size: 70,
+        size: 60,
         coverImageUrl: coverImageUrl,
         isPlaying: _isPlaying,
         progress: progress,
