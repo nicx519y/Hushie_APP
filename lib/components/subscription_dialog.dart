@@ -53,159 +53,167 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
         left: 16,
         right: 16,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          // 关闭按钮
-          Align(
-            alignment: Alignment.topLeft,
-            child: Transform.translate(
-              offset: const Offset(-4, -4),
-              child: IconButton(
-                onPressed: _closeDialog,
-                iconSize: 24,
-                icon: const Icon(Icons.close, color: Colors.white),
-                style: IconButton.styleFrom(
-                  backgroundColor: Color(0xFF979797).withAlpha(128),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // 标题
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // 主要内容
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 120,
-                child: Image.asset('assets/images/logo.png'),
+              SizedBox(height: 32),
+              // 标题
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 96,
+                    child: Image.asset('assets/images/logo.png'),
+                  ),
+                  const SizedBox(width: 6),
+                  Transform.translate(
+                    offset: const Offset(0, 3),
+                    child: Text(
+                      widget.subscribeModel.name ?? 'Pro',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Transform.translate(
-                offset: const Offset(0, 3),
-                child: Text(
-                  widget.subscribeModel.name ?? 'Pro',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black,
+
+              const SizedBox(height: 16),
+
+              // 功能特性列表
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  width: 260,
+                  child: Column(
+                    children: widget.subscribeModel.featureList
+                        .asMap()
+                        .entries
+                        .expand(
+                          (entry) => [
+                            _buildFeatureItem(entry.value),
+                            if (entry.key <
+                                widget.subscribeModel.featureList.length - 1)
+                              const SizedBox(height: 13),
+                          ],
+                        )
+                        .toList(),
                   ),
                 ),
               ),
-            ],
-          ),
 
-          const SizedBox(height: 30),
+              const SizedBox(height: 25),
 
-          // 功能特性列表
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              width: 290,
-              child: Column(
-                children: widget.subscribeModel.featureList
+              // 价格选项
+              Column(
+                children: widget.subscribeModel.optionList
                     .asMap()
                     .entries
-                    .expand((entry) => [
-                          _buildFeatureItem(entry.value),
-                          if (entry.key < widget.subscribeModel.featureList.length - 1)
-                            const SizedBox(height: 13),
-                        ])
+                    .expand(
+                      (entry) => [
+                        _buildPriceOption(
+                          planIndex: entry.value.planIndex,
+                          title: entry.value.title,
+                          price: entry.value.price,
+                          originalPrice: entry.value.originalPrice,
+                        ),
+                        if (entry.key <
+                            widget.subscribeModel.optionList.length - 1)
+                          const SizedBox(height: 18),
+                      ],
+                    )
                     .toList(),
               ),
-            ),
-          ),
 
-          const SizedBox(height: 36),
+              const SizedBox(height: 17),
 
-          // 价格选项
-          Column(
-            children: widget.subscribeModel.optionList
-                .asMap()
-                .entries
-                .expand((entry) => [
-                      _buildPriceOption(
-                        planIndex: entry.value.planIndex,
-                        title: entry.value.title,
-                        price: entry.value.price,
-                        originalPrice: entry.value.originalPrice,
+              // 订阅按钮
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: _onSubscribe,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFDE69),
+                      foregroundColor: Colors.black,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
                       ),
-                      if (entry.key < widget.subscribeModel.optionList.length - 1)
-                        const SizedBox(height: 12),
-                    ])
-                .toList(),
-          ),
-
-          const SizedBox(height: 13),
-
-          // 订阅按钮
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _onSubscribe,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFDE69),
-                  foregroundColor: Colors.black,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: const Text(
-                  'Subscribe',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF502D19),
+                    ),
+                    child: const Text(
+                      'Subscribe',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF502D19),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
 
-          const SizedBox(height: 13),
+              const SizedBox(height: 13),
 
-          // 自动续费说明
-          const Text(
-            'Auto-renews monthly. Cancel anytime.',
-            style: TextStyle(fontSize: 14, color: const Color(0xFF666666)),
-          ),
-
-          const SizedBox(height: 16),
-
-          // 底部链接
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              InkWell(
-                // onTap: () { },
-                child: Text(
-                  'Privacy Policy',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: const Color(0xFF666666),
-                  ),
-                ),
+              // 自动续费说明
+              const Text(
+                'Auto-renews monthly. Cancel anytime.',
+                style: TextStyle(fontSize: 14, color: const Color(0xFF666666)),
               ),
-              InkWell(
-                // onTap: () { },
-                child: Text(
-                  'Terms of Use',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: const Color(0xFF666666),
+
+              const SizedBox(height: 16),
+
+              // 底部链接
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  InkWell(
+                    // onTap: () { },
+                    child: Text(
+                      'Privacy Policy',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: const Color(0xFF666666),
+                      ),
+                    ),
                   ),
-                ),
+                  InkWell(
+                    // onTap: () { },
+                    child: Text(
+                      'Terms of Use',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: const Color(0xFF666666),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
+          ),
+
+          // 关闭按钮 - 使用Positioned脱离布局
+          Positioned(
+            top: -4,
+            left: -4,
+            child: IconButton(
+              onPressed: _closeDialog,
+              iconSize: 24,
+              icon: const Icon(Icons.close, color: Colors.white),
+              style: IconButton.styleFrom(
+                backgroundColor: Color(0xFF979797).withAlpha(128),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -220,9 +228,9 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
         Text(
           text,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             height: 1,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             color: Color(0xFF333333),
           ),
         ),
@@ -253,7 +261,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
       onTap: () => setState(() => _selectedPlan = planIndex),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        height: 72,
+        height: 60,
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFFAF1D8) : Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -279,7 +287,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
             Text(
               title,
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Colors.black,
               ),
@@ -320,20 +328,11 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
-                      '\$',
-                      style: TextStyle(
-                        fontSize: 20,
-                        height: 1.1,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
                     const SizedBox(width: 1.6),
                     Text(
-                      price,
+                      '\$$price',
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 20,
                         height: 1,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,

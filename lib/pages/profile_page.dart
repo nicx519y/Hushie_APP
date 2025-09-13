@@ -555,8 +555,9 @@ class _ProfilePageState extends State<ProfilePage>
                   const Text(
                     'Log in / Sign up to access data.',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Color(0xFF999999),
+                      fontWeight: FontWeight.w400,
                       height: 1,
                     ),
                   ),
@@ -572,7 +573,7 @@ class _ProfilePageState extends State<ProfilePage>
                     },
                     child: const Text(
                       'Log in / Sign up',
-                      style: TextStyle(fontSize: 16, color: Color(0xFF333333)),
+                      style: TextStyle(fontSize: 14, color: Color(0xFF333333), fontWeight: FontWeight.w400),
                     ),
                   ),
 

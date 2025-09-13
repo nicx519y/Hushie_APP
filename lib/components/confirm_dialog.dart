@@ -168,9 +168,9 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
                   child: Text(
                     widget.title,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       height: 1.5,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: Color(0xFF333333),
                     ),
                     textAlign: TextAlign.center,
@@ -185,8 +185,8 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
                       _buildButton(
                         widget.confirmText,
                         const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                           color: Color(0xFFFF2050),
                         ),
                         widget.onConfirm,
@@ -197,7 +197,7 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
                       _buildButton(
                         widget.cancelText,
                         const TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: Color(0xFF000000),
                         ),

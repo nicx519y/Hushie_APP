@@ -50,7 +50,7 @@ class AudioCard extends StatelessWidget {
                   left: 10,
                   right: 10,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       // 播放次数
                       GestureDetector(
@@ -58,7 +58,7 @@ class AudioCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 4,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.black.withAlpha(153),
@@ -71,14 +71,14 @@ class AudioCard extends StatelessWidget {
                                 color: Colors.white,
                                 size: 12,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 6),
                               Text(
                                 NumberFormatter.countNumFilter(
                                   item.playTimes,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -93,7 +93,7 @@ class AudioCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 4,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.black.withAlpha(153),
@@ -107,14 +107,14 @@ class AudioCard extends StatelessWidget {
                                 color: Colors.white,
                                 size: 12,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Text(
                                 NumberFormatter.countNumFilter(
                                   item.likesCount,
                                 ),
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -132,8 +132,8 @@ class AudioCard extends StatelessWidget {
               padding: const EdgeInsets.only(
                 left: 0,
                 right: 0,
-                top: 8,
-                bottom: 8,
+                top: 6,
+                bottom: 0,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,24 +144,35 @@ class AudioCard extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
-                      height: 1.5,
+                      height: 1.2,
                       color: Color(0xff333333),
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  // 描述
-                  Text(
-                    item.tags?.join(', ') ?? '',
-                    style: const TextStyle(
-                      color: Color(0xff666666),
-                      fontSize: 12,
-                      height: 1.4,
+                  const SizedBox(height: 6),
+                  // 标签
+                  if (item.tags != null && item.tags!.isNotEmpty)
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: item.tags!.map((tag) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD8D8D8),
+                          borderRadius: BorderRadius.circular(0),
+                        ),
+                        child: Text(
+                          tag,
+                          style: const TextStyle(
+                            color: Color(0xff666666),
+                            fontSize: 10,
+                            height: 1.2,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      )).toList(),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                   const SizedBox(height: 6),
                   // 作者信息
                   Row(

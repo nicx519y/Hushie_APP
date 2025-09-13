@@ -63,6 +63,8 @@ class AudioPlayerPage extends StatefulWidget {
 
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
+  bool _isPreviewMode = true;
+  Duration _currentPosition = Duration.zero;
 
   // 移除时长代理服务和渲染相关状态，现在由AudioProgressBar内部管理
  
@@ -122,6 +124,21 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       }
     }));
 
+    _subscriptions.add(_audioManager.canPlayAllDurationStream.listen((canPlayAllDuration) {
+      if (mounted) {
+        setState(() {
+          _isPreviewMode = !canPlayAllDuration;
+        });
+      }
+    }));
+
+    _subscriptions.add(_audioManager.positionStream.listen((position) {
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+        });
+      }
+    }));
   }
 
   void _togglePlay() {
@@ -139,10 +156,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       if (currentAudio == null || currentAudio.id != currentAudioId) {
         // 如果没有当前音频信息，无法播放
         if (_currentAudio == null) return;
-
         // 创建音频模型并播放
         _audioManager.playAudio(_currentAudio!);
       } else {
+        // 如果是预览模式，并且在预览结束点 按播放 弹出订阅框
+        if(_currentAudio != null && _isPreviewMode 
+          && _currentPosition.inSeconds >= _currentAudio!.previewStart!.inSeconds + _currentAudio!.previewDuration!.inSeconds) {
+          _onUnlockFullAccessTap();
+          return;
+        }
+
         // 如果是同一首音频，直接恢复播放
         _audioManager.togglePlayPause();
       }
@@ -237,13 +260,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 解锁全功能提示点击事件
   void _onUnlockFullAccessTap() async {
-    final isLogin = await AuthService.isSignedIn();
-    if (!isLogin) {
-      // 打开登录页
-      NavigationUtils.navigateToLogin(context);
-    } else {
-      showSubscriptionDialog(context);
-    }
+    showSubscriptionDialog(context);
   }
 
   void _onReadMoreTap() {
@@ -413,7 +430,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             ],
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 26),
         _buildLikeButton(),
       ],
     );
@@ -470,10 +487,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           Text(
             desc,
             style: const TextStyle(
+              // letterSpacing: 0,
               fontSize: 12,
-              height: 1.5,
+              height: 1.7,
               color: Colors.white,
-              fontWeight: FontWeight.w300,
+              // fontWeight: FontWeight.w300,
             ),
             textAlign: TextAlign.left,
             maxLines: _isDescExpended ? 20 : 2,

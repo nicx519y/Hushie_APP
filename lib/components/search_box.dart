@@ -34,7 +34,7 @@ class SearchBox extends StatelessWidget {
         onTap?.call();
       },
       child: Container(
-        height: 40,
+        height: 30,
         decoration: BoxDecoration(
           color: const Color(0xFFF2F4F5),
           borderRadius: BorderRadius.circular(8),
@@ -47,7 +47,7 @@ class SearchBox extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Container(
-                height: 40,
+                height: 30,
                 alignment: Alignment.centerLeft,
                 child: RepaintBoundary(
                   child: TextField(
@@ -60,7 +60,7 @@ class SearchBox extends StatelessWidget {
                       hintText: hintText,
                       hintStyle: const TextStyle(
                         color: Colors.grey,
-                        fontSize: 16,
+                        fontSize: 14,
                         height: 1,
                       ),
                       border: InputBorder.none,
@@ -68,7 +68,7 @@ class SearchBox extends StatelessWidget {
                       isDense: true,
                     ),
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Color(0xFF333333),
                       height: 1.2,
                     ),
@@ -82,13 +82,13 @@ class SearchBox extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
-                    color: Color(0x55000000),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Color(0x44000000),
+                    borderRadius: BorderRadius.circular(9),
                   ),
                   child: Icon(Icons.clear, size: 12, color: Colors.white),
                 ),
               ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
           ],
         ),
       ),

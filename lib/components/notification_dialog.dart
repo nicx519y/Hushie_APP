@@ -5,6 +5,7 @@ class NotificationDialog extends StatelessWidget {
   final String message;
   final String buttonText;
   final VoidCallback? onConfirm;
+  final double? width; // 添加宽度控制参数
 
   const NotificationDialog({
     super.key,
@@ -12,6 +13,7 @@ class NotificationDialog extends StatelessWidget {
     required this.message,
     this.buttonText = 'Got It',
     this.onConfirm,
+    this.width = 287, // 可选的宽度参数
   });
 
   void _handleConfirm(BuildContext context) {
@@ -26,11 +28,12 @@ class NotificationDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
+        width: width, // 应用宽度约束
         padding: const EdgeInsets.only(
-          left: 30,
-          right: 30,
+          left: 22,
+          right: 22,
           top: 38,
-          bottom: 30,
+          bottom: 20,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -48,23 +51,23 @@ class NotificationDialog extends StatelessWidget {
             Text(
               title,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF333333),
               ),
               textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // 消息内容
             Text(
               message,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 12,
                 fontWeight: FontWeight.w400,
                 color: Color(0xFF666666),
-                height: 1.4,
+                height: 1.67,
               ),
               textAlign: TextAlign.center,
             ),
@@ -88,7 +91,7 @@ class NotificationDialog extends StatelessWidget {
                 child: Text(
                   buttonText,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -108,6 +111,7 @@ Future<void> showNotificationDialog(
   required String message,
   String buttonText = 'Got It',
   VoidCallback? onConfirm,
+  double? width, // 添加宽度参数
 }) async {
   return showDialog<void>(
     context: context,
@@ -118,6 +122,7 @@ Future<void> showNotificationDialog(
         message: message,
         buttonText: buttonText,
         onConfirm: onConfirm,
+        width: width, // 传递宽度参数
       );
     },
   );

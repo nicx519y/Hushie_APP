@@ -312,8 +312,8 @@ class _SearchPageState extends State<SearchPage> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w300,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
                         color: Color(0xFF2A4EFF),
                         height: 1.3,
                       ),

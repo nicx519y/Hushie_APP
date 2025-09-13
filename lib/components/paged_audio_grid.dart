@@ -161,19 +161,21 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
       }
 
       if (newItems.isEmpty) {
-        _pagingController.appendLastPage([]);
+        // _pagingController.appendLastPage([]);
         return;
       }
 
-      final isLastPage = newItems.length < _pageSize;
+      // final isLastPage = newItems.length < _pageSize;
 
-      if (isLastPage) {
-        _pagingController.appendLastPage(newItems);
-      } else {
+      // if (isLastPage) {
+      //   _pagingController.appendLastPage(newItems);
+      // } else {
         // 使用最后一个item的ID作为下一页的key
-        final nextPageKey = newItems.isNotEmpty ? newItems.last.id : null;
+      if(newItems.last.id != ''){
+        final nextPageKey = newItems.last.id;
         _pagingController.appendPage(newItems, nextPageKey);
       }
+      // }
     } catch (error) {
       _pagingController.error = error;
     }
@@ -192,18 +194,14 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
             final newItems = await widget.refreshDataFetcher!(tag: widget.tag);
 
             // 直接设置新数据，避免重复调用 _fetchPage
-            if (newItems.isNotEmpty) {
+            if (newItems.isNotEmpty && newItems.last.id != '') {
               // 有数据时，清空现有数据并设置新数据
               _pagingController.refresh();
-              _pagingController.appendPage(newItems, null);
-            } else {
-              // 没有数据时，清空现有数据并设置为空状态
-              _pagingController.refresh();
-              // 重要：设置为最后一页，避免loading状态
-              _pagingController.appendLastPage([]);
+              _pagingController.appendPage(newItems, newItems.last.id);
             }
           } else {
             // 使用默认的刷新方法
+            
             _pagingController.refresh();
           }
         } catch (error) {

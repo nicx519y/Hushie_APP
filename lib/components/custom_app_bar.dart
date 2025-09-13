@@ -25,11 +25,12 @@ class CustomAppBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              SizedBox(
-                width: 100,
+              Transform.translate(
+                offset: const Offset(0, 3),
                 child: SvgPicture.asset(
                   'assets/icons/logo.svg',
-                  width: 100,
+                  height: 30,
+                  width: 120,
                   // height: 25,
                 ),
               ),
