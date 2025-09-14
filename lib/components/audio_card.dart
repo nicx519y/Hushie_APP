@@ -3,6 +3,7 @@ import 'package:hushie_app/components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../utils/custom_icons.dart';
 import '../models/audio_item.dart';
+import 'package:hushie_app/components/max_lines_wrap.dart';
 
 class AudioCard extends StatelessWidget {
   final AudioItem item;
@@ -153,7 +154,8 @@ class AudioCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   // 标签
                   if (item.tags != null && item.tags!.isNotEmpty)
-                    Wrap(
+                    MaxLinesWrap(
+                      maxLines: 2,
                       spacing: 4,
                       runSpacing: 4,
                       children: item.tags!.map((tag) => Container(
