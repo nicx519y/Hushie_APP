@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'circular_play_button.dart';
 import '../services/audio_manager.dart';
+import '../services/audio_service.dart';
 import '../models/audio_item.dart';
 import '../router/navigation_utils.dart';
 
@@ -34,44 +35,63 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     super.initState();
     _audioManager = AudioManager.instance;
     _setupAudioListeners();
+    _loadInitialState();
+  }
+
+  // 加载初始状态
+  void _loadInitialState() {
+    // 获取当前音频管理器的状态
+    _isPlaying = _audioManager.isPlaying;
+    _currentAudio = _audioManager.currentAudio;
+    _currentPosition = _audioManager.position;
+    _totalDuration = _audioManager.duration;
+
+    // 如果有初始状态，触发UI更新
+    if (_currentAudio != null ||
+        _isPlaying ||
+        _totalDuration != Duration.zero) {
+      setState(() {});
+    }
   }
 
   void _setupAudioListeners() {
-    // 监听播放状态
-    _audioManager.isPlayingStream.listen((isPlaying) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = isPlaying;
-        });
-      }
-    });
+    // 使用统一的音频状态流
+    debugPrint('Setting up audio listeners...');
+    _audioManager.audioStateStream.listen(
+      (audioState) {
+        debugPrint('[bottom_navigation_bar] Received audioState: isPlaying=${audioState.isPlaying}, currentAudio=${audioState.currentAudio?.title}');
+        if (mounted) {
+          // 直接更新所有状态，确保UI能正确反映当前状态
+          setState(() {
+            // 更新播放状态
+            if (_isPlaying != audioState.isPlaying) {
+              _isPlaying = audioState.isPlaying;
+            }
 
-    // 监听当前音频
-    _audioManager.currentAudioStream.listen((audio) {
-      if (mounted) {
-        setState(() {
-          _currentAudio = audio;
-        });
-      }
-    });
+            // 更新当前音频
+            if (_currentAudio?.id != audioState.currentAudio?.id) {
+              _currentAudio = audioState.currentAudio;
+            }
 
-    // 监听播放位置
-    _audioManager.positionStream.listen((position) {
-      if (mounted) {
-        setState(() {
-          _currentPosition = position;
-        });
-      }
-    });
+            // 更新播放位置
+            if (_currentPosition != audioState.position) {
+              _currentPosition = audioState.position;
+            }
 
-    // 监听总时长
-    _audioManager.durationStream.listen((duration) {
-      if (mounted) {
-        setState(() {
-          _totalDuration = duration.totalDuration;
-        });
-      }
-    });
+            // 更新总时长
+            final newTotalDuration =
+                audioState.currentAudio?.duration ??
+                audioState.duration ?? Duration.zero;
+            if (_totalDuration != newTotalDuration) {
+              _totalDuration = newTotalDuration;
+            }
+          });
+        }
+      },
+      onError: (error) {
+        debugPrint('Error in audioStateStream: $error');
+      },
+    );
   }
 
   static const Color activeColor = Color(0xFF333333);
@@ -185,6 +205,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   }
 
   Widget _buildPlayButton() {
+    debugPrint('BottomNavigationBar: 构建播放按钮');
     // 计算播放进度
     double progress = 0.0;
     if (_totalDuration.inMilliseconds > 0) {

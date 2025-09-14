@@ -5,49 +5,84 @@ import '../models/audio_item.dart';
 import 'package:flutter/foundation.dart';
 import 'exoplayer_config_service.dart';
 
+// 音频状态数据类
+class AudioPlayerState {
+  final AudioItem? currentAudio;
+  final Duration position;
+  final Duration bufferedPosition;
+  final Duration duration;
+  final bool isPlaying;
+  final double speed;
+  final PlayerState playerState;
+  final Duration renderPreviewStart;
+  final Duration renderPreviewEnd;
+
+  AudioPlayerState({
+    this.currentAudio,
+    this.position = Duration.zero,
+    this.bufferedPosition = Duration.zero,
+    this.duration = Duration.zero,
+    this.isPlaying = false,
+    this.speed = 1.0,
+    PlayerState? playerState,
+    this.renderPreviewStart = Duration.zero,
+    this.renderPreviewEnd = Duration.zero,
+  }) : playerState = playerState ?? PlayerState(false, ProcessingState.idle);
+
+  AudioPlayerState copyWith({
+    AudioItem? currentAudio,
+    Duration? position,
+    Duration? bufferedPosition,
+    Duration? duration,
+    bool? isPlaying,
+    double? speed,
+    PlayerState? playerState,
+    Duration? renderPreviewStart,
+    Duration? renderPreviewEnd,
+  }) {
+    return AudioPlayerState(
+      currentAudio: currentAudio ?? this.currentAudio,
+      position: position ?? this.position,
+      bufferedPosition: bufferedPosition ?? this.bufferedPosition,
+      duration: duration ?? this.duration,
+      isPlaying: isPlaying ?? this.isPlaying,
+      speed: speed ?? this.speed,
+      playerState: playerState ?? this.playerState,
+      renderPreviewStart: renderPreviewStart ?? this.renderPreviewStart,
+      renderPreviewEnd: renderPreviewEnd ?? this.renderPreviewEnd,
+    );
+  }
+}
+
 class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  // 播放状态流
-  final BehaviorSubject<bool> _isPlayingSubject = BehaviorSubject<bool>.seeded(
-    false,
-  );
-  final BehaviorSubject<AudioItem?> _currentAudioSubject =
-      BehaviorSubject<AudioItem?>.seeded(null);
-  final BehaviorSubject<Duration> _positionSubject =
-      BehaviorSubject<Duration>.seeded(Duration.zero);
-  final BehaviorSubject<Duration> _durationSubject =
-      BehaviorSubject<Duration>.seeded(Duration.zero);
-  final BehaviorSubject<double> _speedSubject = BehaviorSubject<double>.seeded(
-    1.0,
-  );
-  final BehaviorSubject<PlayerState> _playerStateSubject = BehaviorSubject<PlayerState>.seeded(
-    PlayerState(false, ProcessingState.idle)
-  );
-  final BehaviorSubject<Duration> _bufferedPositionSubject = BehaviorSubject<Duration>.seeded(
-    Duration.zero,
+  // 统一的音频状态流
+  final BehaviorSubject<AudioPlayerState> _audioStateSubject = BehaviorSubject<AudioPlayerState>.seeded(
+    AudioPlayerState(),
   );
 
-  // 公开的流
-  Stream<bool> get isPlayingStream => _isPlayingSubject.stream;
-  Stream<AudioItem?> get currentAudioStream => _currentAudioSubject.stream;
-  Stream<Duration> get positionStream => _positionSubject.stream;
-  Stream<Duration> get durationStream => _durationSubject.stream;
-  Stream<double> get speedStream => _speedSubject.stream;
-  Stream<PlayerState> get playerStateStream => _playerStateSubject.stream;
-  Stream<Duration> get bufferedPositionStream => _bufferedPositionSubject.stream;
+  // 公开的统一状态流
+  Stream<AudioPlayerState> get audioStateStream => _audioStateSubject.stream;
+
+
 
   // 当前状态的getter
-  bool get isPlaying => _isPlayingSubject.value;
-  AudioItem? get currentAudio => _currentAudioSubject.value;
-  Duration get position => _positionSubject.value;
-  Duration get duration => _durationSubject.value;
-  double get speed => _speedSubject.value;
-  PlayerState get playerState => _playerStateSubject.value;
-  Duration get bufferedPosition => _bufferedPositionSubject.value;
+  AudioPlayerState get currentState => _audioStateSubject.value;
+  bool get isPlaying => _audioStateSubject.value.isPlaying;
+  AudioItem? get currentAudio => _audioStateSubject.value.currentAudio;
+  Duration get position => _audioStateSubject.value.position;
+  Duration get duration => _audioStateSubject.value.duration;
+  double get speed => _audioStateSubject.value.speed;
+  PlayerState get playerState => _audioStateSubject.value.playerState;
+  Duration get bufferedPosition => _audioStateSubject.value.bufferedPosition;
+
 
   AudioPlayerService() {
+    debugPrint('AudioPlayerService constructor called');
     _init();
+    // 确保初始状态被发送
+    debugPrint('Initial audioState: ${_audioStateSubject.value}');
   }
 
   void _init() {
@@ -56,14 +91,13 @@ class AudioPlayerService extends BaseAudioHandler {
     
     // 监听播放状态变化
     _audioPlayer.playingStream.listen((playing) {
-      _isPlayingSubject.add(playing);
+      _updateAudioState(isPlaying: playing);
       _broadcastState();
     });
 
     // 监听播放位置变化 - 添加防抖动以减少更新频率
-    _audioPlayer.positionStream
-        .listen((position) {
-      _positionSubject.add(position);
+    _audioPlayer.positionStream.listen((position) {
+      _updateAudioState(position: position);
       _broadcastState(); // 调用，减少广播频率
       // 位置更新不需要频繁广播状态，其他状态变化时会自动广播
     });
@@ -71,24 +105,50 @@ class AudioPlayerService extends BaseAudioHandler {
     // 监听播放时长变化
     _audioPlayer.durationStream.listen((duration) {
       if (duration != null) {
-        _durationSubject.add(duration);
+        _updateAudioState(duration: duration);
       }
     });
 
     // 监听播放速度变化
     _audioPlayer.speedStream.listen((speed) {
-      _speedSubject.add(speed);
+      _updateAudioState(speed: speed);
     });
 
     // 监听播放完成
     _audioPlayer.playerStateStream.listen((state) {
-      _playerStateSubject.add(state);
+      _updateAudioState(playerState: state);
     });
 
     // 监听缓冲位置变化
     _audioPlayer.bufferedPositionStream.listen((bufferedPosition) {
-      _bufferedPositionSubject.add(bufferedPosition);
+      _updateAudioState(bufferedPosition: bufferedPosition);
     });
+  }
+
+  // 统一的状态更新方法
+  void _updateAudioState({
+    AudioItem? currentAudio,
+    Duration? position,
+    Duration? bufferedPosition,
+    Duration? duration,
+    bool? isPlaying,
+    double? speed,
+    PlayerState? playerState,
+    Duration? renderPreviewStart,
+    Duration? renderPreviewEnd,
+  }) {
+    final newState = _audioStateSubject.value.copyWith(
+      currentAudio: currentAudio,
+      position: position,
+      bufferedPosition: bufferedPosition,
+      duration: duration,
+      isPlaying: isPlaying,
+      speed: speed,
+      playerState: playerState,
+      renderPreviewStart: renderPreviewStart,
+      renderPreviewEnd: renderPreviewEnd,
+    );
+    _audioStateSubject.add(newState);
   }
 
   Future<void> loadAudio(AudioItem audio, {Duration? initialPosition}) async {
@@ -96,7 +156,7 @@ class AudioPlayerService extends BaseAudioHandler {
       // 先完全停止并重置播放器状态
 
       await _stopAndReset();
-      _currentAudioSubject.add(audio);
+      _updateAudioState(currentAudio: audio);
 
       // 验证音频URL
       final audioUrl = audio.audioUrl;
@@ -161,7 +221,7 @@ class AudioPlayerService extends BaseAudioHandler {
   Future<void> playAudio(AudioItem audio, {Duration? initialPosition}) async {
     try {
       // 检查是否需要加载新音频或重新设置初始位置
-      final currentAudio = _currentAudioSubject.value;
+      final currentAudio = this.currentAudio;
       if (currentAudio == null || currentAudio.id != audio.id) {
         debugPrint('加载新音频: ${audio.title} (ID: ${audio.id})');
         await loadAudio(audio, initialPosition: initialPosition);
@@ -189,6 +249,16 @@ class AudioPlayerService extends BaseAudioHandler {
       }
       // 添加小延迟确保资源完全释放
       await Future.delayed(const Duration(milliseconds: 100));
+      
+      // 使用统一的状态更新方法重置所有状态
+      _updateAudioState(
+        currentAudio: null,
+        position: Duration.zero,
+        duration: null,
+        isPlaying: false,
+        speed: 1.0,
+        bufferedPosition: Duration.zero,
+      );
     } catch (e) {
       debugPrint('停止播放器时出错: $e');
     }
@@ -212,7 +282,7 @@ class AudioPlayerService extends BaseAudioHandler {
     } catch (e) {
       debugPrint('停止播放时出错: $e');
     } finally {
-      _currentAudioSubject.add(null);
+      _updateAudioState(currentAudio: null);
       mediaItem.add(null);
     }
   }
@@ -227,7 +297,7 @@ class AudioPlayerService extends BaseAudioHandler {
   @override
   Future<void> setSpeed(double speed) async {
     await _audioPlayer.setSpeed(speed);
-    _speedSubject.add(speed);
+    _updateAudioState(speed: speed);
   }
 
   // 广播播放状态
@@ -311,12 +381,6 @@ class AudioPlayerService extends BaseAudioHandler {
   // 清理资源
   Future<void> dispose() async {
     await _audioPlayer.dispose();
-    await _isPlayingSubject.close();
-    await _currentAudioSubject.close();
-    await _positionSubject.close();
-    await _durationSubject.close();
-    await _speedSubject.close();
-    await _playerStateSubject.close();
-    await _bufferedPositionSubject.close();
+    await _audioStateSubject.close();
   }
 }

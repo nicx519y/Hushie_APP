@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 import '../models/audio_item.dart';
 import '../services/api/user_history_service.dart';
 import 'auth_service.dart';
-import 'audio_service.dart';
+import 'audio_manager.dart';
+import 'audio_service.dart'; // 需要AudioPlayerState类型定义
 
 /// 音频播放历史管理器
 /// 整合本地内存缓存和服务端数据同步，提供统一的历史管理接口
@@ -19,11 +20,8 @@ class AudioHistoryManager {
   final ValueNotifier<List<AudioItem>> _historyNotifier =
       ValueNotifier<List<AudioItem>>([]);
 
-  // 音频播放监听相关
-  AudioPlayerService? _audioService;
-  StreamSubscription<bool>? _playingSubscription;
-  StreamSubscription<AudioItem?>? _currentAudioSubscription;
-  StreamSubscription<Duration>? _positionSubscription;
+  // 音频播放监听相关 - 通过AudioManager订阅
+  StreamSubscription<AudioPlayerState>? _audioStateSubscription;
 
   // 播放记录相关状态
   AudioItem? _currentPlayingAudio;
@@ -31,6 +29,9 @@ class AudioHistoryManager {
   Duration _lastRecordedPosition = Duration.zero;
   DateTime? _lastProgressRecordTime;
   bool _isRecordingProgress = false; // 防止并发记录进度
+  
+  // 本地状态缓存，用于差异对比
+  AudioPlayerState? _lastAudioState;
 
   static const int progressUpdateIntervalS = 30; // 30秒更新一次
 
@@ -68,51 +69,62 @@ class AudioHistoryManager {
     }
   }
 
-  /// 设置音频播放服务并开始监听
-  void setAudioService(AudioPlayerService audioService) {
-    _audioService = audioService;
+  /// 开始监听音频播放状态（通过AudioManager）
+  void startListening() {
     _startPlaybackListening();
   }
 
   /// 开始监听播放状态变化
   void _startPlaybackListening() {
-    if (_audioService == null) return;
-
     // 取消之前的监听
     _stopPlaybackListening();
 
-    debugPrint('🎵 [HISTORY] 开始监听音频播放状态变化');
+    debugPrint('🎵 [HISTORY] 开始监听音频播放状态变化（通过AudioManager）');
 
-    // 监听当前播放音频变化
-    _currentAudioSubscription = _audioService!.currentAudioStream.listen((
-      audio,
-    ) {
-      _onCurrentAudioChanged(audio);
-    });
-
-    // 监听播放状态变化
-    _playingSubscription = _audioService!.isPlayingStream.listen((isPlaying) {
-      _onPlayingStateChanged(isPlaying);
-    });
-
-    // 监听播放位置变化
-    _positionSubscription = _audioService!.positionStream.listen((position) {
-      _onPositionChanged(position);
+    // 监听AudioManager的统一音频状态流
+    _audioStateSubscription = AudioManager.instance.audioStateStream.listen((audioState) {
+      // 如果是第一次接收状态或状态发生变化，才进行处理
+      if (_lastAudioState == null || _hasStateChanged(_lastAudioState!, audioState)) {
+        // 检查当前音频是否变化
+        if (_lastAudioState?.currentAudio?.id != audioState.currentAudio?.id) {
+          _onCurrentAudioChanged(audioState.currentAudio);
+        }
+        
+        // 检查播放状态是否变化
+        if (_lastAudioState?.isPlaying != audioState.isPlaying) {
+          _onPlayingStateChanged(audioState.isPlaying);
+        }
+        
+        // 检查播放位置是否变化（避免频繁的位置更新）
+        if (_lastAudioState?.position != audioState.position) {
+          _onPositionChanged(audioState.position);
+        }
+        
+        // 更新本地状态缓存
+        _lastAudioState = audioState;
+      }
     });
   }
 
   /// 停止监听播放状态变化
   void _stopPlaybackListening() {
-    _currentAudioSubscription?.cancel();
-    _currentAudioSubscription = null;
-
-    _playingSubscription?.cancel();
-    _playingSubscription = null;
-
-    _positionSubscription?.cancel();
-    _positionSubscription = null;
+    _audioStateSubscription?.cancel();
+    _audioStateSubscription = null;
+    _lastAudioState = null; // 清空状态缓存
 
     debugPrint('🎵 [HISTORY] 已停止监听音频播放状态变化');
+  }
+  
+  /// 检查音频状态是否发生实质性变化
+  bool _hasStateChanged(AudioPlayerState oldState, AudioPlayerState newState) {
+    return oldState.currentAudio?.id != newState.currentAudio?.id ||
+           oldState.isPlaying != newState.isPlaying ||
+           oldState.position != newState.position ||
+           oldState.duration != newState.duration ||
+           oldState.speed != newState.speed ||
+           oldState.playerState.processingState != newState.playerState.processingState ||
+           oldState.renderPreviewStart != newState.renderPreviewStart ||
+           oldState.renderPreviewEnd != newState.renderPreviewEnd;
   }
 
   /// 当前播放音频变化回调
@@ -359,12 +371,12 @@ class AudioHistoryManager {
   /// 获取当前播放记录状态
   Map<String, dynamic> getPlaybackRecordStatus() {
     return {
-      'isListening': _audioService != null,
+      'isListening': _audioStateSubscription != null,
       'currentPlayingAudio': _currentPlayingAudio?.toMap(),
       'isCurrentlyPlaying': _isCurrentlyPlaying,
       'lastRecordedPosition': _lastRecordedPosition.inMilliseconds,
       'lastProgressRecordTime': _lastProgressRecordTime?.toIso8601String(),
-      'recordingMethod': 'position_stream_based',
+      'recordingMethod': 'audioManager_stream_based',
     };
   }
 
@@ -459,7 +471,6 @@ class AudioHistoryManager {
     // 清空播放状态
     _currentPlayingAudio = null;
     _isCurrentlyPlaying = false;
-    _audioService = null;
 
     debugPrint('🎵 [HISTORY] 音频历史管理器资源已清理');
   }

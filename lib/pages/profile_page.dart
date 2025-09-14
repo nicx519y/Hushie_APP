@@ -16,6 +16,7 @@ import 'dart:async';
 import 'package:hushie_app/services/api/user_history_service.dart';
 import 'package:hushie_app/services/audio_manager.dart';
 import '../components/notification_dialog.dart';
+import '../services/audio_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -46,7 +47,7 @@ class _ProfilePageState extends State<ProfilePage>
   // 认证状态订阅
   StreamSubscription<AuthStatusChangeEvent>? _authSubscription;
   // 音频流订阅
-  StreamSubscription<AudioItem?>? _audioSubscription;
+  StreamSubscription<AudioPlayerState>? _audioSubscription;
 
   @override
   void initState() {
@@ -110,11 +111,15 @@ class _ProfilePageState extends State<ProfilePage>
   void _subscribeToAudioChanges() {
     _audioSubscription?.cancel(); // 取消之前的订阅
 
-    _audioSubscription = AudioManager.instance.currentAudioStream.listen((audio) {
+    _audioSubscription = AudioManager.instance.audioStateStream.listen((audioState) {
       if (mounted) {
-        setState(() {
-          currentAudioId = audio?.id ?? '';
-        });
+        final newAudioId = audioState.currentAudio?.id ?? '';
+        // 只有当音频ID真正发生变化时才更新状态
+        if (currentAudioId != newAudioId) {
+          setState(() {
+            currentAudioId = newAudioId;
+          });
+        }
       }
     });
 

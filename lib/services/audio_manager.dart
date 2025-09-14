@@ -10,25 +10,27 @@ import 'audio_history_manager.dart';
 import 'api/audio_list_service.dart';
 import 'package:flutter/foundation.dart';
 
+/// 预览区间即将超出事件
+class PreviewOutEvent {
+  final Duration position;
+  final DateTime timestamp;
+
+  PreviewOutEvent({required this.position, DateTime? timestamp})
+      : timestamp = timestamp ?? DateTime.now();
+
+  @override
+  String toString() {
+    return 'PreviewOutEvent(position: $position, timestamp: $timestamp)';
+  }
+}
+
 class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
   static AudioManager get instance => _instance;
 
   AudioPlayerService? _audioService;
-  final BehaviorSubject<bool> _isPlayingSubject = BehaviorSubject<bool>.seeded(
-    false,
-  );
-  final BehaviorSubject<AudioItem?> _currentAudioSubject =
-      BehaviorSubject<AudioItem?>.seeded(null);
-  final BehaviorSubject<Duration> _positionSubject =
-      BehaviorSubject<Duration>.seeded(Duration.zero);
-  final BehaviorSubject<AudioDurationInfo> _durationSubject =
-      BehaviorSubject<AudioDurationInfo>.seeded(
-        const AudioDurationInfo(totalDuration: Duration.zero),
-      );
-  final BehaviorSubject<double> _speedSubject = BehaviorSubject<double>.seeded(
-    1.0,
-  );
+  bool _isInitializing = false;
+  bool _isInitialized = false;
   final BehaviorSubject<PlayerState> _playerStateSubject =
       BehaviorSubject<PlayerState>.seeded(
         PlayerState(false, ProcessingState.idle),
@@ -37,15 +39,36 @@ class AudioManager {
       BehaviorSubject<bool>.seeded(false);
   final BehaviorSubject<bool> _canAutoPlayNextSubject =
       BehaviorSubject<bool>.seeded(false);
-  final BehaviorSubject<Duration> _bufferedPositionSubject =
-      BehaviorSubject<Duration>.seeded(Duration.zero);
+
+  // 预览区间即将超出事件流
+  static final StreamController<PreviewOutEvent> _previewOutController =
+      StreamController<PreviewOutEvent>.broadcast();
+
+  /// 预览区间即将超出事件流（供外部订阅）
+  static Stream<PreviewOutEvent> get previewOutEvents =>
+      _previewOutController.stream;
 
   AudioManager._internal();
 
   // 初始化音频服务（延迟初始化）
   Future<void> _ensureInitialized() async {
-    if (_audioService != null) return;
+    // 如果已经初始化完成，直接返回
+    if (_isInitialized && _audioService != null) {
+      debugPrint('AudioService already initialized');
+      return;
+    }
 
+    // 如果正在初始化，等待初始化完成
+    if (_isInitializing) {
+      debugPrint('AudioService is initializing, waiting...');
+      while (_isInitializing) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      return;
+    }
+
+    _isInitializing = true;
+    debugPrint('Initializing AudioService...');
     try {
       _audioService = await AudioService.init(
         builder: () => AudioPlayerService(),
@@ -58,28 +81,33 @@ class AudioManager {
         ),
       );
 
+      debugPrint('AudioService initialized successfully');
       // 初始化成功后，设置流监听
       _setupStreamListeners();
+      _isInitialized = true;
     } catch (e) {
       debugPrint('AudioService初始化失败: $e');
       _audioService = null;
+      _isInitialized = false;
+    } finally {
+      _isInitializing = false;
     }
   }
 
   // 设置流监听
   void _setupStreamListeners() {
-    if (_audioService == null) return;
+    if (_audioService == null) {
+      debugPrint('Cannot setup stream listeners: _audioService is null');
+      return;
+    }
 
-    // 监听播放状态
-    _audioService!.isPlayingStream.listen((isPlaying) {
-      _isPlayingSubject.add(isPlaying);
-    });
-
-    // 监听当前音频
-    _audioService!.currentAudioStream.listen((audio) {
-      _currentAudioSubject.add(audio);
-
+    debugPrint('Setting up AudioManager stream listeners...');
+    // 监听统一的音频状态流
+    _audioService!.audioStateStream.listen((audioState) {
+      debugPrint('AudioManager received audioState: isPlaying=${audioState.isPlaying}');
+      
       // 管理播放列表
+      final audio = audioState.currentAudio;
       if (audio != null) {
         final isInPlaylist =
             AudioPlaylist.instance.getAudioItemById(audio.id) != null;
@@ -92,55 +120,25 @@ class AudioManager {
           audio.id,
         ); // 管理播放列表，将当前音频添加到播放列表，如果当前音频是播放列表最后一条，则继续补充下面的播放列表
       }
-    });
-
-    // 监听播放位置
-    _audioService!.positionStream.listen((position) {
-      // 使用节流控制器：每1秒执行一次预览检查
+      
+      // 检查预览区间
+      final position = audioState.position;
       if (_checkWillOutPreview(position)) {
+        // 发送预览区间即将超出事件
         pause();
+        _previewOutController.add(PreviewOutEvent(position: position));
       }
-
-      _positionSubject.add(position);
-    });
-
-    // 监听播放时长
-    _audioService!.durationStream.listen((duration) {
-      final currentAudio = _currentAudioSubject.value;
-      final newDurationInfo = AudioDurationInfo.withValidation(
-        totalDuration: duration,
-        previewStart: currentAudio?.previewStart,
-        previewDuration: currentAudio?.previewDuration,
-      );
-      _durationSubject.add(newDurationInfo);
-    });
-
-    // 监听播放速度
-    _audioService!.speedStream.listen((speed) {
-      _speedSubject.add(speed);
-    });
-
-    // 监听播放位置，检查预览区间限制
-    // _positionSubject.stream.listen((position) {
-    //   _checkPreviewDurationLimit(position);
-    // });
-
-    // 监听播放器状态变化
-    _audioService!.playerStateStream.listen((playerState) {
-      _playerStateSubject.add(playerState);
-      _checkPlaybackCompletion(playerState);
-    });
-
-    // 监听缓冲位置
-    _audioService!.bufferedPositionStream.listen((bufferedPosition) {
-      _bufferedPositionSubject.add(bufferedPosition);
+      
+      // 更新播放器状态
+      _playerStateSubject.add(audioState.playerState);
+      _checkPlaybackCompletion(audioState.playerState);
     });
   }
 
   // 检查是否超出预览区间
   bool _checkWillOutPreview(Duration position) {
     if (currentAudio == null ||
-        !_isPlayingSubject.value ||
+        !isPlaying ||
         _canPlayAllDurationSubject.value) {
       return false;
     }
@@ -150,8 +148,6 @@ class AudioManager {
     final hasPreview =
         previewStart >= Duration.zero && previewDuration > Duration.zero;
 
-    
-
     if (hasPreview && position >= previewStart + previewDuration) {
       debugPrint('[playAudio] position: $position previewStart: $previewStart previewDuration: $previewDuration');
       return true;
@@ -159,14 +155,19 @@ class AudioManager {
     return false;
   }
 
-  Duration _transformPosition(Duration position) {
+  Duration _transformPosition(Duration position, {AudioItem? audio}) {
     // 如果能播放全部时长，直接返回原位置
     if (_canPlayAllDurationSubject.value) {
       return position;
     }
 
-    final currentAudio = _currentAudioSubject.value;
-    if (currentAudio == null) {
+    late AudioItem currentAudio;
+
+    if(audio != null) {
+      currentAudio = audio;
+    } else if(this.currentAudio != null) {
+      currentAudio = this.currentAudio!;
+    } else {
       return position;
     }
 
@@ -202,7 +203,7 @@ class AudioManager {
   /// 检查播放是否完成并自动播放下一首
   void _checkPlaybackCompletion(PlayerState playerState) {
     final canAutoPlayNext = _canAutoPlayNextSubject.value;
-    final currentAudio = _currentAudioSubject.value;
+    final currentAudio = this.currentAudio;
     if (playerState.processingState == ProcessingState.completed &&
         currentAudio != null) {
       if (canAutoPlayNext) {
@@ -236,6 +237,8 @@ class AudioManager {
 
   // 兼容性方法：保持原有的init接口，但改为延迟初始化
   Future<void> init() async {
+    debugPrint('AudioManager.init() called');
+    
     // 先初始化音频历史管理器（确保数据库可用）
     await AudioHistoryManager.instance.initialize();
     debugPrint('AudioManager: AudioHistoryManager 初始化完成');
@@ -244,11 +247,12 @@ class AudioManager {
     await AudioPlaylist.instance.initialize();
     debugPrint('AudioManager: AudioPlaylist 初始化完成');
 
+    // 使用统一的初始化方法，避免重复初始化
     await _ensureInitialized();
     debugPrint('AudioManager: AudioService 初始化完成');
 
-    // 设置音频服务，开启播放历史记录
-    AudioHistoryManager.instance.setAudioService(_audioService!);
+    // 开启播放历史记录监听（通过AudioManager的状态流）
+    AudioHistoryManager.instance.startListening();
 
     // 从播放历史列表中获取最后一条播放记录
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
@@ -272,7 +276,7 @@ class AudioManager {
   // 播放音频
   Future<void> playAudio(AudioItem audio, {bool? autoPlay = true}) async {
     // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
-    final currentAudio = _currentAudioSubject.value;
+    final currentAudio = this.currentAudio;
     final bool auto = autoPlay ?? true;
 
     if (currentAudio != null && currentAudio.id == audio.id) {
@@ -286,8 +290,9 @@ class AudioManager {
     // 2. 从历史列表获取新音频的播放进度，作为起始播放进度
     final position = AudioHistoryManager.instance.getPlaybackPosition(audio.id);
     // 3. 通过 _transformPosition 过滤 initialPosition 得到正确的 initialPosition
-    final transformedPosition = _transformPosition(position);
+    final transformedPosition = _transformPosition(position, audio: audio );
 
+    debugPrint('[playAudio]: 音频预览: 开始 ${audio.previewStart}, 长度 ${audio.previewDuration}');
     debugPrint('[playAudio]: 从历史记录获取的播放位置: $position');
     debugPrint('[playAudio]: 转换后的播放位置: $transformedPosition');
 
@@ -403,7 +408,7 @@ class AudioManager {
     if (_audioService != null) {
       // 使用 _transformPosition 方法处理位置转换
       final seekPosition = _transformPosition(position);
-      debugPrint('AudioManager: seek到位置 $seekPosition (原始位置: $position)');
+      // debugPrint('[progressBar] AudioManager: seek到位置 $seekPosition (原始位置: $position)');
 
       return await _audioService!.seek(seekPosition);
     }
@@ -433,29 +438,17 @@ class AudioManager {
     }
   }
 
-  // 获取播放状态流 - 修复版本
-  Stream<bool> get isPlayingStream {
-    return _isPlayingSubject.stream;
-  }
-
-  // 获取当前音频流 - 修复版本
-  Stream<AudioItem?> get currentAudioStream {
-    return _currentAudioSubject.stream;
-  }
-
-  // 获取播放位置流 - 修复版本
-  Stream<Duration> get positionStream {
-    return _positionSubject.stream;
-  }
-
-  // 获取总时长流 - 修复版本
-  Stream<AudioDurationInfo> get durationStream {
-    return _durationSubject.stream;
-  }
-
-  // 获取播放速度流 - 修复版本
-  Stream<double> get speedStream {
-    return _speedSubject.stream;
+  // 获取统一的音频状态流
+  Stream<AudioPlayerState> get audioStateStream {
+    // 如果服务未初始化，先初始化然后返回流
+    if (_audioService == null) {
+      _ensureInitialized();
+      // 返回一个延迟流，等待初始化完成后再订阅真实流
+      return Stream.fromFuture(_ensureInitialized()).asyncExpand((_) {
+        return _audioService?.audioStateStream ?? Stream.empty();
+      });
+    }
+    return _audioService!.audioStateStream;
   }
 
   // 获取播放器状态流
@@ -463,34 +456,35 @@ class AudioManager {
     return _playerStateSubject.stream;
   }
 
-  // 获取缓冲位置流
-  Stream<Duration> get bufferedPositionStream {
-    return _bufferedPositionSubject.stream;
-  }
-
   // 获取当前状态
   bool get isPlaying {
-    return _isPlayingSubject.value;
+    return _audioService?.currentState.isPlaying ?? false;
   }
 
   AudioItem? get currentAudio {
-    return _currentAudioSubject.value;
+    return _audioService?.currentState.currentAudio;
   }
 
   Duration get position {
-    return _positionSubject.value;
+    return _audioService?.currentState.position ?? Duration.zero;
   }
 
   AudioDurationInfo get durationInfo {
-    return _durationSubject.value;
+    final audio = currentAudio;
+    final duration = _audioService?.currentState.duration ?? Duration.zero;
+    return AudioDurationInfo.withValidation(
+      totalDuration: duration,
+      previewStart: audio?.previewStart,
+      previewDuration: audio?.previewDuration,
+    );
   }
 
   Duration get duration {
-    return _durationSubject.value.totalDuration;
+    return _audioService?.currentState.duration ?? Duration.zero;
   }
 
   double get speed {
-    return _speedSubject.value;
+    return _audioService?.currentState.speed ?? 1.0;
   }
 
   PlayerState get playerState {
@@ -506,7 +500,7 @@ class AudioManager {
   }
 
   Duration get bufferedPosition {
-    return _bufferedPositionSubject.value;
+    return _audioService?.currentState.bufferedPosition ?? Duration.zero;
   }
 
   // 获取状态流
@@ -537,15 +531,12 @@ class AudioManager {
     }
 
     // 关闭所有BehaviorSubject
-    await _isPlayingSubject.close();
-    await _currentAudioSubject.close();
-    await _positionSubject.close();
-    await _durationSubject.close();
-    await _speedSubject.close();
     await _playerStateSubject.close();
     await _canPlayAllDurationSubject.close();
     await _canAutoPlayNextSubject.close();
-    await _bufferedPositionSubject.close();
+
+    // 关闭StreamController
+    await _previewOutController.close();
 
     _audioService = null;
   }

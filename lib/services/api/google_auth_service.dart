@@ -249,7 +249,7 @@ class GoogleAuthService {
   /// 获取当前登录用户
   static Future<GoogleSignInAccount?> getCurrentUser() async {
     try {
-      return await _googleSignIn.currentUser;
+      return _googleSignIn.currentUser;
     } catch (e) {
       debugPrint('获取当前Google用户失败: $e');
       return null;
@@ -276,7 +276,7 @@ class GoogleAuthService {
         // 使用统一的JSON处理函数
         return ApiResponse.fromJson(
           jsonData,
-          (dataJson) => null, // logout不需要返回数据
+          (dataJson) {}, // logout不需要返回数据
         );
       } else {
         return ApiResponse.error(errNo: response.statusCode);
@@ -309,7 +309,7 @@ class GoogleAuthService {
         // 使用统一的JSON处理函数
         return ApiResponse.fromJson(
           jsonData,
-          (dataJson) => null, // delete account不需要返回数据
+          (dataJson) {}, // delete account不需要返回数据
         );
       } else {
         return ApiResponse.error(errNo: response.statusCode);
