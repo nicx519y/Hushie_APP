@@ -243,4 +243,36 @@ class SecureStorageService {
       };
     }
   }
+
+  /// 通用方法：存储字符串
+  static Future<bool> setString(String key, String value) async {
+    try {
+      await _storage.write(key: key, value: value);
+      return true;
+    } catch (e) {
+      debugPrint('存储字符串失败 key=$key: $e');
+      return false;
+    }
+  }
+
+  /// 通用方法：获取字符串
+  static Future<String?> getString(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } catch (e) {
+      debugPrint('获取字符串失败 key=$key: $e');
+      return null;
+    }
+  }
+
+  /// 通用方法：删除指定键
+  static Future<bool> deleteKey(String key) async {
+    try {
+      await _storage.delete(key: key);
+      return true;
+    } catch (e) {
+      debugPrint('删除键失败 key=$key: $e');
+      return false;
+    }
+  }
 }

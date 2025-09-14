@@ -124,7 +124,8 @@ class AudioItem {
       'audio_url': audioUrl,
       'duration': duration?.inMilliseconds,
       'created_at': createdAt?.toIso8601String(),
-      'tags': tags,
+      'tags': tags?.join(',') ?? '',
+      'tags_gender': '', // 保持与fromMap一致的字段结构
       'bg_image': bgImage?.toJson(),
       'last_played_at': lastPlayedAt?.millisecondsSinceEpoch,
       'preview_start_ms': previewStart?.inMilliseconds,
@@ -184,7 +185,7 @@ class AudioItem {
 
   @override
   String toString() {
-    return 'AudioItem(id: $id, title: $title, author: $author)';
+    return 'AudioItem(id: $id, title: $title, author: $author, tags: $tags)';
   }
 
   @override

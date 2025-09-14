@@ -31,7 +31,7 @@ class HomeTabsService {
       }
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      debugPrint("Home tabs service : $jsonData");
+      debugPrint("🏠 [HOME_TABS] API响应成功，errNo: ${jsonData['errNo']}");
 
       final int errNo = jsonData['errNo'] ?? -1;
       if (errNo != 0) {

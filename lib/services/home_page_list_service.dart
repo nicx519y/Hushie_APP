@@ -25,7 +25,6 @@ class HomePageListService {
 
   // 内存中的数据缓存
   final Map<String, List<AudioItem>> _tabDataCache = {};
-  final Map<String, String?> _tabLastCidCache = {};
 
   // 是否已初始化
   bool _isInitialized = false;
@@ -40,7 +39,6 @@ class HomePageListService {
       // 清除之前的缓存数据
       debugPrint('清除之前的缓存数据');
       _tabDataCache.clear();
-      _tabLastCidCache.clear();
 
       // 清除本地存储
       await _prefs?.remove(_storageKey);
@@ -61,9 +59,23 @@ class HomePageListService {
   }
 
   /// 获取指定tab的lastCid
-  String? getTabLastCid(String tabId) {
+  /// 从当前正在使用的数据中获取最后一个item的id
+  String? getTabLastCid(String tabId, {List<AudioItem>? currentData}) {
     _ensureInitialized();
-    return _tabLastCidCache[tabId];
+    
+    // 优先使用传入的当前数据
+    if (currentData != null && currentData.isNotEmpty) {
+      return currentData.last.id;
+    }
+    
+    // 其次使用缓存数据
+    final tabData = _tabDataCache[tabId];
+    if (tabData != null && tabData.isNotEmpty) {
+      return tabData.last.id;
+    }
+    
+    // 如果都没有数据，返回null（首次请求）
+    return null;
   }
 
   /// 获取下一页数据
@@ -79,7 +91,7 @@ class HomePageListService {
 
     try {
       // 获取当前tab的lastCid
-      final lastCid = _tabLastCidCache[tabId];
+      final lastCid = getTabLastCid(tabId);
 
       // 调用API获取数据
       final newItems = await AudioListService.getAudioList(
@@ -89,12 +101,43 @@ class HomePageListService {
       );
 
       if (newItems.isNotEmpty) {
-        // 更新lastCid为最新数据的最后一个item的id
-        final newLastCid = newItems.last.id;
-        _tabLastCidCache[tabId] = newLastCid;
-
         // 不使用缓存，每次都返回新数据
-        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: $newLastCid');
+        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: ${newItems.last.id}');
+        return newItems;
+      } else {
+        debugPrint('Tab $tabId 没有更多数据');
+        return [];
+      }
+    } catch (error) {
+      debugPrint('Tab $tabId 获取数据失败: $error');
+      rethrow;
+    }
+  }
+
+  /// 获取下一页数据（传递当前数据）
+  ///
+  /// [tabId] tab标识
+  /// [currentData] 当前已有的数据列表
+  /// 返回获取到的数据列表
+  Future<List<AudioItem>> fetchNextPageDataWithCurrentData(
+    String tabId,
+    List<AudioItem> currentData,
+  ) async {
+    _ensureInitialized();
+
+    try {
+      // 获取当前tab的lastCid，传递当前数据
+      final lastCid = getTabLastCid(tabId, currentData: currentData);
+
+      // 调用API获取数据
+      final newItems = await AudioListService.getAudioList(
+        tag: tabId == 'for_you' ? null : tabId,
+        cid: lastCid,
+        count: _maxItemsPerTab,
+      );
+
+      if (newItems.isNotEmpty) {
+        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: ${newItems.last.id}');
         return newItems;
       } else {
         debugPrint('Tab $tabId 没有更多数据');
@@ -112,7 +155,6 @@ class HomePageListService {
 
     // 清空当前tab的缓存
     _tabDataCache[tabId] = [];
-    _tabLastCidCache[tabId] = null;
 
     // 重新获取数据
     return await fetchNextPageData(tabId, forceRefresh: true);
@@ -122,7 +164,6 @@ class HomePageListService {
   void clearTabData(String tabId) {
     _ensureInitialized();
     _tabDataCache[tabId] = [];
-    _tabLastCidCache[tabId] = null;
     _saveDataToStorage();
   }
 
@@ -130,7 +171,6 @@ class HomePageListService {
   void clearAllTabData() {
     _ensureInitialized();
     _tabDataCache.clear();
-    _tabLastCidCache.clear();
     _saveDataToStorage();
   }
 
@@ -162,7 +202,6 @@ class HomePageListService {
 
       final data = {
         'tabData': tabDataMap,
-        'lastCid': _tabLastCidCache,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       };
 

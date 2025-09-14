@@ -54,8 +54,8 @@ class _ProfilePageState extends State<ProfilePage>
     super.initState();
 
     _tabItems = [
-      const TabItemModel(id: 'history', label: 'History'),
-      const TabItemModel(id: 'like', label: 'Like'),
+      const TabItemModel(id: 'history', label: 'History', items: []),
+      const TabItemModel(id: 'like', label: 'Like', items: []),
     ];
     _tabController = TabController(length: _tabItems.length, vsync: this);
     _tabController.addListener(() {
