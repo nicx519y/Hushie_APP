@@ -80,6 +80,10 @@ class DurationProxyService {
     
     _renderStart = targetRenderStart;
     _renderDuration = targetRenderDuration;
+    
+    debugPrint('[positionProxy] previewStart: $_previewStart previewDuration: $_previewDuration');
+    debugPrint('[positionProxy] totalDuration $_realDuration');
+    debugPrint('[positionProxy] renderStart: $_renderStart renderDuration: $_renderDuration');
   }
 
   /// 是否为预览模式

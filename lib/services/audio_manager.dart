@@ -150,7 +150,10 @@ class AudioManager {
     final hasPreview =
         previewStart >= Duration.zero && previewDuration > Duration.zero;
 
+    
+
     if (hasPreview && position >= previewStart + previewDuration) {
+      debugPrint('[playAudio] position: $position previewStart: $previewStart previewDuration: $previewDuration');
       return true;
     }
     return false;
@@ -270,7 +273,7 @@ class AudioManager {
   Future<void> playAudio(AudioItem audio, {bool? autoPlay = true}) async {
     // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
     final currentAudio = _currentAudioSubject.value;
-    final bool _auto = autoPlay ?? true;
+    final bool auto = autoPlay ?? true;
 
     if (currentAudio != null && currentAudio.id == audio.id) {
       debugPrint('相同音频正在播放，跳过: ${audio.title} (ID: ${audio.id})');
@@ -282,14 +285,18 @@ class AudioManager {
 
     // 2. 从历史列表获取新音频的播放进度，作为起始播放进度
     final position = AudioHistoryManager.instance.getPlaybackPosition(audio.id);
-    debugPrint('playAudio: 从历史记录获取的播放位置: $position');
     // 3. 通过 _transformPosition 过滤 initialPosition 得到正确的 initialPosition
     final transformedPosition = _transformPosition(position);
-    debugPrint('playAudio: 转换后的播放位置: $transformedPosition');
+
+    debugPrint('[playAudio]: 从历史记录获取的播放位置: $position');
+    debugPrint('[playAudio]: 转换后的播放位置: $transformedPosition');
+
     try {
       // await _ensureInitialized();
+      debugPrint('[playAudio]: _audioService != null : ${_audioService != null}; auto : $auto');
+
       if (_audioService != null) {
-        if (_auto == true) {
+        if (auto == true) {
           await _audioService!.playAudio(
             audio,
             initialPosition: transformedPosition,

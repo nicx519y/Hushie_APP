@@ -3,7 +3,6 @@ import '../utils/custom_icons.dart';
 
 class SearchBox extends StatelessWidget {
   final String hintText;
-  final Function(String)? onSearchChanged;
   final VoidCallback? onSearchSubmitted;
   final TextEditingController? controller;
   final FocusNode? focusNode;
@@ -16,7 +15,6 @@ class SearchBox extends StatelessWidget {
   const SearchBox({
     super.key,
     this.hintText = 'Search songs, users',
-    this.onSearchChanged,
     this.onSearchSubmitted,
     this.controller,
     this.focusNode,
@@ -54,7 +52,6 @@ class SearchBox extends StatelessWidget {
                     controller: controller,
                     focusNode: focusNode,
                     enabled: canFocus,
-                    onChanged: onSearchChanged,
                     onSubmitted: (_) => onSearchSubmitted?.call(),
                     decoration: InputDecoration(
                       hintText: hintText,

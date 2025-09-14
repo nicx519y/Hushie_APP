@@ -51,14 +51,8 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     debugPrint('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
-    return Navigator(
-      observers: [globalRouteObserver],
-      onGenerateRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => _buildMainContent(),
-          settings: settings,
-        );
-      },
+    return RepaintBoundary(
+      child: _buildMainContent(),
     );
   }
 
@@ -73,7 +67,9 @@ class _MainLayoutState extends State<MainLayout> {
             SafeArea(
               top: true, // 确保内容不被状态栏遮挡
               bottom: true,
-              child: IndexedStack(index: _currentIndex, children: widget.pages),
+              child: RepaintBoundary(
+                child: IndexedStack(index: _currentIndex, children: widget.pages),
+              ),
             ),
 
             // 底部导航栏（放在Stack最上层，脱离Scaffold默认布局）

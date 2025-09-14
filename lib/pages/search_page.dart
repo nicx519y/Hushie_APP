@@ -20,7 +20,7 @@ class _SearchPageState extends State<SearchPage> {
   static const int _debounceDelay = 800; // 防抖延迟时间（毫秒），可配置
 
   final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
+  late FocusNode _searchFocusNode;
   List<String> _searchHistory = [];
   List<AudioItem> _searchResults = [];
   bool _isSearching = false;
@@ -39,6 +39,8 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
+
+    _searchFocusNode = FocusNode();
 
     _loadSearchHistory();
     // 监听搜索框文本变化，实现实时搜索
@@ -333,6 +335,7 @@ class _SearchPageState extends State<SearchPage> {
         ),
       ),
     );
+    // return Container();
   }
 
   // 构建搜索历史界面

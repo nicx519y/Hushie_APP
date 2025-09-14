@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'pages/splash_page.dart';
 import 'config/api_config.dart';
+import 'layouts/main_layout.dart';
 
 void main() async {
   debugPrint('🚀 [MAIN] 应用启动开始');
@@ -83,6 +84,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: const SplashPage(),
+      navigatorObservers: [globalRouteObserver],
       debugShowCheckedModeBanner: false,
     );
   }

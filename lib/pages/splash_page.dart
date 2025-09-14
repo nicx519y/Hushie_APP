@@ -119,12 +119,16 @@ class _SplashPageState extends State<SplashPage> {
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
+  // 静态页面列表，避免每次构建时重新创建
+  static const List<Widget> _pages = [HomePage(), ProfilePage()];
+  static const List<String> _pageTitles = ['Home', 'Profile'];
+
   @override
   Widget build(BuildContext context) {
     debugPrint('🏠 [MAIN_APP] MainApp构建开始');
-    final result = MainLayout(
-      pages: const [HomePage(), ProfilePage()],
-      pageTitles: const ['Home', 'Profile'],
+    const result = MainLayout(
+      pages: _pages,
+      pageTitles: _pageTitles,
       initialIndex: 0,
     );
     debugPrint('🏠 [MAIN_APP] MainApp构建完成');

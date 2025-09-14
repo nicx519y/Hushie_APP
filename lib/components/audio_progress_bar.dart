@@ -26,7 +26,7 @@ class AudioProgressBar extends StatefulWidget {
     this.previewOpacity = 1.0,
     // 缓冲条样式参数默认值
     this.bufferColor = Colors.white,
-    this.bufferOpacity = 0.3,
+    this.bufferOpacity = 0.5,
     this.showBufferBar = true,
   });
 
@@ -50,6 +50,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   
   // 渲染用的位置和时长（经过代理转换）
   Duration _renderPosition = Duration.zero;
+  Duration _renderStart = Duration.zero;
   Duration _renderDuration = Duration.zero;
   Duration _renderBufferedPosition = Duration.zero;
   Duration _renderPreviewStart = Duration.zero;
@@ -94,6 +95,10 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
         setState(() {
           if (_durationProxy != null) {
             _renderPosition = _durationProxy!.realPositionToRenderPosition(position);
+            debugPrint('[playAudio] ==============================');
+            debugPrint('[playAudio] renderStart: ${_durationProxy!.renderStart} previewStart: ${_previewStartPosition}');
+            debugPrint('[playAudio] position: $position renderPosition: ${_durationProxy!.realPositionToRenderPosition(position)}');
+            debugPrint('[playAudio] ==============================');
           } else {
             _renderPosition = position;
           }
@@ -166,7 +171,8 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
 
     // 转换时长
     _renderDuration = _durationProxy!.renderDuration;
-    _renderPreviewStart = _durationProxy!.renderStart;
+    _renderStart = _durationProxy!.renderStart;
+    _renderPreviewStart = _previewStartPosition - _durationProxy!.renderStart;
     // 在预览模式下，预览时长就是整个渲染时长
     // 在普通模式下，预览时长需要转换为渲染坐标系
     if (_durationProxy!.isPreviewMode) {
@@ -349,12 +355,12 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
     this.showPreview = false,
     this.bufferedProgress = 0.0,
     // 预览条样式参数默认值
-    this.previewColor = Colors.white,
+    this.previewColor = Colors.black,
     this.previewOpacity = 1.0,
     this.showPreviewBar = true,
     // 缓冲条样式参数默认值
-    this.bufferColor = Colors.white,
-    this.bufferOpacity = 0.3,
+    this.bufferColor = Colors.blue,
+    this.bufferOpacity = .4,
     this.showBufferBar = true,
   });
 
@@ -421,7 +427,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
       );
 
       final bufferedPaint = Paint()
-        ..color = bufferColor/*.withAlpha((bufferOpacity * 255).toInt())*/
+        ..color = bufferColor.withAlpha((bufferOpacity * 255).toInt())
         ..style = PaintingStyle.fill;
 
       context.canvas.drawRRect(
@@ -447,7 +453,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
       );
 
       final previewPaint = Paint()
-        ..color = previewColor/*.withAlpha((previewOpacity * 255).toInt())*/
+        ..color = previewColor.withAlpha((previewOpacity * 255).toInt())
         ..style = PaintingStyle.fill;
 
       // 绘制预览条
@@ -461,7 +467,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
 
       // 绘制预览条两端的圆点（半径2px）
       final circlePaint = Paint()
-        ..color = previewColor/*.withAlpha((previewOpacity * 255).toInt())*/
+        ..color = previewColor.withAlpha((previewOpacity * 255).toInt())
         ..style = PaintingStyle.fill;
 
       final circleRadius = 2.0;

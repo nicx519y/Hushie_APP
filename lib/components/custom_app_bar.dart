@@ -38,7 +38,6 @@ class CustomAppBar extends StatelessWidget {
               Expanded(
                 child: SearchBox(
                   hintText: hintText,
-                  onSearchChanged: onSearchChanged,
                   onSearchSubmitted: onSearchSubmitted,
                   onTap: onSearchTap,
                   canFocus: false,
