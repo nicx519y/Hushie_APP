@@ -134,7 +134,12 @@ class _HistoryListState extends State<HistoryList> {
                         )
                       : AudioList(
                           audios: _historyList,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.only(
+                            top: 0,
+                            bottom: 40,
+                            left: 16,
+                            right: 16,
+                          ),
                           emptyWidget: _buildEmptyWidget(),
                           onRefresh: _refreshHistory,
                           onItemTap: (audio) {

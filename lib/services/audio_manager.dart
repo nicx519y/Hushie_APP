@@ -40,6 +40,11 @@ class AudioManager {
   final BehaviorSubject<bool> _canAutoPlayNextSubject =
       BehaviorSubject<bool>.seeded(false);
 
+  // 缓存本地状态，用于比对变化
+  String? _lastAudioId;
+  bool _lastIsPlaying = false;
+  Duration _lastPosition = Duration.zero;
+
   // 预览区间即将超出事件流
   static final StreamController<PreviewOutEvent> _previewOutController =
       StreamController<PreviewOutEvent>.broadcast();
@@ -106,9 +111,20 @@ class AudioManager {
     _audioService!.audioStateStream.listen((audioState) {
       debugPrint('AudioManager received audioState: isPlaying=${audioState.isPlaying}');
       
-      // 管理播放列表
       final audio = audioState.currentAudio;
-      if (audio != null) {
+      final currentAudioId = audio?.id;
+      final isPlaying = audioState.isPlaying;
+      final position = audioState.position;
+      
+      // 检查音频是否发生变化
+      bool audioChanged = _lastAudioId != currentAudioId;
+      bool playingStateChanged = _lastIsPlaying != isPlaying;
+      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 500);
+      // bool positionChanged = _lastPosition != position;
+      
+      // 管理播放列表 - 只在音频ID发生变化时执行
+      if (audioChanged && audio != null) {
+        debugPrint('Audio changed from ${_lastAudioId} to ${currentAudioId}');
         final isInPlaylist =
             AudioPlaylist.instance.getAudioItemById(audio.id) != null;
 
@@ -121,17 +137,23 @@ class AudioManager {
         ); // 管理播放列表，将当前音频添加到播放列表，如果当前音频是播放列表最后一条，则继续补充下面的播放列表
       }
       
-      // 检查预览区间
-      final position = audioState.position;
-      if (_checkWillOutPreview(position)) {
+      // 检查预览区间 - 只在位置发生明显变化时检查
+      if (positionChanged && _checkWillOutPreview(position)) {
         // 发送预览区间即将超出事件
         pause();
         _previewOutController.add(PreviewOutEvent(position: position));
       }
       
-      // 更新播放器状态
-      _playerStateSubject.add(audioState.playerState);
-      _checkPlaybackCompletion(audioState.playerState);
+      // 更新播放器状态 - 只在状态发生变化时更新
+      if (playingStateChanged || audioChanged) {
+        _playerStateSubject.add(audioState.playerState);
+        _checkPlaybackCompletion(audioState.playerState);
+      }
+      
+      // 更新缓存的状态
+      _lastAudioId = currentAudioId;
+      _lastIsPlaying = isPlaying;
+      _lastPosition = position;
     });
   }
 
@@ -148,7 +170,7 @@ class AudioManager {
     final hasPreview =
         previewStart >= Duration.zero && previewDuration > Duration.zero;
 
-    if (hasPreview && position >= previewStart + previewDuration) {
+    if (hasPreview && position >= previewStart + previewDuration || position < previewStart) {
       debugPrint('[playAudio] position: $position previewStart: $previewStart previewDuration: $previewDuration');
       return true;
     }
@@ -285,6 +307,11 @@ class AudioManager {
         play();
       }
       return;
+    }
+
+    // 如果是不同的音频，先停止之前的播放
+    if(currentAudio != null && currentAudio.id != audio.id) {
+      await stop();
     }
 
     // 2. 从历史列表获取新音频的播放进度，作为起始播放进度

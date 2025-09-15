@@ -620,14 +620,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建进度条
   Widget _buildProgressBar() {
-    // 如果正在加载metadata或没有时长信息，隐藏进度条
-    // if (_isLoadingMetadata || _totalDuration == Duration.zero) {
-    //   return const SizedBox(height: 40); // 保持布局高度
-    // }
-
     return RepaintBoundary(
       child: AudioProgressBar(
-        // onOutPreview: _onUnlockFullAccessTap,
+        onOutPreview: _onUnlockFullAccessTap,
       ),
     );
   }

@@ -150,18 +150,24 @@ class AudioHistoryManager {
   void _onCurrentAudioChanged(AudioItem? audio) {
     debugPrint('🎵 [HISTORY] 当前播放音频变化: ${audio?.id ?? 'null'}');
 
-    // 如果有正在播放的音频且不是同一个，先记录停止
-    if (_currentPlayingAudio != null && _currentPlayingAudio!.id != audio?.id) {
-      _recordPlayStop();
+    // 保存旧的音频ID用于比较
+    final oldAudioId = _currentPlayingAudio?.id;
+    final newAudioId = audio?.id;
+    
+    // 音频切换时不记录停止，因为这不是用户主动停止
+    // 只有在播放状态变化时才记录停止
+    
+    _currentPlayingAudio = audio;
+    
+    // 只有在音频真正变化时才重置位置和时间
+    if (oldAudioId != newAudioId) {
+      _lastRecordedPosition = Duration.zero;
+      _lastProgressRecordTime = null;
     }
 
-    _currentPlayingAudio = audio;
-    _lastRecordedPosition = Duration.zero;
-    _lastProgressRecordTime = null;
-
-    // 记录新音频开始播放
-    if (audio != null) {
-      _recordPlayStart();
+    // 记录新音频开始播放（只在正在播放时记录）
+    if (audio != null && _isCurrentlyPlaying) {
+      _recordPlayStart(isFirst: true);
     }
   }
 
@@ -173,7 +179,10 @@ class AudioHistoryManager {
     _isCurrentlyPlaying = isPlaying;
 
     if (_currentPlayingAudio != null) {
-      if (!isPlaying && wasPlaying) {
+      if (isPlaying && !wasPlaying) {
+        // 开始播放（从暂停恢复或首次播放）
+        _recordPlayStart();
+      } else if (!isPlaying && wasPlaying) {
         // 停止播放
         _recordPlayStop();
       }
@@ -259,12 +268,12 @@ class AudioHistoryManager {
     _isRecordingProgress = false; // 无论成功失败都要重置标志
   }
 
-  /// 记录首次播放开始
-  Future<void> _recordPlayStart() async {
+  /// 记录播放开始
+  Future<void> _recordPlayStart({bool isFirst = false}) async {
     await _recordPlayProgressHelper(
-      logMessage: '🎵 [HISTORY] 记录播放开始: ${_currentPlayingAudio?.title}  id: ${_currentPlayingAudio?.id}',
+      logMessage: '🎵 [HISTORY] 记录播放开始${isFirst ? '(首次)' : '(恢复)'}: ${_currentPlayingAudio?.title}  id: ${_currentPlayingAudio?.id}',
       errorMessage: '🎵 [HISTORY] 记录播放开始失败',
-      isFirst: true,
+      isFirst: isFirst,
       onSuccess: () {
         // 重置进度记录时间，确保30秒后才开始定时上报
         _lastProgressRecordTime = DateTime.now();

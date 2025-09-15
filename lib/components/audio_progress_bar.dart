@@ -276,7 +276,9 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                 // 检查是否超出预览区域
                  if (_isPreviewMode && value < previewStart || value > previewEnd) {
                    // 预览模式下，检查是否需要触发解锁回调
-                    widget.onOutPreview?.call();
+                    if(widget.onOutPreview != null) {
+                      widget.onOutPreview!();
+                    }
                  }
                 
                 final realValue = _isPreviewMode ? value.clamp(previewStart, previewEnd) : value;
