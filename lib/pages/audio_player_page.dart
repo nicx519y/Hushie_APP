@@ -55,7 +55,9 @@ class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
 }
 
 class AudioPlayerPage extends StatefulWidget {
-  const AudioPlayerPage({super.key});
+  final AudioItem? initialAudio;
+  
+  const AudioPlayerPage({super.key, this.initialAudio});
 
   /// 使用标准上滑动画打开播放器页面
 
@@ -65,8 +67,8 @@ class AudioPlayerPage extends StatefulWidget {
 
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
-  bool _isPreviewMode = true;
-  Duration _currentPosition = Duration.zero;
+  // bool _isPreviewMode = true;
+  // Duration _currentPosition = Duration.zero;
 
   // 移除时长代理服务和渲染相关状态，现在由AudioProgressBar内部管理
  
@@ -98,6 +100,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     _audioManager = AudioManager.instance;
     // 只监听音频播放状态，不主动加载音频
     _listenToAudioState();
+    
+    // 如果有初始音频，用初始音频信息渲染
+    if (widget.initialAudio != null) {
+      setState(() {
+        _currentAudio = widget.initialAudio;
+        _isAudioLoading = true;
+      });
+    }
   }
 
   void _listenToAudioState() {
@@ -143,7 +153,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           
           // 检查播放位置是否变化
           if (_lastAudioState?.position != audioState.position) {
-            _currentPosition = audioState.position;
+            // _currentPosition = audioState.position;
             needsUpdate = true;
           }
           
@@ -159,11 +169,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     }));
 
     _subscriptions.add(_audioManager.canPlayAllDurationStream.listen((canPlayAllDuration) {
-      if (mounted) {
-        setState(() {
-          _isPreviewMode = !canPlayAllDuration;
-        });
-      }
+      // if (mounted) {
+      //   setState(() {
+      //     _isPreviewMode = !canPlayAllDuration;
+      //   });
+      // }
     }));
 
     // 监听预览区间即将超出事件
@@ -193,13 +203,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         // 创建音频模型并播放
         _audioManager.playAudio(_currentAudio!);
       } else {
-        // 如果是预览模式，并且在预览结束点 按播放 弹出订阅框
-        // if(_currentAudio != null && _isPreviewMode 
-        //   && _currentPosition.inSeconds >= _currentAudio!.previewStart!.inSeconds + _currentAudio!.previewDuration!.inSeconds) {
-        //   _onUnlockFullAccessTap();
-        //   return;
-        // }
-
         // 如果是同一首音频，直接恢复播放
         _audioManager.togglePlayPause();
       }

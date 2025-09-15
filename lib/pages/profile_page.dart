@@ -358,7 +358,7 @@ class _ProfilePageState extends State<ProfilePage>
 
   void _onAudioListItemTap(AudioItem audio) async {
     AudioManager.instance.playAudio(audio);
-    NavigationUtils.navigateToAudioPlayer(context);
+    NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
   }
   // 订阅按钮点击
   void _onSubscribeTap() {
@@ -472,6 +472,10 @@ class _ProfilePageState extends State<ProfilePage>
                 child: CustomTabBar(
                   controller: _tabController,
                   tabItems: _tabItems,
+                  labelStyle: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                  ),
                   onTabChanged: (index) {
                     setState(() {
                       currentTabIndex = index;
@@ -489,23 +493,10 @@ class _ProfilePageState extends State<ProfilePage>
             child: TabBarView(
               controller: _tabController,
               children: [
-                // History 标签页
-                ValueListenableBuilder<List<AudioItem>>(
-                  valueListenable: AudioHistoryManager.instance.historyNotifier,
-                  builder: (context, historyList, child) {
-                    if (historyList.isEmpty) {
-                      return _buildEmptyWidget('No history');
-                    }
-                    return AudioList(
-                      padding: const EdgeInsets.only(bottom: 120),
-                      audios: historyList,
-                      activeId: currentAudioId,
-                      emptyWidget: _buildEmptyWidget('No history'),
-                      onRefresh: _refreshHistoryData,
-                      hasMoreData: false,
-                      onItemTap: _onAudioListItemTap,
-                    );
-                  },
+                // History 标签页 - 从AudioHistoryManager获取数据并监听事件流
+                _HistoryTabContent(
+                  currentAudioId: currentAudioId,
+                  onItemTap: _onAudioListItemTap,
                 ),
                 // Like 标签页
                 _isLoadingLiked && likedAudios.isEmpty
@@ -614,6 +605,126 @@ class _ProfilePageState extends State<ProfilePage>
         Expanded(child: Center(child: CircularProgressIndicator())),
         const SizedBox(height: 180),
       ],
+    );
+  }
+}
+
+/// 历史记录标签页内容组件
+class _HistoryTabContent extends StatefulWidget {
+  final String currentAudioId;
+  final void Function(AudioItem) onItemTap;
+
+  const _HistoryTabContent({
+    required this.currentAudioId,
+    required this.onItemTap,
+  });
+
+  @override
+  State<_HistoryTabContent> createState() => _HistoryTabContentState();
+}
+
+class _HistoryTabContentState extends State<_HistoryTabContent> {
+  List<AudioItem> _historyList = [];
+  StreamSubscription<List<AudioItem>>? _historyStreamSubscription;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeHistory();
+  }
+
+  /// 初始化历史记录数据
+  Future<void> _initializeHistory() async {
+    try {
+      // 获取初始历史记录数据
+      final historyList = await AudioHistoryManager.instance.getAudioHistory();
+      if (mounted) {
+        setState(() {
+          _historyList = historyList;
+          _isLoading = false;
+        });
+      }
+
+      // 监听历史记录变更事件流
+      _historyStreamSubscription = AudioHistoryManager.instance.historyStream.listen((updatedHistory) {
+        if (mounted) {
+          setState(() {
+            _historyList = updatedHistory;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('初始化历史记录失败: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshHistory() async {
+    try {
+      await AudioHistoryManager.instance.refreshHistory();
+    } catch (e) {
+      debugPrint('刷新历史记录失败: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _historyStreamSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Column(
+        children: [
+          Expanded(child: Center(child: CircularProgressIndicator())),
+          const SizedBox(height: 180),
+        ],
+      );
+    }
+
+    if (_historyList.isEmpty) {
+      return Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Text(
+                'No history',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 180),
+        ],
+      );
+    }
+
+    return AudioList(
+      padding: const EdgeInsets.only(bottom: 120),
+      audios: _historyList,
+      activeId: widget.currentAudioId,
+      emptyWidget: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Text(
+                'No history',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 180),
+        ],
+      ),
+      onRefresh: _refreshHistory,
+      hasMoreData: false,
+      onItemTap: widget.onItemTap,
     );
   }
 }

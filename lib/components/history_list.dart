@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_list.dart';
@@ -15,12 +16,55 @@ class HistoryList extends StatefulWidget {
 }
 
 class _HistoryListState extends State<HistoryList> {
+  List<AudioItem> _historyList = [];
+  StreamSubscription<List<AudioItem>>? _historyStreamSubscription;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeHistory();
+  }
+
+  /// 初始化历史记录数据
+  Future<void> _initializeHistory() async {
+    try {
+      // 获取初始历史记录数据
+      final historyList = await AudioHistoryManager.instance.getAudioHistory();
+      if (mounted) {
+        setState(() {
+          _historyList = historyList;
+          _isLoading = false;
+        });
+      }
+
+      // 监听历史记录变更事件流
+      _historyStreamSubscription = AudioHistoryManager.instance.historyStream.listen((updatedHistory) {
+        if (mounted) {
+          setState(() {
+            _historyList = updatedHistory;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('初始化历史记录失败: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   void _closeDialog() {
     Navigator.of(context, rootNavigator: true).pop();
   }
 
   @override
   void dispose() {
+    // 取消历史记录事件流监听
+    _historyStreamSubscription?.cancel();
+    
     // 在组件销毁时调用 onClose 回调
     if (widget.onClose != null) {
       widget.onClose!();
@@ -84,25 +128,23 @@ class _HistoryListState extends State<HistoryList> {
 
                 // 历史记录列表
                 Expanded(
-                  child: ValueListenableBuilder<List<AudioItem>>(
-                    valueListenable:
-                        AudioHistoryManager.instance.historyNotifier,
-                    builder: (context, historyList, child) {
-                      return AudioList(
-                        audios: historyList,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        emptyWidget: _buildEmptyWidget(),
-                        onRefresh: _refreshHistory,
-                        onItemTap: (audio) {
-                          if (widget.onItemTap != null) {
-                            widget.onItemTap!(audio);
-                            _closeDialog();
-                          }
-                        },
-                        hasMoreData: false,
-                      );
-                    },
-                  ),
+                  child: _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(),
+                        )
+                      : AudioList(
+                          audios: _historyList,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          emptyWidget: _buildEmptyWidget(),
+                          onRefresh: _refreshHistory,
+                          onItemTap: (audio) {
+                            if (widget.onItemTap != null) {
+                              widget.onItemTap!(audio);
+                              _closeDialog();
+                            }
+                          },
+                          hasMoreData: false,
+                        ),
                 ),
               ],
             ),

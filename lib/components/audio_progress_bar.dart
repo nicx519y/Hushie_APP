@@ -328,7 +328,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                 ),
               ),
               Text(
-                _formatDuration(_renderDuration),
+                _formatDuration(_realDuration), // 显示真实时长
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
@@ -385,7 +385,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
     bool isEnabled = false,
     bool isDiscrete = false,
   }) {
-    final trackHeight = 1.6;
+    final trackHeight = 1.0;
     final trackLeft = offset.dx;
     final trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
     final trackWidth = parentBox.size.width;

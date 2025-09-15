@@ -52,6 +52,7 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _initializeServices() async {
     try {
       await AudioManager.instance.init();
+      debugPrint('🔄 [SPLASH] _initializeServices 服务初始化完成');
       if (mounted) {
         setState(() {
           _servicesInitialized = true;

@@ -13,7 +13,7 @@ class NotificationDialog extends StatelessWidget {
     required this.message,
     this.buttonText = 'Got It',
     this.onConfirm,
-    this.width = 287, // 可选的宽度参数
+    this.width = 254, // 可选的宽度参数
   });
 
   void _handleConfirm(BuildContext context) {
@@ -28,12 +28,12 @@ class NotificationDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        width: width, // 应用宽度约束
+        width: width ?? 254, // 应用宽度约束
         padding: const EdgeInsets.only(
-          left: 22,
-          right: 22,
-          top: 38,
-          bottom: 20,
+          left: 19.4,
+          right: 19.4,
+          top: 30,
+          bottom: 16.4,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -52,6 +52,7 @@ class NotificationDialog extends StatelessWidget {
               title,
               style: const TextStyle(
                 fontSize: 16,
+                height: 1,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF333333),
               ),
@@ -66,13 +67,13 @@ class NotificationDialog extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF666666),
+                color: Color(0xFF333333),
                 height: 1.67,
               ),
               textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
             // 确认按钮
             SizedBox(
@@ -93,6 +94,7 @@ class NotificationDialog extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                    color: Color(0xFF333333),
                   ),
                 ),
               ),

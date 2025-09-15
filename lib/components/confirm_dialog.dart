@@ -146,7 +146,7 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
       color: Colors.black.withValues(alpha: 0.5), // 50% 透明黑色蒙层
       child: Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 54),
+          width: 240,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(32),
@@ -228,7 +228,7 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
       onTap: widget.isLoading ? null : _onPressed, // 如果显示loading，则不响应点击事件
       child: SizedBox(
         width: double.infinity,
-        height: 60,
+        height: 48,
         child: Container(
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(vertical: 12),

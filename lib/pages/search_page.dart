@@ -461,7 +461,7 @@ class _SearchPageState extends State<SearchPage> {
         // 播放音频
         _playAudio(audio);
         // 进入播放页面
-        NavigationUtils.navigateToAudioPlayer(context);
+        NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
       },
     );
   }

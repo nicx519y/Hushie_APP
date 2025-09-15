@@ -5,6 +5,7 @@ import '../pages/setting_page.dart';
 import '../pages/account_page.dart';
 import '../pages/about_us_page.dart';
 import '../pages/search_page.dart';
+import '../models/audio_item.dart';
 
 class NavigationUtils {
   // 记录当前是否已经打开了登录页面
@@ -57,11 +58,12 @@ class NavigationUtils {
   
   /// 导航到音频播放器页面
   /// 使用上滑动画效果
-  static Future<T?> navigateToAudioPlayer<T extends Object?>(BuildContext context) async {
+  /// [initialAudio] 可选的初始音频，如果提供则会自动播放该音频
+  static Future<T?> navigateToAudioPlayer<T extends Object?>(BuildContext context, {AudioItem? initialAudio}) async {
     try {
-      debugPrint('🎵 [AUDIO_PLAYER] 打开音频播放器页面');
+      debugPrint('🎵 [AUDIO_PLAYER] 打开音频播放器页面${initialAudio != null ? '，初始音频: ${initialAudio.title}' : ''}');
       return await Navigator.of(context, rootNavigator: true).push(
-        SlideUpPageRoute(page: const AudioPlayerPage()),
+        SlideUpPageRoute(page: AudioPlayerPage(initialAudio: initialAudio)),
       );
     } catch (e) {
       debugPrint('🎵 [AUDIO_PLAYER] 导航到音频播放器页面时发生错误: $e');

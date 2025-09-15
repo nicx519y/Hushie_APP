@@ -159,7 +159,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _playAudio(item);
 
     // 使用播放器页面的标准打开方式（包含上滑动画）
-    NavigationUtils.navigateToAudioPlayer(context);
+    NavigationUtils.navigateToAudioPlayer(context, initialAudio: item);
   }
 
   Future<void> _playAudio(AudioItem item) async {
