@@ -1,4 +1,4 @@
-package com.stdash.hushie_app
+package com.hushie.audio
 
 import android.os.Bundle
 import io.flutter.embedding.engine.FlutterEngine
@@ -7,7 +7,7 @@ import com.ryanheise.audioservice.AudioServiceActivity
 import android.view.WindowManager.LayoutParams
 
 class MainActivity : AudioServiceActivity() {
-    private val CHANNEL = "com.stdash.hushie_app/exoplayer_config"
+    private val CHANNEL = "com.hushie.audio/exoplayer_config"
     
     override fun onCreate(savedInstanceState: Bundle?) {
         // 立即设置主题为正常主题，跳过启动页

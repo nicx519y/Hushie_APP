@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:464599900807:android:c9e4fbf4e5f0f1365a4e22",
+        "mobilesdk_app_id": "1:464599900807:android:50058b0460d9a71d5a4e22",
         "android_client_info": {
-          "package_name": "com.stdash.hushie_app"
+          "package_name": "com.hushie.audio"
         }
       },
       "oauth_client": [
         {
-          "client_id": "464599900807-gcqc3c7ndk3qj0pdv3mv5bphj8ag7pm1.apps.googleusercontent.com",
+          "client_id": "464599900807-3ht957m247d4ea0jftcjo3t5dbg76f2f.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.stdash.hushie_app",
-            "certificate_hash": "2c7dc744e4d8eda88c5f8612966e3450d6b60d29"
+            "package_name": "com.hushie.audio",
+            "certificate_hash": "1c2fbc764ceac33cba78ccde407e6aa87307b29e"
           }
         },
         {

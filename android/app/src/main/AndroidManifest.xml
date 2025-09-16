@@ -5,8 +5,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     
+    <!-- Google Play Billing权限 -->
+    <uses-permission android:name="com.android.vending.BILLING" />
+    
     <application
-        android:label="hushie_app"
+        android:label="Hushie"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">

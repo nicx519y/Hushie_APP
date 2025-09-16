@@ -1,4 +1,4 @@
-package com.stdash.hushie_app
+package com.hushie.audio
 
 import android.content.Context
 import android.content.pm.PackageManager
