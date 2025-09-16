@@ -52,6 +52,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   
   // 真实的音频时长（用于位置转换）
   Duration _realDuration = Duration.zero;
+  Duration _realPosition = Duration.zero;
   
   late AudioManager _audioManager;
   
@@ -74,8 +75,14 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   void _listenToAudioState() {
     // 监听原始音频状态流，获取真实duration
     _subscriptions.add(_audioManager.audioStateStream.listen((originalState) {
-      if (mounted && originalState.duration != _realDuration) {
-        _realDuration = originalState.duration;
+      if(mounted) {
+        if (originalState.duration != _realDuration) {
+          _realDuration = originalState.duration;
+        }
+
+        if(originalState.position != _realPosition) {
+          _realPosition = originalState.position;
+        }
       }
     }));
     
@@ -184,6 +191,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     _lastAudioState = null; // 清空状态缓存
     _proxyStream = null; // 清空代理流引用
     _realDuration = Duration.zero; // 清空真实时长
+    _realPosition = Duration.zero; // 清空真实位置
     super.dispose();
   }
   
@@ -322,7 +330,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _formatDuration(_renderPosition),
+                _formatDuration(_realPosition),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
