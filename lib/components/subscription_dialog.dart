@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'slide_up_overlay.dart';
 import '../utils/custom_icons.dart';
 import '../models/subscribe_model.dart';
+import '../services/dialog_state_manager.dart';
 
 class SubscriptionDialog extends StatefulWidget {
   final SubscribeModel subscribeModel;
@@ -28,6 +29,9 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
 
   @override
   void dispose() {
+    // 清除弹窗状态标志
+    DialogStateManager.instance.closeDialog(DialogStateManager.subscriptionDialog);
+    
     if (widget.onClose != null) {
       widget.onClose!();
     }
@@ -389,6 +393,11 @@ Future<void> showSubscriptionDialog(
   VoidCallback? onSubscribe,
   VoidCallback? onClose,
 }) async {
+  // 检查是否已有弹窗打开
+  if (!DialogStateManager.instance.tryOpenDialog(DialogStateManager.subscriptionDialog)) {
+    return; // 已有其他弹窗打开，直接返回
+  }
+  
   return SlideUpOverlay.show(
     context: context,
     child: SubscriptionDialog(

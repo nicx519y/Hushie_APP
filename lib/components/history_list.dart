@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/audio_item.dart';
 import 'audio_list.dart';
 import '../services/audio_history_manager.dart';
+import '../services/dialog_state_manager.dart';
 import 'slide_up_overlay.dart';
 
 class HistoryList extends StatefulWidget {
@@ -62,6 +63,9 @@ class _HistoryListState extends State<HistoryList> {
 
   @override
   void dispose() {
+    // 清除弹窗状态标志
+    DialogStateManager.instance.closeDialog(DialogStateManager.historyList);
+    
     // 取消历史记录事件流监听
     _historyStreamSubscription?.cancel();
     
@@ -181,6 +185,11 @@ Future<void> showHistoryListWithAnimation(
   void Function(AudioItem)? onItemTap,
   VoidCallback? onClose,
 }) async {
+  // 检查是否已有弹窗打开
+  if (!DialogStateManager.instance.tryOpenDialog(DialogStateManager.historyList)) {
+    return; // 已有其他弹窗打开，直接返回
+  }
+  
   return SlideUpOverlay.show(
     context: context,
     child: HistoryList(

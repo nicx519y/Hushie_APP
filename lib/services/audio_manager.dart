@@ -108,8 +108,8 @@ class AudioManager {
 
     debugPrint('Setting up AudioManager stream listeners...');
     // 监听统一的音频状态流
-    _audioService!.audioStateStream.listen((audioState) {
-      debugPrint('AudioManager received audioState: isPlaying=${audioState.isPlaying}');
+    _audioService!.audioStateStream.listen((audioState) async {
+      debugPrint('[checkWillOutPreview] AudioManager received audioState: isPlaying=${audioState.isPlaying}');
       
       final audio = audioState.currentAudio;
       final currentAudioId = audio?.id;
@@ -121,7 +121,7 @@ class AudioManager {
       bool playingStateChanged = _lastIsPlaying != isPlaying;
       bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 500);
       // bool positionChanged = _lastPosition != position;
-      
+      debugPrint('[checkWillOutPreview] positionChanged: $positionChanged; _lastPosition: $_lastPosition; position: $position');
       // 管理播放列表 - 只在音频ID发生变化时执行
       if (audioChanged && audio != null) {
         debugPrint('Audio changed from ${_lastAudioId} to ${currentAudioId}');
@@ -132,10 +132,13 @@ class AudioManager {
           AudioPlaylist.instance.addAudio(audio);
         }
 
-        _managePlaylist(
-          audio.id,
-        ); // 管理播放列表，将当前音频添加到播放列表，如果当前音频是播放列表最后一条，则继续补充下面的播放列表
+        try {
+          await _managePlaylist( audio.id ); // 管理播放列表，将当前音频添加到播放列表，如果当前音频是播放列表最后一条，则继续补充下面的播放列表
+        } catch (e) {
+          debugPrint('管理播放列表失败: $e');
+        }
       }
+      debugPrint('[checkWillOutPreview] 播放列表管理完成');
       
       // 检查预览区间 - 只在位置发生明显变化时检查
       if (positionChanged && _checkWillOutPreview(position)) {
@@ -153,12 +156,15 @@ class AudioManager {
       // 更新缓存的状态
       _lastAudioId = currentAudioId;
       _lastIsPlaying = isPlaying;
-      _lastPosition = position;
+      if(positionChanged) {
+        _lastPosition = position;
+      }
     });
   }
 
   // 检查是否超出预览区间
   bool _checkWillOutPreview(Duration position) {
+    debugPrint('[checkWillOutPreview] canPlayAllDuration: ${_canPlayAllDurationSubject.value}');
     if (currentAudio == null ||
         !isPlaying ||
         _canPlayAllDurationSubject.value) {
@@ -170,7 +176,9 @@ class AudioManager {
     final hasPreview =
         previewStart >= Duration.zero && previewDuration > Duration.zero;
 
-    if (hasPreview && position >= previewStart + previewDuration || position < previewStart) {
+    debugPrint('[checkWillOutPreview] position: $position previewStart: $previewStart previewDuration: $previewDuration, hasPreview: $hasPreview');    
+
+    if (hasPreview && (position >= previewStart + previewDuration || position < previewStart)) {
       debugPrint('[playAudio] position: $position previewStart: $previewStart previewDuration: $previewDuration');
       return true;
     }

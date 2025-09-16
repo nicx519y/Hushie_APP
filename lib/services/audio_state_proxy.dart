@@ -403,7 +403,10 @@ class AudioStateProxyStream {
             renderStart = previewStart;
             renderDuration = Duration(
               microseconds: (realDuration.inMicroseconds - renderStart.inMicroseconds)
-                .clamp(previewDuration.inMicroseconds, idealRenderDuration.inMicroseconds)
+                .clamp(
+                  math.min(previewDuration.inMicroseconds, idealRenderDuration.inMicroseconds),
+                  math.max(previewDuration.inMicroseconds, idealRenderDuration.inMicroseconds)
+                )
             );
           }
         } else {
@@ -527,7 +530,10 @@ class AudioStateProxyStream {
            renderStart = previewStart;
            renderDuration = Duration(
              microseconds: (realDuration.inMicroseconds - renderStart.inMicroseconds)
-               .clamp(previewDuration.inMicroseconds, idealRenderDuration.inMicroseconds)
+               .clamp(
+                 math.min(previewDuration.inMicroseconds, idealRenderDuration.inMicroseconds),
+                 math.max(previewDuration.inMicroseconds, idealRenderDuration.inMicroseconds)
+               )
            );
          }
        } else {
