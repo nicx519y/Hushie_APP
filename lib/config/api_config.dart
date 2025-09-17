@@ -114,6 +114,17 @@ class ApiEndpoints {
   static const String googleTokenValidate = '/auth/google/validate';
   static const String userInfo = '/auth/userinfo';
 
-  static const String homeTabs = '/home/tabs';
   // 首页相关接口
+  static const String homeTabs = '/home/tabs';
+
+  // 产品相关接口
+  static const String productList = '/product/list';
+  static const String productDetail = '/product/detail';
+  static const String productPurchase = '/product/purchase';
+
+  // 用户权限相关接口
+  static const String userPrivilegeCheck = '/user/privilege/check';
+
+  // 订阅相关接口
+  static const String subscriptionCreate = '/subscriptions';
 }

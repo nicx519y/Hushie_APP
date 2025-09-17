@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../models/audio_item.dart';
+import '../../models/api_response.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
 import 'package:flutter/foundation.dart';
@@ -54,18 +55,18 @@ class UserHistoryService {
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
-      final int errNo = jsonData['errNo'] ?? -1;
-      if (errNo != 0) {
-        throw Exception('API failed: errNo=$errNo');
-      }
+      // 使用ApiResponse统一处理响应
+      final apiResponse = ApiResponse.fromJson<Map<String, dynamic>>(
+        jsonData,
+        (data) => data,
+      );
 
-      final dynamic dataJson = jsonData['data'];
-      if (dataJson == null) {
-        throw Exception('Response data is empty');
+      if (apiResponse.errNo != 0 || apiResponse.data == null) {
+        throw Exception('API failed: errNo=${apiResponse.errNo}');
       }
 
       // 检查history字段的类型
-      final dynamic historyData = dataJson['history'];
+      final dynamic historyData = apiResponse.data!['history'];
       List<dynamic> itemsData = [];
       
       if (historyData is List) {
@@ -121,18 +122,18 @@ class UserHistoryService {
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
-      final int errNo = jsonData['errNo'] ?? -1;
-      if (errNo != 0) {
-        throw Exception('API failed: errNo=$errNo');
-      }
+      // 使用ApiResponse统一处理响应
+      final apiResponse = ApiResponse.fromJson<Map<String, dynamic>>(
+        jsonData,
+        (data) => data,
+      );
 
-      final dynamic dataJson = jsonData['data'];
-      if (dataJson == null) {
-        throw Exception('Response data is empty');
+      if (apiResponse.errNo != 0 || apiResponse.data == null) {
+        throw Exception('API failed: errNo=${apiResponse.errNo}');
       }
 
       // 检查history字段的类型
-      final dynamic historyData = dataJson['history'];
+      final dynamic historyData = apiResponse.data!['history'];
       List<dynamic> itemsData = [];
       
       if (historyData is List) {

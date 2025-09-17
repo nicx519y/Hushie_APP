@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../models/userinfo_model.dart';
+import '../../models/api_response.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
 
@@ -26,19 +27,18 @@ class UserInfoService {
         throw Exception('HTTP failed: ${response.statusCode}');
       }
 
+      // 使用ApiResponse统一处理响应
       final Map<String, dynamic> jsonData = json.decode(response.body);
+      final apiResponse = ApiResponse.fromJson<UserInfoModel>(
+        jsonData,
+        (data) => UserInfoModel.fromMap(data),
+      );
 
-      final int errNo = jsonData['errNo'] ?? -1;
-      if (errNo != 0) {
-        throw Exception('API failed: errNo=$errNo');
+      if (apiResponse.errNo == 0 && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        throw Exception('API failed: errNo=${apiResponse.errNo}');
       }
-
-      final dynamic dataJson = jsonData['data'];
-      if (dataJson == null) {
-        throw Exception('Response data is empty');
-      }
-
-      return UserInfoModel.fromMap(dataJson as Map<String, dynamic>);
     } catch (e) {
       if (e is Exception) {
         rethrow;

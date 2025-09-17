@@ -4,6 +4,7 @@ import '../models/audio_item.dart';
 import 'audio_list.dart';
 import '../services/audio_history_manager.dart';
 import '../services/dialog_state_manager.dart';
+import '../services/audio_manager.dart';
 import 'slide_up_overlay.dart';
 
 class HistoryList extends StatefulWidget {
@@ -19,12 +20,34 @@ class HistoryList extends StatefulWidget {
 class _HistoryListState extends State<HistoryList> {
   List<AudioItem> _historyList = [];
   StreamSubscription<List<AudioItem>>? _historyStreamSubscription;
+  StreamSubscription? _audioStateSubscription;
   bool _isLoading = true;
+  String _currentAudioId = '';
 
   @override
   void initState() {
     super.initState();
     _initializeHistory();
+    _setupAudioStateListener();
+  }
+
+  /// 设置音频状态监听器
+  void _setupAudioStateListener() {
+    try {
+      // 监听AudioManager的音频状态流
+      _audioStateSubscription = AudioManager.instance.audioStateStream.listen((audioState) {
+        final currentAudio = audioState.currentAudio;
+        final newAudioId = currentAudio?.id ?? '';
+        
+        if (mounted && _currentAudioId != newAudioId) {
+          setState(() {
+            _currentAudioId = newAudioId;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('设置音频状态监听器失败: $e');
+    }
   }
 
   /// 初始化历史记录数据
@@ -69,6 +92,9 @@ class _HistoryListState extends State<HistoryList> {
     // 取消历史记录事件流监听
     _historyStreamSubscription?.cancel();
     
+    // 取消音频状态事件流监听
+    _audioStateSubscription?.cancel();
+    
     // 在组件销毁时调用 onClose 回调
     if (widget.onClose != null) {
       widget.onClose!();
@@ -98,10 +124,10 @@ class _HistoryListState extends State<HistoryList> {
                       // 标题和关闭按钮
                       Padding(
                         padding: const EdgeInsets.only(
-                          top: 5,
+                          top: 0,
                           bottom: 5,
-                          left: 16,
-                          right: 5,
+                          left: 0,
+                          right: 0,
                         ),
                         child: Row(
                           children: [
@@ -138,11 +164,12 @@ class _HistoryListState extends State<HistoryList> {
                         )
                       : AudioList(
                           audios: _historyList,
+                          activeId: _currentAudioId,
                           padding: const EdgeInsets.only(
                             top: 0,
                             bottom: 40,
-                            left: 16,
-                            right: 16,
+                            left: 0,
+                            right: 0,
                           ),
                           emptyWidget: _buildEmptyWidget(),
                           onRefresh: _refreshHistory,

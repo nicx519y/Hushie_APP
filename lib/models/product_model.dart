@@ -1,114 +1,224 @@
-class Product {
-  final int id;
+/// 优惠信息模型
+class Offer {
+  final String offerId;
   final String name;
-  final String description;
-  final String productType;
   final double price;
   final String currency;
-  final int durationDays;
-  final bool isCurrentState;
+  final String description;
 
-  const Product({
-    required this.id,
+  const Offer({
+    required this.offerId,
     required this.name,
-    required this.description,
-    required this.productType,
     required this.price,
     required this.currency,
-    required this.durationDays,
-    required this.isCurrentState,
+    required this.description,
   });
 
-  factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['id'] as int,
+  factory Offer.fromJson(Map<String, dynamic> json) {
+    return Offer(
+      offerId: json['offer_id'] as String,
       name: json['name'] as String,
-      description: json['description'] as String,
-      productType: json['product_type'] as String,
       price: (json['price'] as num).toDouble(),
       currency: json['currency'] as String,
-      durationDays: json['duration_days'] as int,
-      isCurrentState: json['is_current_state'] ?? false,
+      description: json['description'] as String,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'offer_id': offerId,
       'name': name,
-      'description': description,
-      'product_type': productType,
       'price': price,
       'currency': currency,
-      'duration_days': durationDays,
-      'is_current_state': isCurrentState,
+      'description': description,
     };
   }
 
   @override
   String toString() {
-    return 'Product{id: $id, name: $name, description: $description, productType: $productType, price: $price, currency: $currency, durationDays: $durationDays, isCurrentState: $isCurrentState}';
+    return 'Offer{offerId: $offerId, name: $name, price: $price, currency: $currency, description: $description}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Offer &&
+        other.offerId == offerId &&
+        other.name == name &&
+        other.price == price &&
+        other.currency == currency &&
+        other.description == description;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(offerId, name, price, currency, description);
+  }
+}
+
+/// 基础计划模型
+class BasePlan {
+  final String googlePlayBasePlanId;
+  final String name;
+  final double price;
+  final String currency;
+  final String billingPeriod;
+  final int durationDays;
+  final List<Offer> offers;
+
+  const BasePlan({
+    required this.googlePlayBasePlanId,
+    required this.name,
+    required this.price,
+    required this.currency,
+    required this.billingPeriod,
+    required this.durationDays,
+    required this.offers,
+  });
+
+  factory BasePlan.fromJson(Map<String, dynamic> json) {
+    final offersList = json['offers'] as List<dynamic>? ?? [];
+    return BasePlan(
+      googlePlayBasePlanId: json['google_play_base_plan_id'] as String,
+      name: json['name'] as String,
+      price: (json['price'] as num).toDouble(),
+      currency: json['currency'] as String,
+      billingPeriod: json['billing_period'] as String,
+      durationDays: json['duration_days'] as int,
+      offers: offersList
+          .map((item) => Offer.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'google_play_base_plan_id': googlePlayBasePlanId,
+      'name': name,
+      'price': price,
+      'currency': currency,
+      'billing_period': billingPeriod,
+      'duration_days': durationDays,
+      'offers': offers.map((offer) => offer.toJson()).toList(),
+    };
+  }
+
+  @override
+  String toString() {
+    return 'BasePlan{googlePlayBasePlanId: $googlePlayBasePlanId, name: $name, price: $price, currency: $currency, billingPeriod: $billingPeriod, durationDays: $durationDays, offers: $offers}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is BasePlan &&
+        other.googlePlayBasePlanId == googlePlayBasePlanId &&
+        other.name == name &&
+        other.price == price &&
+        other.currency == currency &&
+        other.billingPeriod == billingPeriod &&
+        other.durationDays == durationDays &&
+        _listEquals(other.offers, offers);
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      googlePlayBasePlanId,
+      name,
+      price,
+      currency,
+      billingPeriod,
+      durationDays,
+      offers,
+    );
+  }
+
+  bool _listEquals<T>(List<T> a, List<T> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+}
+
+/// 产品模型
+class Product {
+  final String googlePlayProductId;
+  final String name;
+  final String description;
+  final String productType;
+  final List<BasePlan> basePlans;
+
+  const Product({
+    required this.googlePlayProductId,
+    required this.name,
+    required this.description,
+    required this.productType,
+    required this.basePlans,
+  });
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    final basePlansList = json['base_plans'] as List<dynamic>? ?? [];
+    return Product(
+      googlePlayProductId: json['google_play_product_id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      productType: json['product_type'] as String,
+      basePlans: basePlansList
+          .map((item) => BasePlan.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'google_play_product_id': googlePlayProductId,
+      'name': name,
+      'description': description,
+      'product_type': productType,
+      'base_plans': basePlans.map((plan) => plan.toJson()).toList(),
+    };
+  }
+
+  @override
+  String toString() {
+    return 'Product{googlePlayProductId: $googlePlayProductId, name: $name, description: $description, productType: $productType, basePlans: $basePlans}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is Product &&
-        other.id == id &&
+        other.googlePlayProductId == googlePlayProductId &&
         other.name == name &&
         other.description == description &&
         other.productType == productType &&
-        other.price == price &&
-        other.currency == currency &&
-        other.durationDays == durationDays &&
-        other.isCurrentState == isCurrentState;
+        _listEquals(other.basePlans, basePlans);
   }
 
   @override
   int get hashCode {
     return Object.hash(
-      id,
+      googlePlayProductId,
       name,
       description,
       productType,
-      price,
-      currency,
-      durationDays,
-      isCurrentState,
-    );
-  }
-}
-
-class ProductListResponse {
-  final int errNo;
-  final String errMsg;
-  final ProductData data;
-
-  const ProductListResponse({
-    required this.errNo,
-    required this.errMsg,
-    required this.data,
-  });
-
-  factory ProductListResponse.fromJson(Map<String, dynamic> json) {
-    return ProductListResponse(
-      errNo: json['errNo'] as int,
-      errMsg: json['errMsg'] as String,
-      data: ProductData.fromJson(json['data'] as Map<String, dynamic>),
+      basePlans,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'errNo': errNo,
-      'errMsg': errMsg,
-      'data': data.toJson(),
-    };
+  bool _listEquals<T>(List<T> a, List<T> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
-
-  bool get isSuccess => errNo == 0;
 }
 
+/// API响应数据模型
 class ProductData {
   final List<Product> products;
 
@@ -117,7 +227,7 @@ class ProductData {
   });
 
   factory ProductData.fromJson(Map<String, dynamic> json) {
-    final productsList = json['products'] as List<dynamic>;
+    final productsList = json['products'] as List<dynamic>? ?? [];
     return ProductData(
       products: productsList
           .map((item) => Product.fromJson(item as Map<String, dynamic>))
