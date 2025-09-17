@@ -189,6 +189,8 @@ class _CustomTabBarState extends State<CustomTabBar> {
           scrollbarTheme: ScrollbarThemeData(
             thumbVisibility: WidgetStateProperty.all(false),
           ),
+          // 去掉点击水波纹效果
+          splashFactory: NoSplash.splashFactory,
         ),
         child: TabBar(
           controller: widget.controller,

@@ -188,32 +188,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // 自定义顶部栏
           CustomAppBar(onSearchTap: _onSearchTap, hintText: 'Search Creation'),
           
-          // // 功能按钮区域
-          // Padding(
-          //   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          //   child: Row(
-          //     children: [
-          //       // Google Pay 按钮
-          //       Expanded(
-          //         child: ElevatedButton.icon(
-          //           onPressed: _navigateToGooglePay,
-          //           icon: const Icon(Icons.payment, color: Colors.white),
-          //           label: const Text('Google Pay', style: TextStyle(color: Colors.white)),
-          //           style: ElevatedButton.styleFrom(
-          //             backgroundColor: Colors.green,
-          //             padding: const EdgeInsets.symmetric(vertical: 12.0),
-          //             shape: RoundedRectangleBorder(
-          //               borderRadius: BorderRadius.circular(8.0),
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //       const SizedBox(width: 12),
-               
-          //     ],
-          //   ),
-          // ),
-
           if (_tabItems.isNotEmpty)
             CustomTabBar(
               tabItems: _tabItems,

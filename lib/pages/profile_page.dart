@@ -85,7 +85,7 @@ class _ProfilePageState extends State<ProfilePage>
 
     _authSubscription = AuthService.authStatusChanges.listen((event) async {
       debugPrint('👤 [PROFILE] 收到认证状态变化事件: ${event.status}');
-      
+
       // 根据状态变化刷新数据
       switch (event.status) {
         case AuthStatus.authenticated:
@@ -111,7 +111,9 @@ class _ProfilePageState extends State<ProfilePage>
   void _subscribeToAudioChanges() {
     _audioSubscription?.cancel(); // 取消之前的订阅
 
-    _audioSubscription = AudioManager.instance.audioStateStream.listen((audioState) {
+    _audioSubscription = AudioManager.instance.audioStateStream.listen((
+      audioState,
+    ) {
       if (mounted) {
         final newAudioId = audioState.currentAudio?.id ?? '';
         // 只有当音频ID真正发生变化时才更新状态
@@ -132,8 +134,10 @@ class _ProfilePageState extends State<ProfilePage>
 
     // 检查认证状态
     final token = await AuthService.getAccessToken();
-    debugPrint('👤 [PROFILE] 当前访问令牌: ${token != null ? "存在(${token.length}字符)" : "不存在"}');
-    
+    debugPrint(
+      '👤 [PROFILE] 当前访问令牌: ${token != null ? "存在(${token.length}字符)" : "不存在"}',
+    );
+
     final isSignedIn = await AuthService.isSignedIn();
     debugPrint('👤 [PROFILE] 登录状态检查: $isSignedIn');
 
@@ -143,7 +147,9 @@ class _ProfilePageState extends State<ProfilePage>
       AudioHistoryManager.instance.refreshHistory(),
       () async {
         try {
-          debugPrint('🎵 [HISTORY] 开始调用 UserHistoryService.getUserHistoryList()');
+          debugPrint(
+            '🎵 [HISTORY] 开始调用 UserHistoryService.getUserHistoryList()',
+          );
           final value = await UserHistoryService.getUserHistoryList();
           debugPrint('🎵 [HISTORY] 刷新用户播放历史成功: $value');
         } catch (error) {
@@ -153,7 +159,7 @@ class _ProfilePageState extends State<ProfilePage>
             debugPrint('🎵 [HISTORY] 异常详情: ${error.toString()}');
           }
         }
-      }()
+      }(),
     ]);
   }
 
@@ -266,7 +272,9 @@ class _ProfilePageState extends State<ProfilePage>
 
   // 加载喜欢数据
   Future<void> _loadLikedAudios() async {
-    debugPrint('👤 [PROFILE] 加载喜欢数据, _isLoadingLiked: ${_isLoadingLiked}, isLoggedIn: ${isLoggedIn}');
+    debugPrint(
+      '👤 [PROFILE] 加载喜欢数据, _isLoadingLiked: ${_isLoadingLiked}, isLoggedIn: ${isLoggedIn}',
+    );
     if (_isLoadingLiked || !isLoggedIn) return;
 
     setState(() {
@@ -360,6 +368,7 @@ class _ProfilePageState extends State<ProfilePage>
     AudioManager.instance.playAudio(audio);
     NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
   }
+
   // 订阅按钮点击
   void _onSubscribeTap() {
     // if (!isLoggedIn) {
@@ -377,7 +386,8 @@ class _ProfilePageState extends State<ProfilePage>
           showNotificationDialog(
             context,
             title: 'Notification',
-            message: 'Hushie Pro is active in your subscription and does not support downgrades.',
+            message:
+                'Hushie Pro is active in your subscription and does not support downgrades.',
             buttonText: 'Got It',
           );
         });
@@ -396,18 +406,13 @@ class _ProfilePageState extends State<ProfilePage>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 0,
-            bottom: 0,
-          ),
-          child: Column(
-            children: [
-              // 设置按钮
-              const SizedBox(height: 10),
-              Row(
+        child: Column(
+          children: [
+            // 设置按钮
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   IconButton(
@@ -423,34 +428,38 @@ class _ProfilePageState extends State<ProfilePage>
                   ),
                 ],
               ),
+            ),
 
-              const SizedBox(height: 10),
+            const SizedBox(height: 10),
 
-              // 用户头部组件
-              UserHeader(
+            // 用户头部组件
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: UserHeader(
                 isLoggedIn: isLoggedIn,
                 userName: userName,
                 onLoginTap: () {
                   LoginPage.show(context);
                 },
               ),
+            ),
 
-              const SizedBox(height: 25),
+            const SizedBox(height: 25),
 
-              // Premium Access 卡片
-              PremiumAccessCard(
-                onSubscribe: _onSubscribeTap,
-              ),
+            // Premium Access 卡片
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: PremiumAccessCard(onSubscribe: _onSubscribeTap),
+            ),
 
-              const SizedBox(height: 16),
-              // 内容区域
-              Expanded(
-                child: isLoggedIn
-                    ? _buildLoggedInContent()
-                    : _buildLoggedOutContent(),
-              ),
-            ],
-          ),
+            const SizedBox(height: 16),
+            // 内容区域
+            Expanded(
+              child: isLoggedIn
+                  ? _buildLoggedInContent()
+                  : _buildLoggedOutContent(),
+            ),
+          ],
         ),
       ),
     );
@@ -476,6 +485,10 @@ class _ProfilePageState extends State<ProfilePage>
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                   ),
+                  unselectedLabelStyle: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                  ),
                   onTabChanged: (index) {
                     setState(() {
                       currentTabIndex = index;
@@ -490,31 +503,34 @@ class _ProfilePageState extends State<ProfilePage>
 
           // 内容区域
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // History 标签页 - 从AudioHistoryManager获取数据并监听事件流
-                _HistoryTabContent(
-                  currentAudioId: currentAudioId,
-                  onItemTap: _onAudioListItemTap,
-                ),
-                // Like 标签页
-                _isLoadingLiked && likedAudios.isEmpty
-                    ? _buildLoadingWidget()
-                    : likedAudios.isEmpty
-                    ? _buildEmptyWidget('No liked content')
-                    : AudioList(
-                        audios: likedAudios,
-                        activeId: currentAudioId,
-                        padding: const EdgeInsets.only(bottom: 120),
-                        emptyWidget: _buildEmptyWidget('No liked content'),
-                        onRefresh: _refreshLikedAudios, // 改为刷新方法
-                        onLoadMore: _loadMoreLikedAudios,
-                        hasMoreData: true,
-                        isLoadingMore: _isLoadingLiked, // 添加加载状态
-                        onItemTap: _onAudioListItemTap,
-                      ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // History 标签页 - 从AudioHistoryManager获取数据并监听事件流
+                  _HistoryTabContent(
+                    currentAudioId: currentAudioId,
+                    onItemTap: _onAudioListItemTap,
+                  ),
+                  // Like 标签页
+                  _isLoadingLiked && likedAudios.isEmpty
+                      ? _buildLoadingWidget()
+                      : likedAudios.isEmpty
+                      ? _buildEmptyWidget('No liked content')
+                      : AudioList(
+                          audios: likedAudios,
+                          activeId: currentAudioId,
+                          padding: const EdgeInsets.only(bottom: 120),
+                          emptyWidget: _buildEmptyWidget('No liked content'),
+                          onRefresh: _refreshLikedAudios, // 改为刷新方法
+                          onLoadMore: _loadMoreLikedAudios,
+                          hasMoreData: true,
+                          isLoadingMore: _isLoadingLiked, // 添加加载状态
+                          onItemTap: _onAudioListItemTap,
+                        ),
+                ],
+              ),
             ),
           ),
         ],
@@ -544,37 +560,47 @@ class _ProfilePageState extends State<ProfilePage>
 
           // 未登录状态的内容
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Log in / Sign up to access data.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF999999),
-                      fontWeight: FontWeight.w400,
-                      height: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Log in / Sign up to access data.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF999999),
+                        fontWeight: FontWeight.w400,
+                        height: 1,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Color(0xFF999999),
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      side: BorderSide(color: Color(0xFF999999)),
+                    const SizedBox(height: 20),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Color(0xFF999999),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        side: BorderSide(color: Color(0xFF999999)),
+                      ),
+                      onPressed: () {
+                        NavigationUtils.navigateToLogin(context);
+                      },
+                      child: const Text(
+                        'Log in / Sign up',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF333333),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
                     ),
-                    onPressed: () {
-                      NavigationUtils.navigateToLogin(context);
-                    },
-                    child: const Text(
-                      'Log in / Sign up',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF333333), fontWeight: FontWeight.w400),
-                    ),
-                  ),
 
-                  const SizedBox(height: 180),
-                ],
+                    const SizedBox(height: 180),
+                  ],
+                ),
               ),
             ),
           ),
@@ -647,13 +673,14 @@ class _HistoryTabContentState extends State<_HistoryTabContent> {
       }
 
       // 监听历史记录变更事件流
-      _historyStreamSubscription = AudioHistoryManager.instance.historyStream.listen((updatedHistory) {
-        if (mounted) {
-          setState(() {
-            _historyList = updatedHistory;
+      _historyStreamSubscription = AudioHistoryManager.instance.historyStream
+          .listen((updatedHistory) {
+            if (mounted) {
+              setState(() {
+                _historyList = updatedHistory;
+              });
+            }
           });
-        }
-      });
     } catch (e) {
       debugPrint('初始化历史记录失败: $e');
       if (mounted) {
