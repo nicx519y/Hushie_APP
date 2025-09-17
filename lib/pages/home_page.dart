@@ -8,6 +8,7 @@ import '../services/audio_manager.dart';
 import '../services/home_tab_list_data_provider.dart';
 
 import '../router/navigation_utils.dart';
+import 'google_pay_demo_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -171,6 +172,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  void _navigateToGooglePay() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const GooglePayDemoPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,6 +187,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         children: [
           // 自定义顶部栏
           CustomAppBar(onSearchTap: _onSearchTap, hintText: 'Search Creation'),
+          
+          // // 功能按钮区域
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          //   child: Row(
+          //     children: [
+          //       // Google Pay 按钮
+          //       Expanded(
+          //         child: ElevatedButton.icon(
+          //           onPressed: _navigateToGooglePay,
+          //           icon: const Icon(Icons.payment, color: Colors.white),
+          //           label: const Text('Google Pay', style: TextStyle(color: Colors.white)),
+          //           style: ElevatedButton.styleFrom(
+          //             backgroundColor: Colors.green,
+          //             padding: const EdgeInsets.symmetric(vertical: 12.0),
+          //             shape: RoundedRectangleBorder(
+          //               borderRadius: BorderRadius.circular(8.0),
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //       const SizedBox(width: 12),
+               
+          //     ],
+          //   ),
+          // ),
 
           if (_tabItems.isNotEmpty)
             CustomTabBar(
