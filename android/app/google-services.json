@@ -1,41 +1,49 @@
 {
   "project_info": {
-    "project_number": "464599900807",
-    "project_id": "hushie-ai-test",
-    "storage_bucket": "hushie-ai-test.firebasestorage.app"
+    "project_number": "658633307055",
+    "project_id": "hushie-ai",
+    "storage_bucket": "hushie-ai.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:464599900807:android:50058b0460d9a71d5a4e22",
+        "mobilesdk_app_id": "1:658633307055:android:38890df1786e41938f755a",
         "android_client_info": {
           "package_name": "com.hushie.audio"
         }
       },
       "oauth_client": [
         {
-          "client_id": "464599900807-3ht957m247d4ea0jftcjo3t5dbg76f2f.apps.googleusercontent.com",
+          "client_id": "658633307055-e0tbor4c495na8kq93c4ekm833fv15pr.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.hushie.audio",
-            "certificate_hash": "1c2fbc764ceac33cba78ccde407e6aa87307b29e"
+            "certificate_hash": "2c7dc744e4d8eda88c5f8612966e3450d6b60d29"
           }
         },
         {
-          "client_id": "464599900807-jtkjnpb7ovn9m7r1gph7re0pd0q89cia.apps.googleusercontent.com",
+          "client_id": "658633307055-vm7k5s25qtd08540oekcjmj7feksbav7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hushie.audio",
+            "certificate_hash": "f773624c3bf39f4c464d2d2b29d46bf8d2385ede"
+          }
+        },
+        {
+          "client_id": "658633307055-n1alc0i177t0d39kqt79nuks91caaeqr.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAtmVb_kvRIlhpcgBBdTGhspAkhkH6ZDLs"
+          "current_key": "AIzaSyDPC_HQNvPKemyO2zGbFt61_ZJXfsWctrs"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "464599900807-jtkjnpb7ovn9m7r1gph7re0pd0q89cia.apps.googleusercontent.com",
+              "client_id": "658633307055-n1alc0i177t0d39kqt79nuks91caaeqr.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

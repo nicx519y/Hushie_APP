@@ -14,7 +14,7 @@ class GoogleAuthService {
     scopes: ['email', 'profile'],
     // 配置Web客户端ID，用于获取serverAuthCode
     serverClientId:
-        '464599900807-jtkjnpb7ovn9m7r1gph7re0pd0q89cia.apps.googleusercontent.com',
+        '658633307055-n1alc0i177t0d39kqt79nuks91caaeqr.apps.googleusercontent.com',
   );
 
   /// Google账号登录 - 完整的OAuth 2.0流程

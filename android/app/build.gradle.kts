@@ -37,6 +37,12 @@ android {
             storeFile = keystoreProperties["storeFile"]?.let { file("../$it") }
             storePassword = keystoreProperties["storePassword"] as String?
         }
+        getByName("debug") {
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword = "android"
+        }
     }
 
     defaultConfig {
@@ -53,6 +59,9 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
