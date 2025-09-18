@@ -14,7 +14,7 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
-  bool _servicesInitialized = false;
+  bool servicesInitialized = false;
 
   @override
   void initState() {
@@ -55,14 +55,14 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('🔄 [SPLASH] _initializeServices 服务初始化完成');
       if (mounted) {
         setState(() {
-          _servicesInitialized = true;
+          servicesInitialized = true;
         });
       }
     } catch (e) {
       debugPrint('Failed to initialize services: $e');
       if (mounted) {
         setState(() {
-          _servicesInitialized = true;
+          servicesInitialized = true;
         });
       }
     }

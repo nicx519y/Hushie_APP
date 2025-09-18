@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'circular_play_button.dart';
 import '../services/audio_manager.dart';
-import '../services/audio_service.dart';
 import '../models/audio_item.dart';
 import '../router/navigation_utils.dart';
 
@@ -81,7 +80,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             // 更新总时长
             final newTotalDuration =
                 audioState.currentAudio?.duration ??
-                audioState.duration ?? Duration.zero;
+                audioState.duration;
             if (_totalDuration != newTotalDuration) {
               _totalDuration = newTotalDuration;
             }

@@ -260,16 +260,6 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // 刷新历史数据（用于下拉刷新）
-  Future<void> _refreshHistoryData() async {
-    if (!isLoggedIn) return;
-    try {
-      await AudioHistoryManager.instance.refreshHistory();
-    } catch (e) {
-      debugPrint('刷新历史数据失败: $e');
-    }
-  }
-
   // 加载喜欢数据
   Future<void> _loadLikedAudios() async {
     debugPrint(

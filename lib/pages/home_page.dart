@@ -8,7 +8,6 @@ import '../services/audio_manager.dart';
 import '../services/home_tab_list_data_provider.dart';
 
 import '../router/navigation_utils.dart';
-import 'google_pay_demo_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -170,13 +169,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     } catch (e) {
       debugPrint('播放音频失败: $e');
     }
-  }
-
-  void _navigateToGooglePay() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const GooglePayDemoPage()),
-    );
   }
 
   @override

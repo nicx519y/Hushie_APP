@@ -1,5 +1,3 @@
-import 'audio_item.dart';
-
 class ApiResponse<T> {
   final T? data;
   final int errNo;
@@ -20,13 +18,14 @@ class ApiResponse<T> {
     T Function(Map<String, dynamic>) fromMapT,
   ) {
     final int errNo = json['errNo'] ?? -1;
+    final bool success = json['success'] ?? false;
 
-    // 检查errNo，只有为0时才处理data
-    if (errNo != 0) {
+    // 检查成功条件：errNo == 0 或者 success == true
+    if (errNo != 0 && !success) {
       return ApiResponse.error(errNo: errNo);
     }
 
-    // errNo == 0，处理data
+    // 成功条件满足，处理data
     try {
       final dynamic dataJson = json['data'];
       if (dataJson == null) {
