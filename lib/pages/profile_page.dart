@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hushie_app/components/subscription_dialog.dart';
+import 'package:hushie_app/components/subscribe_dialog.dart';
 import 'package:hushie_app/services/api/user_likes_service.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
@@ -361,34 +361,22 @@ class _ProfilePageState extends State<ProfilePage>
 
   // 订阅按钮点击
   void _onSubscribeTap() {
-    // if (!isLoggedIn) {
-    //   NavigationUtils.navigateToLogin(context);
-    // } else {
-    //   // .. todo
-    // }
-    showSubscriptionDialog(
+    showSubscribeDialog(
       context,
-      onSubscribe: () {},
-      onClose: () {
-        // Use post-frame callback to ensure the subscription dialog is fully closed
-        // before showing the notification dialog
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          showNotificationDialog(
-            context,
-            title: 'Notification',
-            message:
-                'Hushie Pro is active in your subscription and does not support downgrades.',
-            buttonText: 'Got It',
-          );
-        });
-      },
+      // onClose: () {
+      //   // Use post-frame callback to ensure the subscription dialog is fully closed
+      //   // before showing the notification dialog
+      //   WidgetsBinding.instance.addPostFrameCallback((_) {
+      //     showNotificationDialog(
+      //       context,
+      //       title: 'Notification',
+      //       message:
+      //           'Hushie Pro is active in your subscription and does not support downgrades.',
+      //       buttonText: 'Got It',
+      //     );
+      //   });
+      // },
     );
-    // showNotificationDialog(
-    //       context,
-    //       title: 'Notification',
-    //       message: 'Hushie Pro is active in your subscription and does not support downgrades.',
-    //       buttonText: 'Got It',
-    //     );
   }
 
   @override

@@ -43,10 +43,6 @@ class AudioListService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP failed: ${response.statusCode}');
-      }
-
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
       // 使用ApiResponse统一处理响应
@@ -55,7 +51,7 @@ class AudioListService {
         (data) => data,
       );
 
-      if (apiResponse.errNo != 0 || apiResponse.data == null) {
+      if (apiResponse.data == null) {
         throw Exception('API failed: errNo=${apiResponse.errNo}');
       }
 

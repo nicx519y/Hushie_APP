@@ -44,31 +44,25 @@ class UserPrivilegeService {
       debugPrint('👑 [USER_PRIVILEGE_SERVICE] 响应状态码: ${response.statusCode}');
       debugPrint('👑 [USER_PRIVILEGE_SERVICE] 响应内容: ${response.body}');
       
-      // 检查HTTP状态码
-      if (response.statusCode == 200) {
-        // 解析JSON响应并使用ApiResponse统一处理
-        final jsonData = json.decode(response.body) as Map<String, dynamic>;
-        final apiResponse = ApiResponse.fromJson<UserPrivilege>(
-          jsonData,
-          (data) => UserPrivilege.fromJson(data),
-        );
+      // 解析JSON响应并使用ApiResponse统一处理
+      final jsonData = json.decode(response.body) as Map<String, dynamic>;
+      final apiResponse = ApiResponse.fromJson<UserPrivilege>(
+        jsonData,
+        (data) => UserPrivilege.fromJson(data),
+      );
+      
+      if (apiResponse.data != null) {
+        final privilege = apiResponse.data!;
         
-        if (apiResponse.errNo == 0 && apiResponse.data != null) {
-          final privilege = apiResponse.data!;
-          
-          // 更新缓存
-          _cachedPrivilege = privilege;
-          _lastFetchTime = DateTime.now();
-          
-          debugPrint('👑 [USER_PRIVILEGE_SERVICE] 成功获取用户权限: hasPremium=${privilege.hasPremium}, endDate=${privilege.premiumEndDate}');
-          return privilege;
-        } else {
-          debugPrint('👑 [USER_PRIVILEGE_SERVICE] API返回错误: errNo=${apiResponse.errNo}');
-          throw Exception('检查用户权限失败: errNo=${apiResponse.errNo}');
-        }
+        // 更新缓存
+        _cachedPrivilege = privilege;
+        _lastFetchTime = DateTime.now();
+        
+        debugPrint('👑 [USER_PRIVILEGE_SERVICE] 成功获取用户权限: hasPremium=${privilege.hasPremium}, endDate=${privilege.premiumEndDate}');
+        return privilege;
       } else {
-        debugPrint('👑 [USER_PRIVILEGE_SERVICE] HTTP请求失败: ${response.statusCode}');
-        throw Exception('检查用户权限失败: HTTP ${response.statusCode}');
+        debugPrint('👑 [USER_PRIVILEGE_SERVICE] API返回错误: errNo=${apiResponse.errNo}');
+        throw Exception('检查用户权限失败: errNo=${apiResponse.errNo}');
       }
       
     } catch (e) {

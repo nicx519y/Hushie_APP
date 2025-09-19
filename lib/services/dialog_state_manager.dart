@@ -10,7 +10,7 @@ class DialogStateManager {
   String? _currentOpenDialog;
   
   /// 弹窗类型常量
-  static const String subscriptionDialog = 'subscription_dialog';
+  static const String subscribeDialog = 'subscribe_dialog';
   static const String historyList = 'history_list';
   
   /// 尝试打开弹窗

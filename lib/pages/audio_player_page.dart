@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:hushie_app/components/subscription_dialog.dart';
+import 'package:hushie_app/components/subscribe_dialog.dart';
 import 'package:hushie_app/services/auth_service.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
@@ -297,7 +297,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 解锁全功能提示点击事件
   void _onUnlockFullAccessTap() async {
-    showSubscriptionDialog(context);
+    showSubscribeDialog(context);
   }
 
   void _onReadMoreTap() {

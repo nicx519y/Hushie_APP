@@ -33,25 +33,19 @@ class ProductService {
       debugPrint('🛒 [PRODUCT_SERVICE] 响应状态码: ${response.statusCode}');
       debugPrint('🛒 [PRODUCT_SERVICE] 响应内容: ${response.body}');
       
-      // 检查HTTP状态码
-      if (response.statusCode == 200) {
-        // 解析JSON响应并使用ApiResponse统一处理
-        final jsonData = json.decode(response.body) as Map<String, dynamic>;
-        final apiResponse = ApiResponse.fromJson<ProductData>(
-          jsonData,
-          (data) => ProductData.fromJson(data),
-        );
-        
-        if (apiResponse.errNo == 0 && apiResponse.data != null) {
-          debugPrint('🛒 [PRODUCT_SERVICE] 成功获取 ${apiResponse.data!.products.length} 个商品');
-          return apiResponse.data!;
-        } else {
-          debugPrint('🛒 [PRODUCT_SERVICE] API返回错误: errNo=${apiResponse.errNo}');
-          throw Exception('获取商品列表失败: errNo=${apiResponse.errNo}');
-        }
+      // 解析JSON响应并使用ApiResponse统一处理
+      final jsonData = json.decode(response.body) as Map<String, dynamic>;
+      final apiResponse = ApiResponse.fromJson<ProductData>(
+        jsonData,
+        (data) => ProductData.fromJson(data),
+      );
+      
+      if (apiResponse.data != null) {
+        debugPrint('🛒 [PRODUCT_SERVICE] 成功获取 ${apiResponse.data!.products.length} 个商品');
+        return apiResponse.data!;
       } else {
-        debugPrint('🛒 [PRODUCT_SERVICE] HTTP请求失败: ${response.statusCode}');
-        throw Exception('网络请求失败: HTTP ${response.statusCode}');
+        debugPrint('🛒 [PRODUCT_SERVICE] API返回错误: errNo=${apiResponse.errNo}');
+        throw Exception('获取商品列表失败: errNo=${apiResponse.errNo}');
       }
       
     } catch (e) {

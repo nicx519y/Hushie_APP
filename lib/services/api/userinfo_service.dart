@@ -23,10 +23,6 @@ class UserInfoService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP failed: ${response.statusCode}');
-      }
-
       // 使用ApiResponse统一处理响应
       final Map<String, dynamic> jsonData = json.decode(response.body);
       final apiResponse = ApiResponse.fromJson<UserInfoModel>(
@@ -34,10 +30,10 @@ class UserInfoService {
         (data) => UserInfoModel.fromMap(data),
       );
 
-      if (apiResponse.errNo == 0 && apiResponse.data != null) {
+      if (apiResponse.data != null) {
         return apiResponse.data!;
       } else {
-        throw Exception('API failed: errNo=${apiResponse.errNo}');
+        throw Exception('API failed: data is null');
       }
     } catch (e) {
       if (e is Exception) {

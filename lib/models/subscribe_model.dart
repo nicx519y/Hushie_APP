@@ -1,111 +1,119 @@
-class SubscribeModel {
-  final String? name;
-  final List<String> featureList;
-  final List<SubscriptionOption> optionList;
+import 'payment_method.dart';
 
-  const SubscribeModel({
-    required this.name,
-    required this.featureList,
-    required this.optionList,
+/// Google Play订阅数据模型
+class SubscribeModel {
+  final int id;
+  final int userId;
+  final String googlePlayProductId;
+  final String googlePlayBasePlanId;
+  final String subscriptionType;
+  final String status;
+  final PaymentMethod paymentMethod;
+  final double amount;
+  final String currency;
+  final DateTime startDate;
+  final DateTime currentPeriodStart;
+  final DateTime currentPeriodEnd;
+  final DateTime nextBillingDate;
+  final String googlePlayPurchaseToken;
+  final String googlePlayOrderId;
+  final DateTime createdAt;
+
+  SubscribeModel({
+    required this.id,
+    required this.userId,
+    required this.googlePlayProductId,
+    required this.googlePlayBasePlanId,
+    required this.subscriptionType,
+    required this.status,
+    required this.paymentMethod,
+    required this.amount,
+    required this.currency,
+    required this.startDate,
+    required this.currentPeriodStart,
+    required this.currentPeriodEnd,
+    required this.nextBillingDate,
+    required this.googlePlayPurchaseToken,
+    required this.googlePlayOrderId,
+    required this.createdAt,
   });
 
+  /// 从JSON创建SubscribeModel实例
   factory SubscribeModel.fromJson(Map<String, dynamic> json) {
     return SubscribeModel(
-      name: json['name'] as String?,
-      featureList: List<String>.from(json['featureList'] as List),
-      optionList: (json['optionList'] as List)
-          .map((item) => SubscriptionOption.fromJson(item as Map<String, dynamic>))
-          .toList(),
+      id: json['id'] ?? 0,
+      userId: json['user_id'] ?? 0,
+      googlePlayProductId: json['google_play_product_id'] ?? '',
+      googlePlayBasePlanId: json['google_play_base_plan_id'] ?? '',
+      subscriptionType: json['subscription_type'] ?? '',
+      status: json['status'] ?? '',
+      paymentMethod: PaymentMethod.fromValue(json['payment_method'] ?? 'google_play'),
+      amount: (json['amount'] ?? 0.0).toDouble(),
+      currency: json['currency'] ?? 'USD',
+      startDate: DateTime.parse(json['start_date'] ?? DateTime.now().toIso8601String()),
+      currentPeriodStart: DateTime.parse(json['current_period_start'] ?? DateTime.now().toIso8601String()),
+      currentPeriodEnd: DateTime.parse(json['current_period_end'] ?? DateTime.now().toIso8601String()),
+      nextBillingDate: DateTime.parse(json['next_billing_date'] ?? DateTime.now().toIso8601String()),
+      googlePlayPurchaseToken: json['google_play_purchase_token'] ?? '',
+      googlePlayOrderId: json['google_play_order_id'] ?? '',
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 
+  /// 转换为JSON
   Map<String, dynamic> toJson() {
     return {
-      'name': name ?? '',
-      'featureList': featureList,
-      'optionList': optionList.map((option) => option.toJson()).toList(),
+      'id': id,
+      'user_id': userId,
+      'google_play_product_id': googlePlayProductId,
+      'google_play_base_plan_id': googlePlayBasePlanId,
+      'subscription_type': subscriptionType,
+      'status': status,
+      'payment_method': paymentMethod.value,
+      'amount': amount,
+      'currency': currency,
+      'start_date': startDate.toIso8601String(),
+      'current_period_start': currentPeriodStart.toIso8601String(),
+      'current_period_end': currentPeriodEnd.toIso8601String(),
+      'next_billing_date': nextBillingDate.toIso8601String(),
+      'google_play_purchase_token': googlePlayPurchaseToken,
+      'google_play_order_id': googlePlayOrderId,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 
   @override
   String toString() {
-    return 'SubscribeModel(name: $name, featureList: $featureList, optionList: $optionList)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is SubscribeModel &&
-        other.name == name &&
-        _listEquals(other.featureList, featureList) &&
-        _listEquals(other.optionList, optionList);
-  }
-
-  @override
-  int get hashCode {
-    return name?.hashCode ?? 0 ^ featureList.hashCode ^ optionList.hashCode;
-  }
-
-  bool _listEquals<T>(List<T> a, List<T> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
+    return 'SubscribeModel(id: $id, userId: $userId, productId: $googlePlayProductId, status: $status, amount: $amount $currency)';
   }
 }
 
-class SubscriptionOption {
-  final String title;
-  final String price;
-  final String? originalPrice;
-  final int planIndex;
+/// 创建订阅请求数据模型
+class CreateSubscribeRequest {
+  final String googlePlayProductId;
+  final String googlePlayBasePlanId;
+  final PaymentMethod paymentMethod;
+  final String googlePlayPurchaseToken;
 
-  const SubscriptionOption({
-    required this.title,
-    required this.price,
-    this.originalPrice,
-    required this.planIndex,
+  CreateSubscribeRequest({
+    required this.googlePlayProductId,
+    required this.googlePlayBasePlanId,
+    required this.paymentMethod,
+    required this.googlePlayPurchaseToken,
   });
 
-  factory SubscriptionOption.fromJson(Map<String, dynamic> json) {
-    return SubscriptionOption(
-      title: json['title'] as String,
-      price: json['price'] as String,
-      originalPrice: json['originalPrice'] as String?,
-      planIndex: json['planIndex'] as int,
-    );
-  }
-
+  /// 转换为JSON
   Map<String, dynamic> toJson() {
     return {
-      'title': title,
-      'price': price,
-      'originalPrice': originalPrice,
-      'planIndex': planIndex,
+      'google_play_product_id': googlePlayProductId,
+      'google_play_base_plan_id': googlePlayBasePlanId,
+      'payment_method': paymentMethod.value,
+      'google_play_purchase_token': googlePlayPurchaseToken,
     };
   }
 
   @override
   String toString() {
-    return 'SubscriptionOption(title: $title, price: $price, originalPrice: $originalPrice, planIndex: $planIndex)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is SubscriptionOption &&
-        other.title == title &&
-        other.price == price &&
-        other.originalPrice == originalPrice &&
-        other.planIndex == planIndex;
-  }
-
-  @override
-  int get hashCode {
-    return title.hashCode ^
-        price.hashCode ^
-        originalPrice.hashCode ^
-        planIndex.hashCode;
+    return 'CreateSubscriptionRequest(productId: $googlePlayProductId, basePlanId: $googlePlayBasePlanId, paymentMethod: ${paymentMethod.value})';
   }
 }

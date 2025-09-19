@@ -3,15 +3,19 @@ class Offer {
   final String offerId;
   final String name;
   final double price;
+  final double originalPrice;
   final String currency;
   final String description;
+  final bool isAvailable;
 
   const Offer({
     required this.offerId,
     required this.name,
     required this.price,
+    required this.originalPrice,
     required this.currency,
     required this.description,
+    required this.isAvailable,
   });
 
   factory Offer.fromJson(Map<String, dynamic> json) {
@@ -19,8 +23,10 @@ class Offer {
       offerId: json['offer_id'] as String,
       name: json['name'] as String,
       price: (json['price'] as num).toDouble(),
+      originalPrice: (json['original_price'] ?? json['price']).toDouble(),
       currency: json['currency'] as String,
       description: json['description'] as String,
+      isAvailable: json['is_available'] ?? false,
     );
   }
 
@@ -29,14 +35,16 @@ class Offer {
       'offer_id': offerId,
       'name': name,
       'price': price,
+      'original_price': originalPrice,
       'currency': currency,
       'description': description,
+      'is_available': isAvailable,
     };
   }
 
   @override
   String toString() {
-    return 'Offer{offerId: $offerId, name: $name, price: $price, currency: $currency, description: $description}';
+    return 'Offer{offerId: $offerId, name: $name, price: $price, originalPrice: $originalPrice, currency: $currency, description: $description, isAvailable: $isAvailable}';
   }
 
   @override
@@ -46,13 +54,15 @@ class Offer {
         other.offerId == offerId &&
         other.name == name &&
         other.price == price &&
+        other.originalPrice == originalPrice &&
         other.currency == currency &&
-        other.description == description;
+        other.description == description &&
+        other.isAvailable == isAvailable;
   }
 
   @override
   int get hashCode {
-    return Object.hash(offerId, name, price, currency, description);
+    return Object.hash(offerId, name, price, originalPrice, currency, description, isAvailable);
   }
 }
 
@@ -61,19 +71,27 @@ class BasePlan {
   final String googlePlayBasePlanId;
   final String name;
   final double price;
+  final double originalPrice;
   final String currency;
   final String billingPeriod;
   final int durationDays;
+  final bool isAvailable;
+  final bool isSubscribing;
+  final bool isShowDiscount;
   final List<Offer> offers;
 
   const BasePlan({
     required this.googlePlayBasePlanId,
     required this.name,
     required this.price,
+    required this.originalPrice,
     required this.currency,
     required this.billingPeriod,
     required this.durationDays,
     required this.offers,
+    required this.isSubscribing,
+    required this.isShowDiscount,
+    required this.isAvailable,
   });
 
   factory BasePlan.fromJson(Map<String, dynamic> json) {
@@ -82,9 +100,13 @@ class BasePlan {
       googlePlayBasePlanId: json['google_play_base_plan_id'] as String,
       name: json['name'] as String,
       price: (json['price'] as num).toDouble(),
+      originalPrice: (json['original_price'] ?? json['price'] as num).toDouble(),
       currency: json['currency'] as String,
       billingPeriod: json['billing_period'] as String,
       durationDays: json['duration_days'] as int,
+      isAvailable: json['is_available'] ?? false,
+      isSubscribing: json['is_subscribing'] ?? false,
+      isShowDiscount: json['is_show_discount'] ?? false,
       offers: offersList
           .map((item) => Offer.fromJson(item as Map<String, dynamic>))
           .toList(),
@@ -96,16 +118,20 @@ class BasePlan {
       'google_play_base_plan_id': googlePlayBasePlanId,
       'name': name,
       'price': price,
+      'original_price': originalPrice,
       'currency': currency,
       'billing_period': billingPeriod,
       'duration_days': durationDays,
+      'is_subscribing': isSubscribing,
+      'is_show_discount': isShowDiscount,
+      'is_available': isAvailable,
       'offers': offers.map((offer) => offer.toJson()).toList(),
     };
   }
 
   @override
   String toString() {
-    return 'BasePlan{googlePlayBasePlanId: $googlePlayBasePlanId, name: $name, price: $price, currency: $currency, billingPeriod: $billingPeriod, durationDays: $durationDays, offers: $offers}';
+    return 'BasePlan{googlePlayBasePlanId: $googlePlayBasePlanId, name: $name, price: $price, originalPrice: $originalPrice, currency: $currency, billingPeriod: $billingPeriod, durationDays: $durationDays, isSubscribing: $isSubscribing, isShowDiscount: $isShowDiscount, offers: $offers}';
   }
 
   @override
@@ -115,9 +141,13 @@ class BasePlan {
         other.googlePlayBasePlanId == googlePlayBasePlanId &&
         other.name == name &&
         other.price == price &&
+        other.originalPrice == originalPrice &&
         other.currency == currency &&
         other.billingPeriod == billingPeriod &&
         other.durationDays == durationDays &&
+        other.isAvailable == isAvailable &&
+        other.isSubscribing == isSubscribing &&
+        other.isShowDiscount == isShowDiscount &&
         _listEquals(other.offers, offers);
   }
 
@@ -127,9 +157,13 @@ class BasePlan {
       googlePlayBasePlanId,
       name,
       price,
+      originalPrice,
       currency,
       billingPeriod,
       durationDays,
+      isAvailable,
+      isSubscribing,
+      isShowDiscount,
       offers,
     );
   }

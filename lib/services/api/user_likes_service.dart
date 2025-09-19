@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../models/audio_item.dart';
+import '../../models/api_response.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
 
@@ -35,23 +36,19 @@ class UserLikesService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP failed: ${response.statusCode}');
-      }
-
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
-      final int errNo = jsonData['errNo'] ?? -1;
-      if (errNo != 0) {
-        throw Exception('API failed: errNo=$errNo');
-      }
+      // 使用统一的ApiResponse处理响应
+      final apiResponse = ApiResponse.fromJson<Map<String, dynamic>>(
+        jsonData,
+        (data) => data,
+      );
 
-      final dynamic dataJson = jsonData['data'];
-      if (dataJson == null) {
+      if (apiResponse.data == null) {
         throw Exception('Response data is empty');
       }
 
-      final List<dynamic> itemsData = dataJson['items'] ?? [];
+      final List<dynamic> itemsData = apiResponse.data!['items'] ?? [];
       final List<AudioItem> likedAudios = itemsData
           .map((item) => AudioItem.fromMap(item as Map<String, dynamic>))
           .toList();

@@ -49,10 +49,6 @@ class UserHistoryService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP failed: ${response.statusCode}');
-      }
-
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
       // 使用ApiResponse统一处理响应
@@ -61,8 +57,8 @@ class UserHistoryService {
         (data) => data,
       );
 
-      if (apiResponse.errNo != 0 || apiResponse.data == null) {
-        throw Exception('API failed: errNo=${apiResponse.errNo}');
+      if (apiResponse.data == null) {
+        throw Exception('API failed: data is null');
       }
 
       // 检查history字段的类型
@@ -116,10 +112,6 @@ class UserHistoryService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP failed: ${response.statusCode}');
-      }
-
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
       // 使用ApiResponse统一处理响应
@@ -128,8 +120,8 @@ class UserHistoryService {
         (data) => data,
       );
 
-      if (apiResponse.errNo != 0 || apiResponse.data == null) {
-        throw Exception('API failed: errNo=${apiResponse.errNo}');
+      if (apiResponse.data == null) {
+        throw Exception('API failed: data is null');
       }
 
       // 检查history字段的类型

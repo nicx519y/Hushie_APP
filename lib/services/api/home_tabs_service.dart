@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../models/tab_item.dart';
+import '../../models/api_response.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
 import 'package:flutter/foundation.dart';
@@ -26,24 +27,19 @@ class HomeTabsService {
       );
       debugPrint("获取 tabs 数据完成 $response");
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP failed: ${response.statusCode}');
-      }
-
       final Map<String, dynamic> jsonData = json.decode(response.body);
       debugPrint("🏠 [HOME_TABS] API响应成功，errNo: ${jsonData['errNo']}");
 
-      final int errNo = jsonData['errNo'] ?? -1;
-      if (errNo != 0) {
-        throw Exception('API failed: errNo=$errNo');
+      final apiResponse = ApiResponse.fromJson<Map<String, dynamic>>(
+        jsonData,
+        (data) => data,
+      );
+
+      if (apiResponse.data == null) {
+        throw Exception('API failed: errNo=${apiResponse.errNo}');
       }
 
-      final dynamic dataJson = jsonData['data'];
-      if (dataJson == null) {
-        throw Exception('Response data is empty');
-      }
-
-      final List<dynamic> tabsData = dataJson['tabs'] ?? [];
+      final List<dynamic> tabsData = apiResponse.data!['tabs'] ?? [];
       final List<TabItemModel> tabs = tabsData
           .map((tab) => TabItemModel.fromMap(tab as Map<String, dynamic>))
           .toList();

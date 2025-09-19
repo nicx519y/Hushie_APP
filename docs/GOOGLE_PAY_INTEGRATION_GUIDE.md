@@ -11,7 +11,7 @@
 - ✅ 已设置最小 SDK 版本为 19
 
 ### 2. 配置文件
-- ✅ 已创建 `assets/google_pay_config.json` 配置文件
+- ✅ 已创建 `assets/configs/google_pay_config.json` 配置文件
 - ✅ 已将配置文件添加到 `pubspec.yaml` 的 assets 列表
 
 ### 3. 服务类

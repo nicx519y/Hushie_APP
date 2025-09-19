@@ -121,17 +121,13 @@ class GoogleAuthService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+      final Map<String, dynamic> jsonData = json.decode(response.body);
 
-        // 使用统一的JSON处理函数
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) => AccessTokenResponse.fromMap(dataJson),
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
-      }
+      // 使用统一的JSON处理函数
+      return ApiResponse.fromJson(
+        jsonData,
+        (dataJson) => AccessTokenResponse.fromMap(dataJson),
+      );
     } catch (e) {
       return ApiResponse.error(errNo: -1);
     }
@@ -163,22 +159,16 @@ class GoogleAuthService {
       debugPrint('🔐 [GOOGLE_AUTH] HTTP响应状态码: ${response.statusCode}');
       debugPrint('🔐 [GOOGLE_AUTH] HTTP响应体长度: ${response.body.length}');
       
-      if (response.statusCode == 200) {
-        debugPrint('🔐 [GOOGLE_AUTH] 开始解析JSON响应...');
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-        debugPrint('🔐 [GOOGLE_AUTH] JSON解析成功，errNo: ${jsonData['errNo']}');
+      debugPrint('🔐 [GOOGLE_AUTH] 开始解析JSON响应...');
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+      debugPrint('🔐 [GOOGLE_AUTH] JSON解析成功，errNo: ${jsonData['errNo']}');
 
-        final apiResponse = ApiResponse.fromJson(
-          jsonData,
-          (dataJson) => AccessTokenResponse.fromMap(dataJson),
-        );
-        debugPrint('🔐 [GOOGLE_AUTH] Token刷新API调用完成，errNo: ${apiResponse.errNo}');
-        return apiResponse;
-      } else {
-        debugPrint('🔐 [GOOGLE_AUTH] HTTP请求失败，状态码: ${response.statusCode}');
-        debugPrint('🔐 [GOOGLE_AUTH] 错误响应体: ${response.body}');
-        return ApiResponse.error(errNo: response.statusCode);
-      }
+      final apiResponse = ApiResponse.fromJson(
+        jsonData,
+        (dataJson) => AccessTokenResponse.fromMap(dataJson),
+      );
+      debugPrint('🔐 [GOOGLE_AUTH] Token刷新API调用完成，errNo: ${apiResponse.errNo}');
+      return apiResponse;
     } catch (e) {
       debugPrint('🔐 [GOOGLE_AUTH] Token刷新请求异常: $e');
       debugPrint('🔐 [GOOGLE_AUTH] 异常类型: ${e.runtimeType}');
@@ -202,16 +192,12 @@ class GoogleAuthService {
         headers: ApiConfig.getAuthHeaders(token: accessToken),
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+      final Map<String, dynamic> jsonData = json.decode(response.body);
 
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) => TokenValidationResponse.fromMap(dataJson),
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
-      }
+      return ApiResponse.fromJson(
+        jsonData,
+        (dataJson) => TokenValidationResponse.fromMap(dataJson),
+      );
     } catch (e) {
       return ApiResponse.error(errNo: -1);
     }
@@ -270,17 +256,13 @@ class GoogleAuthService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+      final Map<String, dynamic> jsonData = json.decode(response.body);
 
-        // 使用统一的JSON处理函数
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) {}, // logout不需要返回数据
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
-      }
+      // 使用统一的JSON处理函数
+      return ApiResponse.fromJson(
+        jsonData,
+        (dataJson) {}, // logout不需要返回数据
+      );
     } catch (e) {
       return ApiResponse.error(errNo: -1);
     }
@@ -303,17 +285,13 @@ class GoogleAuthService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+      final Map<String, dynamic> jsonData = json.decode(response.body);
 
-        // 使用统一的JSON处理函数
-        return ApiResponse.fromJson(
-          jsonData,
-          (dataJson) {}, // delete account不需要返回数据
-        );
-      } else {
-        return ApiResponse.error(errNo: response.statusCode);
-      }
+      // 使用统一的JSON处理函数
+      return ApiResponse.fromJson(
+        jsonData,
+        (dataJson) {}, // delete account不需要返回数据
+      );
     } catch (e) {
       return ApiResponse.error(errNo: -1);
     }

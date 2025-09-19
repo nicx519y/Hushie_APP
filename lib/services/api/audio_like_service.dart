@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../config/api_config.dart';
+import '../../models/api_response.dart';
 import '../http_client_service.dart';
 
 /// 音频点赞服务
@@ -28,18 +29,18 @@ class AudioLikeService {
         timeout: _defaultTimeout,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP failed: ${response.statusCode}');
-      }
-
       final Map<String, dynamic> jsonData = json.decode(response.body);
+      
+      final apiResponse = ApiResponse.fromJson<Map<String, dynamic>>(
+        jsonData,
+        (data) => data as Map<String, dynamic>,
+      );
 
-      final int errNo = jsonData['errNo'] ?? -1;
-      if (errNo != 0) {
-        throw Exception('API failed: errNo=$errNo');
+      if (apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        throw Exception('API failed: errNo=${apiResponse.errNo}');
       }
-
-      return jsonData['data'] ?? {};
     } catch (e) {
       if (e is Exception) {
         rethrow;

@@ -126,7 +126,7 @@ flutter:
     - assets/icons/
     - assets/images/
     - assets/html/
-    - assets/google_pay_config.json
+    - assets/configs/google_pay_config.json
 
   # Custom fonts configuration
   fonts:

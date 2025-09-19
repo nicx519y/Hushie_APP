@@ -2,7 +2,7 @@
   "provider": "google_pay",
   "data": {
     "environment": "TEST",
-    "apiVersion": 2,
+    "apiVersion": 1,
     "apiVersionMinor": 0,
     "allowedPaymentMethods": [
       {
@@ -21,8 +21,8 @@
       }
     ],
     "merchantInfo": {
-      "merchantId": "12345678901234567890",
-      "merchantName": "Hushie Audio"
+      "merchantId": "04474495528685697080",
+      "merchantName": "Hushie"
     },
     "transactionInfo": {
       "totalPriceStatus": "FINAL",

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pay/pay.dart';
 
 class GooglePayService {
-  static const String _googlePayConfigAsset = 'assets/google_pay_config.json';
+  static const String _googlePayConfigAsset = 'assets/configs/google_pay_config.json';
   
   // 支付项目列表
   static const List<PaymentItem> _paymentItems = [
@@ -91,42 +91,4 @@ class GooglePayService {
     ];
   }
   
-  // 更新支付配置（用于生产环境）
-  static PaymentConfiguration createProductionConfig({
-    required String merchantId,
-    required String merchantName,
-    required String gateway,
-    required String gatewayMerchantId,
-  }) {
-    final config = {
-      "provider": "google_pay",
-      "data": {
-        "environment": "PRODUCTION",
-        "apiVersion": 2,
-        "apiVersionMinor": 0,
-        "allowedPaymentMethods": [
-          {
-            "type": "CARD",
-            "parameters": {
-              "allowedAuthMethods": ["PAN_ONLY", "CRYPTOGRAM_3DS"],
-              "allowedCardNetworks": ["AMEX", "DISCOVER", "JCB", "MASTERCARD", "VISA"]
-            },
-            "tokenizationSpecification": {
-              "type": "PAYMENT_GATEWAY",
-              "parameters": {
-                "gateway": gateway,
-                "gatewayMerchantId": gatewayMerchantId
-              }
-            }
-          }
-        ],
-        "merchantInfo": {
-          "merchantId": merchantId,
-          "merchantName": merchantName
-        }
-      }
-    };
-    
-    return PaymentConfiguration.fromJsonString(config.toString());
-  }
 }

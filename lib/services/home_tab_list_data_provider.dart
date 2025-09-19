@@ -265,10 +265,15 @@ class HomeTabListDataProvider {
       // 调用列表服务获取更多数据，传递当前数据
       final newData = await _listService.fetchNextPageDataWithCurrentData(tabId, currentData);
       
-      // 将新数据追加到现有缓存中
+      // 将新数据追加到现有内存缓存中（用于返回给UI）
       final existingData = getTabListData(tabId);
       final combinedData = [...existingData, ...newData];
-      await _updateTabListCache(tabId, combinedData);
+      _cachedTabLists[tabId] = combinedData;
+      
+      // 本地存储只保留最新数据，抛弃旧数据
+      await _cacheTabListData(tabId, newData);
+      
+      debugPrint('🏠 [DATA_PROVIDER] 内存缓存已更新为${combinedData.length}条数据，本地存储只保留最新${newData.length}条数据');
       
       return newData;
     } catch (error) {

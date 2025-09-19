@@ -45,6 +45,10 @@ class AudioManager {
   bool _lastIsPlaying = false;
   Duration _lastPosition = Duration.zero;
 
+  // 播放列表管理状态标志位
+  bool _isManagingPlaylist = false;
+  String? _lastManagedAudioId;
+
   // 预览区间即将超出事件流
   static final StreamController<PreviewOutEvent> _previewOutController =
       StreamController<PreviewOutEvent>.broadcast();
@@ -366,6 +370,15 @@ class AudioManager {
 
   /// 管理播放列表（清理和补充）
   Future<void> _managePlaylist(String currentAudioId) async {
+    // 防止频繁触发：如果正在管理播放列表或者是同一个音频ID，直接返回
+    if (_isManagingPlaylist || _lastManagedAudioId == currentAudioId) {
+      debugPrint('_managePlaylist: 跳过重复操作 - isManaging: $_isManagingPlaylist, lastManagedId: $_lastManagedAudioId, currentId: $currentAudioId');
+      return;
+    }
+
+    _isManagingPlaylist = true;
+    _lastManagedAudioId = currentAudioId;
+
     try {
       final playlist = AudioPlaylist.instance;
 
@@ -382,6 +395,8 @@ class AudioManager {
       }
     } catch (e) {
       debugPrint('管理播放列表失败: $e');
+    } finally {
+      _isManagingPlaylist = false;
     }
   }
 
