@@ -88,9 +88,6 @@ dependencies:
   
   # Google Play内购
   in_app_purchase: ^3.1.13
-  
-  # Google Pay和Apple Pay支付
-  pay: ^3.2.1
 
 dev_dependencies:
   flutter_test:
@@ -126,7 +123,7 @@ flutter:
     - assets/icons/
     - assets/images/
     - assets/html/
-    - assets/configs/google_pay_config.json
+    - assets/configs/
 
   # Custom fonts configuration
   fonts:

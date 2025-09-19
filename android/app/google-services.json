@@ -1,49 +1,41 @@
 {
   "project_info": {
-    "project_number": "658633307055",
-    "project_id": "hushie-ai",
-    "storage_bucket": "hushie-ai.firebasestorage.app"
+    "project_number": "561280927021",
+    "project_id": "diesel-ability-472311-t3",
+    "storage_bucket": "diesel-ability-472311-t3.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:658633307055:android:38890df1786e41938f755a",
+        "mobilesdk_app_id": "1:561280927021:android:f34cb42de098aaa917ffa4",
         "android_client_info": {
           "package_name": "com.hushie.audio"
         }
       },
       "oauth_client": [
         {
-          "client_id": "658633307055-e0tbor4c495na8kq93c4ekm833fv15pr.apps.googleusercontent.com",
+          "client_id": "561280927021-b2139lsqqlj8k41uft743diga3jtqntb.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.hushie.audio",
-            "certificate_hash": "2c7dc744e4d8eda88c5f8612966e3450d6b60d29"
+            "certificate_hash": "45038998b2e2ca33b82cafcf0b82260eded45390"
           }
         },
         {
-          "client_id": "658633307055-vm7k5s25qtd08540oekcjmj7feksbav7.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.hushie.audio",
-            "certificate_hash": "f773624c3bf39f4c464d2d2b29d46bf8d2385ede"
-          }
-        },
-        {
-          "client_id": "658633307055-n1alc0i177t0d39kqt79nuks91caaeqr.apps.googleusercontent.com",
+          "client_id": "561280927021-dhnvh4g8eq0m3rc2130p5e9l78aiuben.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDPC_HQNvPKemyO2zGbFt61_ZJXfsWctrs"
+          "current_key": "AIzaSyB1_xgeMyqDwHNHHQxaebaKiRCEGr8kNAM"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "658633307055-n1alc0i177t0d39kqt79nuks91caaeqr.apps.googleusercontent.com",
+              "client_id": "561280927021-dhnvh4g8eq0m3rc2130p5e9l78aiuben.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

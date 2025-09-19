@@ -2,8 +2,8 @@
 /// 
 /// 定义应用支持的支付方式类型
 enum PaymentMethod {
-  /// Google Pay支付
-  googlePay('google_pay');
+  /// Google Play Billing支付
+  googlePlayBilling('google_play_billing');
 
   const PaymentMethod(this.value);
 

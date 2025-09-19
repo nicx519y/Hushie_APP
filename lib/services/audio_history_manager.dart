@@ -39,6 +39,9 @@ class AudioHistoryManager {
   
   // 本地状态缓存，用于差异对比
   AudioPlayerState? _lastAudioState;
+  
+  // 防止重复请求历史数据的状态标识
+  bool _isLoadingHistoryFromServer = false;
 
   static const int progressUpdateIntervalS = 30; // 30秒更新一次
   static const String _historyCacheKey = 'audio_history_cache'; // 本地存储键名
@@ -332,7 +335,14 @@ class AudioHistoryManager {
 
   /// 登录后重新初始化
   Future<void> _reinitializeAfterLogin() async {
+    // 防止重复请求
+    if (_isLoadingHistoryFromServer) {
+      debugPrint('🎵 [HISTORY] 正在从服务端加载历史数据，跳过重复请求');
+      return;
+    }
+
     try {
+      _isLoadingHistoryFromServer = true;
       debugPrint('🎵 [HISTORY] 用户已登录，重新初始化历史数据');
 
       // 从服务端拉取最新的历史列表
@@ -349,6 +359,8 @@ class AudioHistoryManager {
       // 初始化失败，清空缓存
       _historyCache = [];
       _historyNotifier.value = [];
+    } finally {
+      _isLoadingHistoryFromServer = false;
     }
   }
 
@@ -372,10 +384,25 @@ class AudioHistoryManager {
     try {
       // 如果强制刷新或缓存为空，从服务端拉取
       if (forceRefresh || _historyCache.isEmpty) {
-        debugPrint('🎵 [HISTORY] 从服务端拉取历史数据');
-        final historyList = await UserHistoryService.getUserHistoryList();
-        await _updateLocalCache(historyList);
-        return _historyCache;
+        // 防止重复请求
+        if (_isLoadingHistoryFromServer) {
+          debugPrint('🎵 [HISTORY] 正在从服务端加载历史数据，等待完成...');
+          // 等待当前请求完成，然后返回缓存数据
+          while (_isLoadingHistoryFromServer) {
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
+          return _historyCache;
+        }
+
+        try {
+          _isLoadingHistoryFromServer = true;
+          debugPrint('🎵 [HISTORY] 从服务端拉取历史数据');
+          final historyList = await UserHistoryService.getUserHistoryList();
+          await _updateLocalCache(historyList);
+          return _historyCache;
+        } finally {
+          _isLoadingHistoryFromServer = false;
+        }
       }
 
       // 返回缓存数据

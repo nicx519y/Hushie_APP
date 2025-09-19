@@ -4,7 +4,6 @@ import '../../models/api_response.dart';
 import '../../models/subscribe_model.dart';
 import '../../models/payment_method.dart';
 import '../http_client_service.dart';
-import '../auth_service.dart';
 
 /// Google Play订阅服务
 class SubscribeService {
@@ -16,21 +15,14 @@ class SubscribeService {
   /// 返回创建的订阅信息
   static Future<ApiResponse<SubscribeModel>> createSubscribe(CreateSubscribeRequest request) async {
     try {
-      // 获取访问令牌
-      final accessToken = await AuthService.getAccessToken();
-      if (accessToken == null || accessToken.isEmpty) {
-        return ApiResponse.error(errNo: -1);
-      }
-
       // 构建请求URI
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.subscribeCreate));
 
-      // 发送POST请求，使用公共请求头
+      // 发送POST请求，HttpClientService会自动处理请求头（包括Authorization、设备ID、签名等）
       final response = await HttpClientService.postJson(
         uri,
         body: request.toJson(),
         timeout: _defaultTimeout,
-        headers: ApiConfig.getAuthHeaders(token: accessToken),
       );
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
@@ -59,7 +51,7 @@ class SubscribeService {
     final request = CreateSubscribeRequest(
       googlePlayProductId: productId,
       googlePlayBasePlanId: basePlanId,
-      paymentMethod: PaymentMethod.googlePay,
+      paymentMethod: PaymentMethod.googlePlayBilling,
       googlePlayPurchaseToken: purchaseToken,
     );
 

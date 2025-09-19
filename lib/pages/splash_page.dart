@@ -5,6 +5,7 @@ import '../pages/home_page.dart';
 import '../pages/profile_page.dart';
 import '../services/audio_manager.dart';
 import '../router/navigation_utils.dart';
+import '../services/subscribe_privilege_manager.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});

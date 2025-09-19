@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 import '../components/notification_dialog.dart';
-import 'package:pay/pay.dart';
 import 'dart:async';
 import 'slide_up_overlay.dart';
 import '../utils/custom_icons.dart';
 import '../utils/currency_formatter.dart';
 import '../models/product_model.dart';
 import '../services/dialog_state_manager.dart';
-import '../services/google_pay_service.dart';
-import '../services/api/subscription_service.dart';
+import '../services/google_play_billing_service.dart';
+import '../services/subscribe_privilege_manager.dart';
 import '../utils/toast_helper.dart';
 
 class SubscribeDialog extends StatefulWidget {
-  final Product product;
   final VoidCallback? onSubscribe;
 
   const SubscribeDialog({
     super.key,
-    required this.product,
     this.onSubscribe,
   });
 
@@ -27,6 +24,47 @@ class SubscribeDialog extends StatefulWidget {
 
 class _SubscribeDialogState extends State<SubscribeDialog> {
   int _selectedPlan = 0; // 0: First Month, 1: Per year
+  Product? _product; // 从服务获取的商品数据
+  bool _isLoading = true; // 数据加载状态
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProductData();
+  }
+
+  /// 从 SubscribePrivilegeManager 获取商品数据
+  Future<void> _loadProductData() async {
+    try {
+      final productData = await SubscribePrivilegeManager.instance.getProductData();
+      if (productData != null && productData.products.isNotEmpty) {
+        // 获取第一个订阅类型的商品，或者使用第一个商品
+        final subscriptionProducts = productData.products
+            .where((product) => product.productType == 'subscription')
+            .toList();
+        
+        if (subscriptionProducts.isNotEmpty) {
+          _product = subscriptionProducts.first;
+        } else if (productData.products.isNotEmpty) {
+          _product = productData.products.first;
+        }
+      }
+      
+      // 如果没有获取到商品数据，使用默认的 sampleProduct
+      _product ??= sampleProduct;
+      
+    } catch (e) {
+      debugPrint('🏆 [SUBSCRIBE_DIALOG] 获取商品数据失败: $e');
+      // 使用默认的 sampleProduct
+      _product = sampleProduct;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   void _closeDialog() {
     Navigator.of(context, rootNavigator: true).pop();
@@ -60,197 +98,111 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       return;
     }
 
-    // 启动Google Pay支付流程
-    _initiateGooglePayPayment();
+    // 启动Google Play Billing支付流程
+    _initiateGooglePlayBillingPurchase();
   }
 
-  /// 启动Google Pay支付流程
-  Future<void> _initiateGooglePayPayment() async {
+  /// 启动Google Play Billing购买流程
+  Future<void> _initiateGooglePlayBillingPurchase() async {
     try {
       // 显示加载状态
-      ToastHelper.showInfo('Initializing payment...');
+      ToastHelper.showInfo('Initializing purchase...');
       
-      // 检查Google Pay是否可用
-      final canPay = await GooglePayService.canUserPay();
-      if (!canPay) {
-        ToastHelper.showError('Google Pay is not available on this device.');
-        return;
-      }
-
-      // 构建支付数据
-      final paymentItems = buildGooglePayPaymentItems();
-      final subscriptionData = buildGooglePaySubscriptionData();
+      // 获取Google Play Billing服务实例
+      final billingService = GooglePlayBillingService();
       
-      // 验证支付数据
-      if (paymentItems.isEmpty) {
-        ToastHelper.showError('Google Pay payment data build failed, please try again.');
+      // 初始化服务
+      final isInitialized = await billingService.initialize();
+      if (!isInitialized) {
+        ToastHelper.showError('Google Play Billing service unavailable, please check device settings');
         return;
       }
       
-      // 显示Google Pay支付界面
-      await _showGooglePayButton(paymentItems, subscriptionData);
+      // 获取产品信息
+      final basePlan = _product?.basePlans[_selectedPlan];
+      final basePlanId = basePlan?.googlePlayBasePlanId ?? '';
+      
+      if (basePlanId.isEmpty) {
+        ToastHelper.showError('Product configuration error, unable to purchase');
+        return;
+      }
+      
+      // 获取可用优惠
+      final availableOffer = _selectedPlanAvailableOffer;
+      String? offerToken;
+      
+      if (availableOffer != null) {
+        offerToken = availableOffer.offerId;
+      }
+      
+      try {
+        // 显示加载状态
+        ToastHelper.showInfo('Processing purchase request...');
+        
+        // 发起购买 - 使用basePlanId而不是productId，等待购买结果
+        final purchaseResult = await billingService.purchaseProduct(basePlanId, offerToken: offerToken);
+        
+        // 根据购买结果处理不同情况
+        switch (purchaseResult.result) {
+          case PurchaseResult.success:
+            ToastHelper.showSuccess('Purchase successful! Subscription activated');
+            // 可以在这里刷新用户订阅状态
+            break;
+          case PurchaseResult.pending:
+            ToastHelper.showInfo('Purchase pending, please check subscription status later');
+            break;
+          case PurchaseResult.canceled:
+            ToastHelper.showInfo('Purchase canceled');
+            break;
+          case PurchaseResult.error:
+          case PurchaseResult.failed:
+            ToastHelper.showError(purchaseResult.message ?? 'Purchase failed, please try again');
+            break;
+        }
+      } catch (e) {
+        debugPrint('Google Play Billing购买异常: $e');
+        ToastHelper.showError('An exception occurred during purchase, please try again');
+      }
       
     } catch (e) {
-      debugPrint('启动Google Pay支付失败: $e');
-      String errorMessage = 'Payment initialization failed';
+      debugPrint('Google Play Billing购买失败: $e');
       
-      // 根据错误类型提供更具体的错误信息
-      if (e.toString().contains('network')) {
-        errorMessage = 'Network connection failed, please check network and try again.';
-      } else if (e.toString().contains('permission')) {
-        errorMessage = 'Insufficient permissions, please check app permissions.';
-      } else if (e.toString().contains('configuration')) {
-        errorMessage = 'Pay configuration error, please contact customer service.';
+      // 根据错误类型提供具体的错误信息
+      String errorMessage = 'Purchase failed, please try again';
+      
+      if (e.toString().contains('BILLING_UNAVAILABLE')) {
+        errorMessage = 'Google Play Billing service unavailable';
+      } else if (e.toString().contains('ITEM_UNAVAILABLE')) {
+        errorMessage = 'Product temporarily unavailable';
+      } else if (e.toString().contains('DEVELOPER_ERROR')) {
+        errorMessage = 'App configuration error, please contact developer';
+      } else if (e.toString().contains('USER_CANCELED')) {
+        errorMessage = 'User canceled the purchase';
+      } else if (e.toString().contains('SERVICE_DISCONNECTED')) {
+        errorMessage = 'Network connection failed, please check network and try again';
+      } else if (e.toString().contains('SERVICE_TIMEOUT')) {
+        errorMessage = 'Request timeout, please try again';
       }
       
       ToastHelper.showError(errorMessage);
-    }
-  }
-
-  /// 显示Google Pay支付按钮
-  Future<void> _showGooglePayButton(
-    List<Map<String, dynamic>> paymentItems, 
-    Map<String, dynamic> subscriptionData
-  ) async {
-    try {
-      // 转换为PaymentItem格式
-      final List<PaymentItem> items = paymentItems.map((item) => PaymentItem(
-        label: item['label'],
-        amount: item['amount'],
-        status: PaymentItemStatus.final_price,
-      )).toList();
-
-      // 创建支付配置
-      final paymentConfiguration = await PaymentConfiguration.fromAsset('assets/configs/google_pay_config.json');
-      
-      // 创建支付客户端
-      final payClient = Pay({PayProvider.google_pay: paymentConfiguration});
-      
-      // 执行支付
-      final result = await payClient.showPaymentSelector(
-        PayProvider.google_pay,
-        items,
-      );
-      
-      // 处理支付结果
-      await _handleGooglePayResult(result, subscriptionData);
-      
-    } catch (e) {
-      debugPrint('Google Pay failure: $e');
-      
-      String errorMessage = 'Pay failure: $e';
-      
-      // 根据错误信息提供更具体的错误信息
-      if (e.toString().contains('cancelled') || e.toString().contains('user_cancelled')) {
-        errorMessage = 'Pay cancelled by user';
-      } else if (e.toString().contains('not_available') || e.toString().contains('unavailable')) {
-        errorMessage = 'Google Pay service not available';
-      } else if (e.toString().contains('developer') || e.toString().contains('configuration')) {
-        errorMessage = 'Pay configuration error, please contact customer service';
-      } else if (e.toString().contains('network')) {
-        errorMessage = 'Network error, please check network connection';
-      }
-      
-      ToastHelper.showError(errorMessage);
-    }
-  }
-
-  /// 处理Google Pay支付结果
-  Future<void> _handleGooglePayResult(
-    Map<String, dynamic> paymentResult,
-    Map<String, dynamic> subscriptionData,
-  ) async {
-    try {
-      debugPrint('Google Pay payment result: $paymentResult');
-      
-      // 显示处理状态
-      ToastHelper.showInfo('Processing payment result...');
-      
-      // 验证支付结果数据结构
-      if (paymentResult['paymentMethodData'] == null) {
-        ToastHelper.showError('Pay payment data format error');
-        return;
-      }
-      
-      // 提取支付令牌
-      final paymentMethodData = paymentResult['paymentMethodData'];
-      final tokenizationData = paymentMethodData['tokenizationData'];
-      final token = tokenizationData?['token'];
-      
-      if (token == null || token.toString().isEmpty) {
-        ToastHelper.showError('Pay payment token error, please retry.');
-        return;
-      }
-
-      // 调用后端API创建订阅
-      final response = await SubscribeService.createGooglePlaySubscribe(
-        productId: subscriptionData['google_play_product_id'],
-        basePlanId: subscriptionData['google_play_base_plan_id'],
-        purchaseToken: token,
-      );
-
-      if (response.errNo == 0 && response.data != null) {
-        // 支付成功
-        _closeDialog();
-        ToastHelper.showSuccess('Pay subscription success! Thank you for your support.');
-        
-        // 调用成功回调
-        if (widget.onSubscribe != null) {
-          widget.onSubscribe!();
-        }
-      } else {
-        // 支付失败，提供更详细的错误信息
-        String errorMessage = 'Pay subscription create failed.';
-        
-        // 根据错误码提供更具体的错误信息
-        if (response.errNo == -2) {
-          errorMessage = 'Pay subscription already exists. Error code: ${response.errNo}';
-        } else if (response.errNo == -3) {
-          errorMessage = 'Pay payment token invalid, please pay again. Error code: ${response.errNo}';
-        } else if (response.errNo == -4) {
-          errorMessage = 'Pay network connection error, please check network and try again. Error code: ${response.errNo}';
-        } else if (response.errNo == -5) {
-          errorMessage = 'Pay server error, please try again later. Error code: ${response.errNo}';
-        }
-        
-        ToastHelper.showError(errorMessage);
-      }
-      
-    } on FormatException catch (e) {
-      debugPrint('Pay payment result data format error: $e');
-      ToastHelper.showError('Pay payment data format error, please retry.');
-    } on TimeoutException catch (e) {
-      debugPrint('Pay handle payment result timeout: $e');
-      ToastHelper.showError('Pay handle timeout, please check network connection and try again.');
-    } catch (e) {
-      debugPrint('Pay handle Google Pay result error: $e');
-      
-      String errorMessage = 'Pay subscription handle failed.';
-      
-      // 根据错误类型提供更具体的错误信息
-      if (e.toString().contains('network') || e.toString().contains('connection')) {
-        errorMessage = 'Pay network connection error, please check network and try again.';
-      } else if (e.toString().contains('timeout')) {
-        errorMessage = 'Pay request timeout, please retry.';
-      } else if (e.toString().contains('unauthorized')) {
-        errorMessage = 'Pay authentication failed, please login again.';
-      }
-      
-      ToastHelper.showError('$errorMessage, please contact customer service if the problem persists.');
+    } finally {
+      // 关闭弹窗
+      _closeDialog();
     }
   }
 
   bool get _isSelectedPlanSubscribing {
-    return widget.product.basePlans[_selectedPlan].isSubscribing;
+    return _product?.basePlans[_selectedPlan].isSubscribing ?? false;
   }
 
   bool get _isSelectedPlanAvailable {
-    return widget.product.basePlans[_selectedPlan].isAvailable;
+    return _product?.basePlans[_selectedPlan].isAvailable ?? false;
   }
 
   /// 获取选中计划的可用Offer，如果没有可用Offer则返回null
   Offer? get _selectedPlanAvailableOffer {
-    final basePlan = widget.product.basePlans[_selectedPlan];
+    final basePlan = _product?.basePlans[_selectedPlan];
+    if (basePlan == null) return null;
     try {
       return basePlan.offers.firstWhere((offer) => offer.isAvailable);
     } catch (e) {
@@ -258,66 +210,28 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
     }
   }
 
-  /// 构建Google Pay需要的订阅数据
-  Map<String, dynamic> buildGooglePaySubscriptionData() {
-    final basePlan = widget.product.basePlans[_selectedPlan];
-    final availableOffer = _selectedPlanAvailableOffer;
-    
-    // 决定使用的价格和货币信息
-    final displayPrice = availableOffer?.price ?? basePlan.price;
-    final displayCurrency = availableOffer?.currency ?? basePlan.currency;
-    final displayName = availableOffer?.name ?? basePlan.name;
-    
-    return {
-      'google_play_product_id': widget.product.googlePlayProductId,
-      'google_play_base_plan_id': basePlan.googlePlayBasePlanId,
-      'offer_id': availableOffer?.offerId,
-      'product_name': widget.product.name,
-      'plan_name': displayName,
-      'price': displayPrice,
-      'currency': displayCurrency,
-      'billing_period': basePlan.billingPeriod,
-      'duration_days': basePlan.durationDays,
-    };
-  }
-
-  /// 构建Google Pay PaymentItem列表
-  List<Map<String, dynamic>> buildGooglePayPaymentItems() {
-    final basePlan = widget.product.basePlans[_selectedPlan];
-    final availableOffer = _selectedPlanAvailableOffer;
-    
-    final displayPrice = availableOffer?.price ?? basePlan.price;
-    final displayName = availableOffer?.name ?? basePlan.name;
-    
-    return [
-      {
-        'label': '${widget.product.name} - $displayName',
-        'amount': displayPrice.toStringAsFixed(2),
-        'status': 'FINAL',
-      }
-    ];
-  }
-
-  /// 获取Google Pay支付配置数据
-  Map<String, dynamic> buildGooglePayTransactionInfo() {
-    final basePlan = widget.product.basePlans[_selectedPlan];
-    final availableOffer = _selectedPlanAvailableOffer;
-    
-    final displayPrice = availableOffer?.price ?? basePlan.price;
-    final displayCurrency = availableOffer?.currency ?? basePlan.currency;
-    
-    return {
-      'totalPriceStatus': 'FINAL',
-      'totalPrice': displayPrice.toStringAsFixed(2),
-      'currencyCode': displayCurrency,
-      'countryCode': 'US', // 可以根据需要调整
-    };
-  }
-
   
 
   @override
   Widget build(BuildContext context) {
+    // 如果正在加载数据，显示加载指示器
+    if (_isLoading || _product == null) {
+      return SlideUpContainer(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+        backgroundImage: 'assets/images/dailog_bg.png',
+        backgroundImageAlignment: Alignment(0.2, 0.55),
+        padding: EdgeInsets.only(
+          top: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 36,
+          left: 16,
+          right: 16,
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return SlideUpContainer(
       maxHeight: MediaQuery.of(context).size.height * 0.9,
       backgroundImage: 'assets/images/dailog_bg.png',
@@ -347,7 +261,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                   Transform.translate(
                     offset: const Offset(0, 3),
                     child: Text(
-                      widget.product.name,
+                      _product!.name,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
@@ -381,7 +295,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
               // 价格选项
               Column(
-                children: widget.product.basePlans
+                children: _product!.basePlans
                     .asMap()
                     .entries
                     .expand(
@@ -390,7 +304,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                           planIndex: entry.key,
                           basePlan: entry.value,
                         ),
-                        if (entry.key < widget.product.basePlans.length - 1)
+                        if (entry.key < _product!.basePlans.length - 1)
                           const SizedBox(height: 18),
                       ],
                     )
@@ -689,9 +603,8 @@ final sampleProduct = Product(
 
 // 显示订阅对话框的便捷方法
 Future<void> showSubscribeDialog(
-  BuildContext context, {
-  Product? product,
-}) async {
+  BuildContext context,
+) async {
   // 检查是否已有弹窗打开
   if (!DialogStateManager.instance.tryOpenDialog(DialogStateManager.subscribeDialog)) {
     return; // 已有其他弹窗打开，直接返回
@@ -699,8 +612,6 @@ Future<void> showSubscribeDialog(
   
   return SlideUpOverlay.show(
     context: context,
-    child: SubscribeDialog(
-      product: product ?? sampleProduct,
-    ),
+    child: const SubscribeDialog(),
   );
 }

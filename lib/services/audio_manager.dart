@@ -8,6 +8,7 @@ import 'audio_service.dart';
 import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
 import 'api/audio_list_service.dart';
+import 'subscribe_privilege_manager.dart';
 import 'package:flutter/foundation.dart';
 
 /// 预览区间即将超出事件
@@ -52,6 +53,9 @@ class AudioManager {
   // 预览区间即将超出事件流
   static final StreamController<PreviewOutEvent> _previewOutController =
       StreamController<PreviewOutEvent>.broadcast();
+
+  // 权益状态监听
+  StreamSubscription<PrivilegeChangeEvent>? _privilegeSubscription;
 
   /// 预览区间即将超出事件流（供外部订阅）
   static Stream<PreviewOutEvent> get previewOutEvents =>
@@ -123,7 +127,7 @@ class AudioManager {
       // 检查音频是否发生变化
       bool audioChanged = _lastAudioId != currentAudioId;
       bool playingStateChanged = _lastIsPlaying != isPlaying;
-      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 500);
+      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 5);
       // bool positionChanged = _lastPosition != position;
       debugPrint('[checkWillOutPreview] positionChanged: $positionChanged; _lastPosition: $_lastPosition; position: $position');
       // 管理播放列表 - 只在音频ID发生变化时执行
@@ -280,6 +284,16 @@ class AudioManager {
     // 初始化AudioPlaylist
     await AudioPlaylist.instance.initialize();
     debugPrint('AudioManager: AudioPlaylist 初始化完成');
+
+    // 初始化权益管理器
+    await SubscribePrivilegeManager.instance.initialize();
+    debugPrint('AudioManager: SubscribePrivilegeManager 初始化完成');
+
+    // 获取当前权益状态并设置播放权限
+    await _initializePrivilegeStatus();
+
+    // 监听权益变化事件
+    _setupPrivilegeListener();
 
     // 使用统一的初始化方法，避免重复初始化
     await _ensureInitialized();
@@ -573,12 +587,56 @@ class AudioManager {
     debugPrint('设置canAutoPlayNext: $canAutoPlay');
   }
 
+  /// 初始化权益状态
+  Future<void> _initializePrivilegeStatus() async {
+    try {
+      final privilege = await SubscribePrivilegeManager.instance.getUserPrivilege();
+      final hasPremium = privilege?.hasPremium ?? false;
+      
+      debugPrint('AudioManager: 初始化权益状态 - hasPremium: $hasPremium');
+      _updatePlaybackPermissions(hasPremium);
+    } catch (e) {
+      debugPrint('AudioManager: 初始化权益状态失败: $e');
+      // 失败时设置为无权限状态
+      _updatePlaybackPermissions(false);
+    }
+  }
+
+  /// 设置权益监听器
+  void _setupPrivilegeListener() {
+    _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen(
+      (event) {
+        debugPrint('AudioManager: 收到权益变化事件 - hasPremium: ${event.hasPremium}');
+        _updatePlaybackPermissions(event.hasPremium);
+      },
+      onError: (error) {
+        debugPrint('AudioManager: 权益状态监听异常: $error');
+      },
+    );
+    debugPrint('AudioManager: 权益状态监听器已设置');
+  }
+
+  /// 根据权益状态更新播放权限
+  void _updatePlaybackPermissions(bool hasPremium) {
+    debugPrint('AudioManager: 更新播放权限 - hasPremium: $hasPremium');
+    
+    // 根据权益状态设置播放权限
+    setCanPlayAllDuration(hasPremium);
+    setCanAutoPlayNext(hasPremium);
+    
+    debugPrint('AudioManager: 播放权限已更新 - canPlayAllDuration: $hasPremium, canAutoPlayNext: $hasPremium');
+  }
+
   // 清理资源
   Future<void> dispose() async {
     // 在销毁前记录最后的播放停止
     if (_audioService != null) {
       await _audioService!.dispose();
     }
+
+    // 清理权益状态监听
+    await _privilegeSubscription?.cancel();
+    _privilegeSubscription = null;
 
     // 关闭所有BehaviorSubject
     await _playerStateSubject.close();

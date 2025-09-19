@@ -13,9 +13,7 @@ import '../utils/custom_icons.dart';
 import 'login_page.dart';
 import '../router/navigation_utils.dart';
 import 'dart:async';
-import 'package:hushie_app/services/api/user_history_service.dart';
 import 'package:hushie_app/services/audio_manager.dart';
-import '../components/notification_dialog.dart';
 import '../services/audio_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -130,36 +128,10 @@ class _ProfilePageState extends State<ProfilePage>
 
   /// 登录后加载数据
   Future<void> _loadDataAfterLogin() async {
-    debugPrint('👤 [PROFILE] 用户已登录，重新加载页面数据');
-
-    // 检查认证状态
-    final token = await AuthService.getAccessToken();
-    debugPrint(
-      '👤 [PROFILE] 当前访问令牌: ${token != null ? "存在(${token.length}字符)" : "不存在"}',
-    );
-
-    final isSignedIn = await AuthService.isSignedIn();
-    debugPrint('👤 [PROFILE] 登录状态检查: $isSignedIn');
-
     // 并行加载历史和喜欢数据
     await Future.wait([
       _loadLikedAudios(),
-      AudioHistoryManager.instance.refreshHistory(),
-      () async {
-        try {
-          debugPrint(
-            '🎵 [HISTORY] 开始调用 UserHistoryService.getUserHistoryList()',
-          );
-          final value = await UserHistoryService.getUserHistoryList();
-          debugPrint('🎵 [HISTORY] 刷新用户播放历史成功: $value');
-        } catch (error) {
-          debugPrint('🎵 [HISTORY] 获取用户播放历史失败: $error');
-          debugPrint('🎵 [HISTORY] 错误类型: ${error.runtimeType}');
-          if (error is Exception) {
-            debugPrint('🎵 [HISTORY] 异常详情: ${error.toString()}');
-          }
-        }
-      }(),
+      // AudioHistoryManager.instance.refreshHistory(),
     ]);
   }
 
@@ -361,22 +333,7 @@ class _ProfilePageState extends State<ProfilePage>
 
   // 订阅按钮点击
   void _onSubscribeTap() {
-    showSubscribeDialog(
-      context,
-      // onClose: () {
-      //   // Use post-frame callback to ensure the subscription dialog is fully closed
-      //   // before showing the notification dialog
-      //   WidgetsBinding.instance.addPostFrameCallback((_) {
-      //     showNotificationDialog(
-      //       context,
-      //       title: 'Notification',
-      //       message:
-      //           'Hushie Pro is active in your subscription and does not support downgrades.',
-      //       buttonText: 'Got It',
-      //     );
-      //   });
-      // },
-    );
+    showSubscribeDialog(context);
   }
 
   @override

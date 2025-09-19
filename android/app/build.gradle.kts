@@ -71,5 +71,6 @@ flutter {
 }
 
 dependencies {
-    implementation("com.google.android.gms:play-services-wallet:19.2.1")
+    // Google Play Billing Library
+    implementation("com.android.billingclient:billing:6.0.1")
 }
