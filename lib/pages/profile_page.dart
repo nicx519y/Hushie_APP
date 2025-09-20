@@ -64,14 +64,11 @@ class _ProfilePageState extends State<ProfilePage>
       }
     });
 
-    // 订阅认证状态变化事件
+    // 订阅登录状态变化事件
     _subscribeToAuthChanges();
 
     // 订阅音频流变化事件
     _subscribeToAudioChanges();
-
-    // 初始化 AudioHistoryManager
-    AudioHistoryManager.instance.initialize();
 
     // 异步初始化登录状态
     _initializeAuthState();
@@ -183,13 +180,6 @@ class _ProfilePageState extends State<ProfilePage>
 
   /// 刷新认证状态
   Future<void> _refreshAuthState() async {
-    // 防抖逻辑：避免频繁调用
-    if (_isRefreshingAuth) {
-      return;
-    }
-
-    _isRefreshingAuth = true;
-
     try {
       final newLoginState = await AuthService.isSignedIn();
 
@@ -212,9 +202,7 @@ class _ProfilePageState extends State<ProfilePage>
       }
     } catch (e) {
       debugPrint('刷新认证状态失败: $e');
-    } finally {
-      _isRefreshingAuth = false;
-    }
+    } 
   }
 
   /// 刷新用户信息

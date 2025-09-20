@@ -52,8 +52,8 @@ class SubscribePrivilegeManager {
   final StreamController<PrivilegeChangeEvent> _privilegeChangeController = 
       StreamController<PrivilegeChangeEvent>.broadcast();
 
-  // 数据刷新间隔（30分钟）
-  static const Duration _refreshInterval = Duration(minutes: 30);
+  // 数据刷新间隔（5分钟）
+  static const Duration _refreshInterval = Duration(minutes: 5);
 
   // 服务状态
   bool _isInitialized = false;
@@ -337,9 +337,9 @@ class SubscribePrivilegeManager {
         if (remainingDays > 30) {
           return '高级权限有效';
         } else if (remainingDays > 7) {
-          return '高级权限即将到期（剩余${remainingDays}天）';
+          return '高级权限即将到期（剩余$remainingDays天）';
         } else if (remainingDays > 0) {
-          return '高级权限即将到期（剩余${remainingDays}天）';
+          return '高级权限即将到期（剩余$remainingDays天）';
         } else {
           return '高级权限今日到期';
         }
@@ -358,6 +358,30 @@ class SubscribePrivilegeManager {
   Future<void> refreshData() async {
     debugPrint('🏆 [PRIVILEGE_SERVICE] 手动刷新数据');
     await _loadPrivilegeAndProductData();
+  }
+
+  /// 更新订阅权限
+  /// 
+  /// 在订阅成功后调用此方法，强制刷新用户权限和商品数据
+  /// 通常在 Google Play 订阅购买成功后调用，确保权限状态及时更新
+  Future<void> updateSubscribePrivilege() async {
+    try {
+      debugPrint('🏆 [PRIVILEGE_SERVICE] 订阅成功，开始更新权限数据');
+      
+      // 检查认证状态
+      if (AuthService.currentAuthStatus != AuthStatus.authenticated) {
+        debugPrint('🏆 [PRIVILEGE_SERVICE] 用户未登录，无法更新权限数据');
+        return;
+      }
+
+      // 强制刷新权限和商品数据
+      await _loadPrivilegeAndProductData();
+      
+      debugPrint('🏆 [PRIVILEGE_SERVICE] 订阅权限更新完成');
+    } catch (e) {
+      debugPrint('🏆 [PRIVILEGE_SERVICE] 更新订阅权限失败: $e');
+      // 即使更新失败，也不抛出异常，避免影响购买流程
+    }
   }
 
   /// 获取数据最后更新时间

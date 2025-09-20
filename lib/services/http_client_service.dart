@@ -16,6 +16,12 @@ class HttpClientService {
   static String? _cachedDeviceId;
   static bool _isDeviceIdInitializing = false;
 
+  // 动态签名缓存和并发控制
+  static Map<String, dynamic>? _cachedDynamicSignature;
+  static bool _isDynamicSignatureGenerating = false;
+  static DateTime? _signatureCacheTime;
+  static const Duration _signatureCacheExpiry = Duration(minutes: 5); // 签名缓存5分钟
+
   /// 获取应用密钥
   static String get _appSecret => ApiConfig.getAppSecret();
 
@@ -65,6 +71,108 @@ class HttpClientService {
   static void clearDeviceIdCache() {
     _cachedDeviceId = null;
     _isDeviceIdInitializing = false;
+  }
+
+  /// 清除动态签名缓存
+  static void clearDynamicSignatureCache() {
+    _cachedDynamicSignature = null;
+    _isDynamicSignatureGenerating = false;
+    _signatureCacheTime = null;
+  }
+
+  /// 生成动态签名（带缓存和并发控制）
+  static Future<Map<String, dynamic>?> _generateDynamicSignatureWithCache() async {
+    debugPrint('🔐 [DYNAMIC_SIGNATURE] 开始生成动态签名...');
+
+    // 检查缓存是否有效
+    if (_cachedDynamicSignature != null && _signatureCacheTime != null) {
+      final now = DateTime.now();
+      final cacheAge = now.difference(_signatureCacheTime!);
+      
+      if (cacheAge < _signatureCacheExpiry) {
+        debugPrint('🔐 [DYNAMIC_SIGNATURE] 使用缓存的动态签名，剩余有效期: ${_signatureCacheExpiry - cacheAge}');
+        return _cachedDynamicSignature;
+      } else {
+        debugPrint('🔐 [DYNAMIC_SIGNATURE] 缓存的动态签名已过期，需要重新生成');
+        _cachedDynamicSignature = null;
+        _signatureCacheTime = null;
+      }
+    }
+
+    // 如果正在生成中，等待结果
+    if (_isDynamicSignatureGenerating) {
+      debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名正在生成中，等待...');
+      
+      // 等待生成完成，最多等待10秒
+      int waitCount = 0;
+      const maxWaitCount = 100; // 10秒 (100 * 100ms)
+      
+      while (_isDynamicSignatureGenerating && waitCount < maxWaitCount) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        waitCount++;
+        
+        // 如果在等待期间生成完成，返回结果
+        if (_cachedDynamicSignature != null && _signatureCacheTime != null) {
+          final now = DateTime.now();
+          final cacheAge = now.difference(_signatureCacheTime!);
+          
+          if (cacheAge < _signatureCacheExpiry) {
+            debugPrint('🔐 [DYNAMIC_SIGNATURE] 等待完成，获得动态签名');
+            return _cachedDynamicSignature;
+          }
+        }
+      }
+      
+      if (waitCount >= maxWaitCount) {
+        debugPrint('⚠️ [DYNAMIC_SIGNATURE] 等待动态签名生成超时');
+        _isDynamicSignatureGenerating = false;
+        return null;
+      }
+    }
+
+    // 开始生成新的动态签名
+    debugPrint('🔐 [DYNAMIC_SIGNATURE] 开始生成新的动态签名...');
+    _isDynamicSignatureGenerating = true;
+
+    try {
+      final appSignatureService = AppSignatureService();
+      
+      // 生成动态签名参数
+      final Map<String, String>? dynamicSignature = await appSignatureService.generateDynamicSignature();
+      
+      if (dynamicSignature != null) {
+        // 获取应用签名哈希
+        final signatureHash = await appSignatureService.getSignatureHash();
+        
+        // 获取完整性验证信息
+        final integrityInfo = await appSignatureService.getIntegrityInfo();
+        
+        // 构建完整的签名信息
+        final completeSignature = <String, dynamic>{
+          'signature': dynamicSignature['signature'] ?? '',
+          'timestamp': dynamicSignature['timestamp'] ?? '',
+          'nonce': dynamicSignature['nonce'] ?? '',
+          'signatureHash': signatureHash,
+          'integrityInfo': integrityInfo,
+        };
+        
+        // 缓存结果
+        _cachedDynamicSignature = completeSignature;
+        _signatureCacheTime = DateTime.now();
+        
+        debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名生成成功并已缓存');
+        return completeSignature;
+      } else {
+        debugPrint('⚠️ [DYNAMIC_SIGNATURE] 动态签名生成失败');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ [DYNAMIC_SIGNATURE] 生成动态签名异常: $e');
+      return null;
+    } finally {
+      _isDynamicSignatureGenerating = false;
+      debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名生成流程完成');
+    }
   }
 
   /// 发送GET请求
@@ -246,32 +354,31 @@ class HttpClientService {
     
     // 添加动态签名验证信息
     try {
-      final appSignatureService = AppSignatureService();
+      // 使用新的缓存和并发控制的动态签名生成函数
+      final Map<String, dynamic>? completeSignature = await _generateDynamicSignatureWithCache();
       
-      // 生成动态签名参数
-      final Map<String, String>? dynamicSignature = await appSignatureService.generateDynamicSignature();
-      
-      if (dynamicSignature != null) {
+      if (completeSignature != null) {
         // 添加动态签名相关请求头
-        headers['X-Dynamic-Signature'] = dynamicSignature['signature'] ?? '';
-        headers['X-Timestamp'] = dynamicSignature['timestamp'] ?? '';
-        headers['X-Nonce'] = dynamicSignature['nonce'] ?? '';
+        headers['X-Dynamic-Signature'] = completeSignature['signature'] ?? '';
+        headers['X-Timestamp'] = completeSignature['timestamp'] ?? '';
+        headers['X-Nonce'] = completeSignature['nonce'] ?? '';
         
-        // 获取应用签名哈希
-        final signatureHash = await appSignatureService.getSignatureHash();
-        if (signatureHash != null) {
-          headers['X-App-Signature-Hash'] = signatureHash;
+        // 添加应用签名哈希
+        if (completeSignature['signatureHash'] != null) {
+          headers['X-App-Signature-Hash'] = completeSignature['signatureHash'];
         }
         
-        // 获取完整性验证信息
-        final integrityInfo = await appSignatureService.getIntegrityInfo();
-        headers['X-App-Integrity'] = json.encode({
-          'signature_valid': integrityInfo['isSignatureValid'],
-          'trusted_source': integrityInfo['isFromTrustedSource'],
-          'debug_build': integrityInfo['isDebugBuild'],
-        });
+        // 添加完整性验证信息
+        final integrityInfo = completeSignature['integrityInfo'];
+        if (integrityInfo != null) {
+          headers['X-App-Integrity'] = json.encode({
+            'signature_valid': integrityInfo['isSignatureValid'],
+            'trusted_source': integrityInfo['isFromTrustedSource'],
+            'debug_build': integrityInfo['isDebugBuild'],
+          });
+        }
         
-        debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名生成成功');
+        debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名添加成功');
       } else {
         debugPrint('⚠️ [DYNAMIC_SIGNATURE] 动态签名生成失败，使用备用签名');
         
