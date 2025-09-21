@@ -147,20 +147,47 @@ class _ProfilePageState extends State<ProfilePage>
   /// 异步初始化认证状态
   Future<void> _initializeAuthState() async {
     try {
-      isLoggedIn = await AuthService.isSignedIn();
-      if (isLoggedIn) {
+      // 先检查认证状态
+      final signedIn = await AuthService.isSignedIn();
+      
+      if (mounted) {
+        setState(() {
+          isLoggedIn = signedIn;
+        });
+      }
+
+      if (signedIn) {
+        // 获取用户信息
         final user = await AuthService.getCurrentUser();
+        final displayName = user?.displayName ?? user?.email ?? '';
+        
         if (mounted) {
           setState(() {
-            userName = user?.displayName ?? '';
+            userName = displayName;
           });
         }
-
+        
         // 登录状态下加载数据
         await _loadDataAfterLogin();
+      } else {
+        // 未登录状态，清空数据
+        if (mounted) {
+          setState(() {
+            userName = '';
+            likedAudios.clear();
+          });
+        }
       }
     } catch (e) {
       debugPrint('初始化认证状态失败: $e');
+      // 发生错误时，确保状态一致
+      if (mounted) {
+        setState(() {
+          isLoggedIn = false;
+          userName = '';
+          likedAudios.clear();
+        });
+      }
     }
   }
 
@@ -191,17 +218,24 @@ class _ProfilePageState extends State<ProfilePage>
         // 如果登录状态发生变化，重新获取用户信息
         if (newLoginState) {
           await _refreshUserInfo();
-        }
-
-        // 如果登录状态变为false，清空用户信息
-        if (!newLoginState) {
+        } else {
+          // 如果登录状态变为false，清空用户信息和数据
           setState(() {
             userName = '';
+            likedAudios.clear();
           });
         }
       }
     } catch (e) {
       debugPrint('刷新认证状态失败: $e');
+      // 发生错误时，采用保守策略
+      if (mounted) {
+        setState(() {
+          isLoggedIn = false;
+          userName = '';
+          likedAudios.clear();
+        });
+      }
     } 
   }
 
@@ -209,14 +243,23 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _refreshUserInfo() async {
     try {
       final user = await AuthService.getCurrentUser();
-      debugPrint('👤 [PROFILE] 刷新用户信息: ${user?.displayName}');
+      final displayName = user?.displayName ?? user?.email ?? '';
+      
+      debugPrint('👤 [PROFILE] 刷新用户信息: $displayName');
+      
       if (mounted) {
         setState(() {
-          userName = user?.displayName ?? '';
+          userName = displayName;
         });
       }
     } catch (e) {
       debugPrint('刷新用户信息失败: $e');
+      // 刷新失败时，尝试保持当前状态或设置默认值
+      if (mounted && userName.isEmpty) {
+        setState(() {
+          userName = 'User';
+        });
+      }
     }
   }
 
@@ -225,6 +268,7 @@ class _ProfilePageState extends State<ProfilePage>
     debugPrint(
       '👤 [PROFILE] 加载喜欢数据, _isLoadingLiked: ${_isLoadingLiked}, isLoggedIn: ${isLoggedIn}',
     );
+    
     if (_isLoadingLiked || !isLoggedIn) return;
 
     setState(() {
@@ -239,9 +283,16 @@ class _ProfilePageState extends State<ProfilePage>
         setState(() {
           likedAudios = likesList;
         });
+        debugPrint('👤 [PROFILE] 成功加载 ${likesList.length} 个喜欢的音频');
       }
     } catch (e) {
       debugPrint('加载喜欢数据失败: $e');
+      // 加载失败时，确保UI状态正确
+      if (mounted) {
+        setState(() {
+          likedAudios = [];
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {

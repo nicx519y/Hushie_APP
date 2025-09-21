@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hushie_app/services/auth_service.dart';
 import '../components/notification_dialog.dart';
 import 'dart:async';
 import 'slide_up_overlay.dart';
@@ -9,6 +10,7 @@ import '../services/dialog_state_manager.dart';
 import '../services/google_play_billing_service.dart';
 import '../services/subscribe_privilege_manager.dart';
 import '../utils/toast_helper.dart';
+import '../router/navigation_utils.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -75,8 +77,16 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
     super.dispose();
   }
 
-  void _onSubscribe() {
+  void _onSubscribe() async {
     debugPrint('SubscribeDialog _onSubscribe selectedPlan: $_selectedPlan');
+    
+    final isLogin = await AuthService.isSignedIn();
+
+    if (!isLogin) {
+      NavigationUtils.navigateToLogin(context);
+      return;
+    }
+
     // 不可用 就是不能降级 已经订阅了更高级的计划
     if (!_isSelectedPlanAvailable) {
       _closeDialog();
