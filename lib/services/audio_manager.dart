@@ -36,10 +36,8 @@ class AudioManager {
       BehaviorSubject<PlayerState>.seeded(
         PlayerState(false, ProcessingState.idle),
       );
-  final BehaviorSubject<bool> _canPlayAllDurationSubject =
-      BehaviorSubject<bool>.seeded(false);
-  final BehaviorSubject<bool> _canAutoPlayNextSubject =
-      BehaviorSubject<bool>.seeded(false);
+  final BehaviorSubject<bool> _isPreviewModeSubject =
+      BehaviorSubject<bool>.seeded(true);
 
   // 缓存本地状态，用于比对变化
   String? _lastAudioId;
@@ -172,10 +170,10 @@ class AudioManager {
 
   // 检查是否超出预览区间
   bool _checkWillOutPreview(Duration position) {
-    debugPrint('[checkWillOutPreview] canPlayAllDuration: ${_canPlayAllDurationSubject.value}');
+    debugPrint('[checkWillOutPreview] canPlayAllDuration: ${!_isPreviewModeSubject.value}');
     if (currentAudio == null ||
         !isPlaying ||
-        _canPlayAllDurationSubject.value) {
+        !_isPreviewModeSubject.value) {
       return false;
     }
 
@@ -195,7 +193,7 @@ class AudioManager {
 
   Duration _transformPosition(Duration position, {AudioItem? audio}) {
     // 如果能播放全部时长，直接返回原位置
-    if (_canPlayAllDurationSubject.value) {
+    if (!_isPreviewModeSubject.value) {
       return position;
     }
 
@@ -240,7 +238,7 @@ class AudioManager {
 
   /// 检查播放是否完成并自动播放下一首
   void _checkPlaybackCompletion(PlayerState playerState) {
-    final canAutoPlayNext = _canAutoPlayNextSubject.value;
+    final canAutoPlayNext = !_isPreviewModeSubject.value;
     final currentAudio = this.currentAudio;
     if (playerState.processingState == ProcessingState.completed &&
         currentAudio != null) {
@@ -555,36 +553,23 @@ class AudioManager {
     return _playerStateSubject.value;
   }
 
-  bool get canPlayAllDuration {
-    return _canPlayAllDurationSubject.value;
-  }
-
-  bool get canAutoPlayNext {
-    return _canAutoPlayNextSubject.value;
+  bool get isPreviewMode {
+    return _isPreviewModeSubject.value;
   }
 
   Duration get bufferedPosition {
     return _audioService?.currentState.bufferedPosition ?? Duration.zero;
   }
 
-  // 获取状态流
-  Stream<bool> get canPlayAllDurationStream {
-    return _canPlayAllDurationSubject.stream;
+  // 获取预览模式流
+  Stream<bool> get isPreviewModeStream {
+    return _isPreviewModeSubject.stream;
   }
 
-  Stream<bool> get canAutoPlayNextStream {
-    return _canAutoPlayNextSubject.stream;
-  }
-
-  // 设置状态
-  void setCanPlayAllDuration(bool canPlay) {
-    _canPlayAllDurationSubject.add(canPlay);
-    debugPrint('设置canPlayAllDuration: $canPlay');
-  }
-
-  void setCanAutoPlayNext(bool canAutoPlay) {
-    _canAutoPlayNextSubject.add(canAutoPlay);
-    debugPrint('设置canAutoPlayNext: $canAutoPlay');
+  // 新增：直接设置预览模式的方法
+  void setPreviewMode(bool isPreview) {
+    _isPreviewModeSubject.add(isPreview);
+    debugPrint('设置预览模式: $isPreview');
   }
 
   /// 初始化权益状态
@@ -620,11 +605,10 @@ class AudioManager {
   void _updatePlaybackPermissions(bool hasPremium) {
     debugPrint('AudioManager: 更新播放权限 - hasPremium: $hasPremium');
     
-    // 根据权益状态设置播放权限
-    setCanPlayAllDuration(hasPremium);
-    setCanAutoPlayNext(hasPremium);
+    // 根据权益状态设置预览模式（hasPremium为true时，预览模式为false）
+    setPreviewMode(!hasPremium);
     
-    debugPrint('AudioManager: 播放权限已更新 - canPlayAllDuration: $hasPremium, canAutoPlayNext: $hasPremium');
+    debugPrint('AudioManager: 播放权限已更新 - 预览模式: ${!hasPremium}');
   }
 
   // 清理资源
@@ -640,8 +624,7 @@ class AudioManager {
 
     // 关闭所有BehaviorSubject
     await _playerStateSubject.close();
-    await _canPlayAllDurationSubject.close();
-    await _canAutoPlayNextSubject.close();
+    await _isPreviewModeSubject.close();
 
     // 关闭StreamController
     await _previewOutController.close();

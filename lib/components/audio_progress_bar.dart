@@ -69,6 +69,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   void initState() {
     super.initState();
     _audioManager = AudioManager.instance;
+    _isPreviewMode = _audioManager.isPreviewMode;
     _listenToAudioState();
   }
   
@@ -156,12 +157,11 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     }));
 
     // 监听预览模式变化
-    _subscriptions.add(_audioManager.canPlayAllDurationStream.listen((canPlayAll) {
+    _subscriptions.add(_audioManager.isPreviewModeStream.listen((isPreviewMode) {
       if (mounted) {
-        final newPreviewMode = !canPlayAll;
-        if (_isPreviewMode != newPreviewMode) {
+        if (_isPreviewMode != isPreviewMode) {
           setState(() {
-            _isPreviewMode = newPreviewMode;
+            _isPreviewMode = isPreviewMode;
           });
         }
       }

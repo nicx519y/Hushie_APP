@@ -67,7 +67,7 @@ class AudioPlayerPage extends StatefulWidget {
 
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
-  // bool _isPreviewMode = true;
+  bool _isPreviewMode = true;
   // Duration _currentPosition = Duration.zero;
 
   // 移除时长代理服务和渲染相关状态，现在由AudioProgressBar内部管理
@@ -106,6 +106,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       setState(() {
         _currentAudio = widget.initialAudio;
         _isAudioLoading = true;
+        _isPreviewMode = _audioManager.isPreviewMode;
       });
     }
   }
@@ -168,12 +169,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       }
     }));
 
-    _subscriptions.add(_audioManager.canPlayAllDurationStream.listen((canPlayAllDuration) {
-      // if (mounted) {
-      //   setState(() {
-      //     _isPreviewMode = !canPlayAllDuration;
-      //   });
-      // }
+    _subscriptions.add(_audioManager.isPreviewModeStream.listen((isPreviewMode) {
+      if (mounted) {
+        setState(() {
+          _isPreviewMode = isPreviewMode;
+        });
+      }
     }));
 
     // 监听预览区间即将超出事件
@@ -428,11 +429,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               Row(
                 children: [
                   Expanded(child: _buildProgressBar()),
-                  const SizedBox(width: 10),
-                  Transform.translate(
+                  _isPreviewMode ? const SizedBox(width: 10) : const SizedBox.shrink(),
+                  _isPreviewMode ? Transform.translate(
                     offset: const Offset(0, -8),
                     child: _buildUnlockFullAccessTip(),
-                  ),
+                  ) : const SizedBox.shrink(),
                 ],
               ),
               const SizedBox(height: 20),
