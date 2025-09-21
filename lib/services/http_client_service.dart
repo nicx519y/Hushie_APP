@@ -12,6 +12,11 @@ import 'package:flutter/foundation.dart';
 class HttpClientService {
   static const Duration _defaultTimeout = Duration(seconds: 10);
 
+  // 重试配置参数
+  static int _maxRetries = 3; // 默认重试3次
+  static Duration _retryDelay = Duration(milliseconds: 500); // 重试间隔1秒
+  static List<int> _retryStatusCodes = [404, 500, 502, 503, 504]; // 需要重试的状态码
+
   // 缓存设备ID，避免重复获取
   static String? _cachedDeviceId;
   static bool _isDeviceIdInitializing = false;
@@ -21,6 +26,91 @@ class HttpClientService {
   static bool _isDynamicSignatureGenerating = false;
   static DateTime? _signatureCacheTime;
   static const Duration _signatureCacheExpiry = Duration(minutes: 5); // 签名缓存5分钟
+
+  /// 配置重试参数
+  static void configureRetry({
+    int? maxRetries,
+    Duration? retryDelay,
+    List<int>? retryStatusCodes,
+  }) {
+    if (maxRetries != null) _maxRetries = maxRetries;
+    if (retryDelay != null) _retryDelay = retryDelay;
+    if (retryStatusCodes != null) _retryStatusCodes = retryStatusCodes;
+  }
+
+  /// 统一的重试逻辑
+  static Future<http.Response> _executeWithRetry(
+    Future<http.Response> Function() request,
+    String requestType,
+    Uri uri,
+  ) async {
+    int attempt = 0;
+    
+    while (attempt <= _maxRetries) {
+      try {
+        debugPrint('🔄 [RETRY] $requestType 请求尝试 ${attempt + 1}/${_maxRetries + 1}: $uri');
+        
+        final response = await request();
+        
+        // 检查是否需要重试
+        if (_shouldRetry(response.statusCode, attempt)) {
+          debugPrint('⚠️ [RETRY] $requestType 请求失败，状态码: ${response.statusCode}，准备重试...');
+          attempt++;
+          if (attempt <= _maxRetries) {
+            await Future.delayed(_retryDelay);
+            continue;
+          }
+        }
+        
+        debugPrint('✅ [RETRY] $requestType 请求成功，状态码: ${response.statusCode}');
+        return response;
+        
+      } catch (e) {
+        debugPrint('❌ [RETRY] $requestType 请求异常: $e');
+        debugPrint('🔄 [RETRY] 异常类型: ${e.runtimeType}');
+        
+        // 检查是否是需要重试的异常
+        if (_shouldRetryException(e, attempt)) {
+          debugPrint('⚠️ [RETRY] 异常需要重试，准备重试...');
+          attempt++;
+          if (attempt <= _maxRetries) {
+            await Future.delayed(_retryDelay);
+            continue;
+          }
+        }
+        
+        debugPrint('💥 [RETRY] $requestType 请求最终失败，不再重试');
+        rethrow;
+      }
+    }
+    
+    throw Exception('HTTP请求重试次数已用完');
+  }
+
+  /// 判断是否需要重试（基于状态码）
+  static bool _shouldRetry(int statusCode, int currentAttempt) {
+    return currentAttempt < _maxRetries && _retryStatusCodes.contains(statusCode);
+  }
+
+  /// 判断是否需要重试（基于异常）
+  static bool _shouldRetryException(dynamic exception, int currentAttempt) {
+    if (currentAttempt >= _maxRetries) return false;
+    
+    // 超时异常需要重试
+    if (exception.toString().contains('TimeoutException') ||
+        exception.toString().contains('timeout')) {
+      return true;
+    }
+    
+    // 网络连接异常需要重试
+    if (exception.toString().contains('SocketException') ||
+        exception.toString().contains('HandshakeException') ||
+        exception.toString().contains('Connection')) {
+      return true;
+    }
+    
+    return false;
+  }
 
   /// 获取应用密钥
   static String get _appSecret => ApiConfig.getAppSecret();
@@ -181,25 +271,21 @@ class HttpClientService {
     Map<String, String>? headers,
     Duration? timeout,
   }) async {
-    debugPrint('🌐 [HTTP] 开始GET请求: $uri');
-    
-    try {
-      final requestHeaders = await _buildRequestHeaders(
-        method: 'GET',
-        path: uri.path,
-        customHeaders: headers,
-      );
-      
-      final response = await http
-          .get(uri, headers: requestHeaders)
-          .timeout(timeout ?? _defaultTimeout);
-      
-      return response;
-    } catch (e) {
-      debugPrint('🌐 [HTTP] HTTP GET请求异常: $e');
-      debugPrint('🌐 [HTTP] 异常类型: ${e.runtimeType}');
-      rethrow;
-    }
+    return _executeWithRetry(
+      () async {
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'GET',
+          path: uri.path,
+          customHeaders: headers,
+        );
+        
+        return http
+            .get(uri, headers: requestHeaders)
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'GET',
+      uri,
+    );
   }
 
   /// 发送POST请求
@@ -209,20 +295,26 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildRequestHeaders(
-      method: 'POST',
-      path: uri.path,
-      customHeaders: headers,
-      body: body,
-    );
+    return _executeWithRetry(
+      () async {
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'POST',
+          path: uri.path,
+          customHeaders: headers,
+          body: body,
+        );
 
-    return http
-        .post(
-          uri,
-          headers: requestHeaders,
-          body: body is String ? body : json.encode(body),
-        )
-        .timeout(timeout ?? _defaultTimeout);
+        return http
+            .post(
+              uri,
+              headers: requestHeaders,
+              body: body is String ? body : json.encode(body),
+            )
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'POST',
+      uri,
+    );
   }
 
   /// 发送PUT请求
@@ -232,20 +324,26 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildRequestHeaders(
-      method: 'PUT',
-      path: uri.path,
-      customHeaders: headers,
-      body: body,
-    );
+    return _executeWithRetry(
+      () async {
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'PUT',
+          path: uri.path,
+          customHeaders: headers,
+          body: body,
+        );
 
-    return http
-        .put(
-          uri,
-          headers: requestHeaders,
-          body: body is String ? body : json.encode(body),
-        )
-        .timeout(timeout ?? _defaultTimeout);
+        return http
+            .put(
+              uri,
+              headers: requestHeaders,
+              body: body is String ? body : json.encode(body),
+            )
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'PUT',
+      uri,
+    );
   }
 
   /// 发送DELETE请求
@@ -255,20 +353,26 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildRequestHeaders(
-      method: 'DELETE',
-      path: uri.path,
-      customHeaders: headers,
-      body: body,
-    );
+    return _executeWithRetry(
+      () async {
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'DELETE',
+          path: uri.path,
+          customHeaders: headers,
+          body: body,
+        );
 
-    return http
-        .delete(
-          uri,
-          headers: requestHeaders,
-          body: body is String ? body : json.encode(body),
-        )
-        .timeout(timeout ?? _defaultTimeout);
+        return http
+            .delete(
+              uri,
+              headers: requestHeaders,
+              body: body is String ? body : json.encode(body),
+            )
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'DELETE',
+      uri,
+    );
   }
 
   /// 发送PATCH请求
@@ -278,20 +382,26 @@ class HttpClientService {
     Object? body,
     Duration? timeout,
   }) async {
-    final requestHeaders = await _buildRequestHeaders(
-      method: 'PATCH',
-      path: uri.path,
-      customHeaders: headers,
-      body: body,
-    );
+    return _executeWithRetry(
+      () async {
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'PATCH',
+          path: uri.path,
+          customHeaders: headers,
+          body: body,
+        );
 
-    return http
-        .patch(
-          uri,
-          headers: requestHeaders,
-          body: body is String ? body : json.encode(body),
-        )
-        .timeout(timeout ?? _defaultTimeout);
+        return http
+            .patch(
+              uri,
+              headers: requestHeaders,
+              body: body is String ? body : json.encode(body),
+            )
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'PATCH',
+      uri,
+    );
   }
 
   /// 构建请求头
@@ -505,17 +615,23 @@ class HttpClientService {
     Map<String, dynamic>? body,
     Duration? timeout,
   }) async {
-    final jsonBody = body != null ? json.encode(body) : null;
-    final requestHeaders = await _buildRequestHeaders(
-      method: 'POST',
-      path: uri.path,
-      customHeaders: headers,
-      body: jsonBody,
-    );
+    return _executeWithRetry(
+      () async {
+        final jsonBody = body != null ? json.encode(body) : null;
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'POST',
+          path: uri.path,
+          customHeaders: headers,
+          body: jsonBody,
+        );
 
-    return http
-        .post(uri, headers: requestHeaders, body: jsonBody)
-        .timeout(timeout ?? _defaultTimeout);
+        return http
+            .post(uri, headers: requestHeaders, body: jsonBody)
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'POST_JSON',
+      uri,
+    );
   }
 
   /// 发送JSON PUT请求的便捷方法
@@ -525,17 +641,23 @@ class HttpClientService {
     Map<String, dynamic>? body,
     Duration? timeout,
   }) async {
-    final jsonBody = body != null ? json.encode(body) : null;
-    final requestHeaders = await _buildRequestHeaders(
-      method: 'PUT',
-      path: uri.path,
-      customHeaders: headers,
-      body: jsonBody,
-    );
+    return _executeWithRetry(
+      () async {
+        final jsonBody = body != null ? json.encode(body) : null;
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'PUT',
+          path: uri.path,
+          customHeaders: headers,
+          body: jsonBody,
+        );
 
-    return http
-        .put(uri, headers: requestHeaders, body: jsonBody)
-        .timeout(timeout ?? _defaultTimeout);
+        return http
+            .put(uri, headers: requestHeaders, body: jsonBody)
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'PUT_JSON',
+      uri,
+    );
   }
 
   /// 发送JSON PATCH请求的便捷方法
@@ -545,17 +667,23 @@ class HttpClientService {
     Map<String, dynamic>? body,
     Duration? timeout,
   }) async {
-    final jsonBody = body != null ? json.encode(body) : null;
-    final requestHeaders = await _buildRequestHeaders(
-      method: 'PATCH',
-      path: uri.path,
-      customHeaders: headers,
-      body: jsonBody,
-    );
+    return _executeWithRetry(
+      () async {
+        final jsonBody = body != null ? json.encode(body) : null;
+        final requestHeaders = await _buildRequestHeaders(
+          method: 'PATCH',
+          path: uri.path,
+          customHeaders: headers,
+          body: jsonBody,
+        );
 
-    return http
-        .patch(uri, headers: requestHeaders, body: jsonBody)
-        .timeout(timeout ?? _defaultTimeout);
+        return http
+            .patch(uri, headers: requestHeaders, body: jsonBody)
+            .timeout(timeout ?? _defaultTimeout);
+      },
+      'PATCH_JSON',
+      uri,
+    );
   }
 
   /// 验证响应签名（可选，用于双向验签）

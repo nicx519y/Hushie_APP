@@ -22,6 +22,22 @@
           }
         },
         {
+          "client_id": "561280927021-l93qnmatq9hff3jtftsurjhonhd7osug.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hushie.audio",
+            "certificate_hash": "0807e8bfee2a78b3652a4cc9996dd8c861e937c0"
+          }
+        },
+        {
+          "client_id": "561280927021-p7u9nuhqmhcislcqkk7j5aqu1ocmbpto.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hushie.audio",
+            "certificate_hash": "ca144f06b1a12e85c6f16207160d7d185d9d166c"
+          }
+        },
+        {
           "client_id": "561280927021-dhnvh4g8eq0m3rc2130p5e9l78aiuben.apps.googleusercontent.com",
           "client_type": 3
         }

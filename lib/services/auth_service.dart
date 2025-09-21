@@ -103,17 +103,21 @@ class AuthService {
       final googleAuthResult = await GoogleAuthService.googleSignIn();
 
       if (googleAuthResult.errNo != 0 || googleAuthResult.data == null) {
+        debugPrint('Google登录失败: googleAuthResult.errNo: ${googleAuthResult.errNo}');
+        _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return googleAuthResult;
       }
 
       final googleAuth = googleAuthResult.data!;
 
-      // 第二步：用Google认证信息换取服务器Token
+      // 第二步：用Google认证信息换取业务服务器Token
       final tokenResult = await GoogleAuthService.getAccessToken(
         googleToken: googleAuth.authCode,
       );
 
       if (tokenResult.errNo != 0 || tokenResult.data == null) {
+        debugPrint('Google登录失败: tokenResult.errNo: ${tokenResult.errNo}');
+        _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return ApiResponse.error(errNo: tokenResult.errNo);
       }
 
