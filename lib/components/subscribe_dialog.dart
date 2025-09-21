@@ -37,7 +37,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
   Future<void> _loadProductData() async {
     try {
       final productData = await SubscribePrivilegeManager.instance
-          .getProductData(forceRefresh: false);
+          .getProductData(forceRefresh: true);
       if (productData != null && productData.products.isNotEmpty) {
         // 获取第一个订阅类型的商品，或者使用第一个商品
         final subscriptionProducts = productData.products

@@ -38,12 +38,22 @@ class GooglePlayBillingService {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   
   StreamSubscription<List<PurchaseDetails>>? _subscription;
+  bool _isInitialized = false;
   
   // 购买结果的Completer，用于将购买流监听结果封装成Future
   final Map<String, Completer<PurchaseResultData>> _purchaseCompleters = {};
   
+  // 存储每个产品对应的basePlanId，用于验证时传递
+  final Map<String, String> _productBasePlanIds = {};
+  
   // 初始化服务
   Future<bool> initialize() async {
+    // 如果已经初始化过，直接返回成功
+    if (_isInitialized) {
+      debugPrint('Google Play Billing已经初始化，跳过重复初始化');
+      return true;
+    }
+    
     try {
       // 检查平台支持
       final bool available = await _inAppPurchase.isAvailable();
@@ -52,6 +62,9 @@ class GooglePlayBillingService {
         return false;
       }
       
+      // 先取消之前的订阅（如果存在）
+      await _subscription?.cancel();
+      
       // 监听购买更新
       _subscription = _inAppPurchase.purchaseStream.listen(
         _handlePurchaseUpdates,
@@ -59,6 +72,7 @@ class GooglePlayBillingService {
         onError: (error) => debugPrint('购买流监听错误: $error'),
       );
       
+      _isInitialized = true;
       debugPrint('Google Play Billing初始化成功');
       return true;
     } catch (e) {
@@ -214,11 +228,15 @@ class GooglePlayBillingService {
       final completer = Completer<PurchaseResultData>();
       _purchaseCompleters[targetProduct.googlePlayProductId] = completer;
       
+      // 存储basePlanId，用于验证时传递
+      _productBasePlanIds[targetProduct.googlePlayProductId] = basePlanId;
+      
       // 使用 buyNonConsumable 购买订阅
       final success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
       
       if (!success) {
         _purchaseCompleters.remove(targetProduct.googlePlayProductId);
+        _productBasePlanIds.remove(targetProduct.googlePlayProductId);
         return PurchaseResultData(
           result: PurchaseResult.error,
           message: 'Purchase failed',
@@ -294,9 +312,9 @@ class GooglePlayBillingService {
       }
       
       // 完成购买处理 server调用，端就不调了
-      // if (purchaseDetails.pendingCompletePurchase) {
-      //   _inAppPurchase.completePurchase(purchaseDetails);
-      // }
+      if (purchaseDetails.pendingCompletePurchase) {
+        _inAppPurchase.completePurchase(purchaseDetails);
+      }
     }
   }
   
@@ -313,8 +331,11 @@ class GooglePlayBillingService {
     // 获取对应的Completer
     final completer = _purchaseCompleters[purchaseDetails.productID];
     
+    // 获取存储的basePlanId
+    final basePlanId = _productBasePlanIds[purchaseDetails.productID] ?? '';
+    
     // 验证购买
-    final verifyResult = await _verifyPurchase(purchaseDetails);
+    final verifyResult = await _verifyPurchase(purchaseDetails, basePlanId);
     
     if (completer != null && !completer.isCompleted) {
       if (verifyResult) {
@@ -335,8 +356,9 @@ class GooglePlayBillingService {
           purchaseDetails: purchaseDetails,
         ));
       }
-      // 清理Completer
-      _purchaseCompleters.remove(purchaseDetails.productID);
+      // 清理Completer和basePlanId
+        _purchaseCompleters.remove(purchaseDetails.productID);
+        _productBasePlanIds.remove(purchaseDetails.productID);
     }
   }
   
@@ -358,53 +380,20 @@ class GooglePlayBillingService {
   }
   
   // 验证购买
-  Future<bool> _verifyPurchase(PurchaseDetails purchaseDetails) async {
+  Future<bool> _verifyPurchase(PurchaseDetails purchaseDetails, String basePlanId) async {
     try {
       debugPrint('开始验证购买: ${purchaseDetails.productID}');
+      debugPrint('使用传入的 basePlanId: $basePlanId');
       
-      // 从SubscribePrivilegeManager获取商品信息，找到对应的basePlanId
-    final productData = await SubscribePrivilegeManager.instance.getProductData();
-      if (productData == null) {
-        debugPrint('无法获取商品数据进行验证');
+      // 验证传入的 basePlanId 是否有效
+      if (basePlanId.isEmpty) {
+        debugPrint('验证购买失败: basePlanId 为空');
         return false;
       }
       
-      // 根据productID查找对应的basePlanId
-      String? basePlanId;
-      Product? matchedProduct;
-      
-      for (final product in productData.products) {
-        if (product.googlePlayProductId == purchaseDetails.productID) {
-          matchedProduct = product;
-          
-          // 如果有多个基础计划，这里需要更精确的逻辑来确定是哪个计划
-          // 理想情况下应该从购买详情中获取具体的 basePlanId
-          // 但由于当前 PurchaseDetails 不包含这些信息，暂时使用第一个可用的基础计划
-          if (product.basePlans.isNotEmpty) {
-            // 优先选择可用的基础计划
-            final availableBasePlans = product.basePlans.where((plan) => plan.isAvailable).toList();
-            if (availableBasePlans.isNotEmpty) {
-              basePlanId = availableBasePlans.first.googlePlayBasePlanId;
-              debugPrint('验证购买: 使用第一个可用的基础计划: $basePlanId');
-            } else {
-              basePlanId = product.basePlans.first.googlePlayBasePlanId;
-              debugPrint('验证购买: 使用第一个基础计划（可能不可用）: $basePlanId');
-            }
-          }
-          break;
-        }
-      }
-      
-      if (matchedProduct == null) {
-        debugPrint('验证购买失败: 未找到匹配的产品 ${purchaseDetails.productID}');
-        return false;
-      }
-      
-      if (basePlanId == null || basePlanId.isEmpty) {
-        debugPrint('验证购买失败: 产品 ${purchaseDetails.productID} 没有可用的基础计划');
-        return false;
-      }
-      
+      debugPrint('验证购买: 产品 ${purchaseDetails.productID} 基础计划 $basePlanId');
+      debugPrint('验证购买: 购买令牌 ${purchaseDetails.verificationData.serverVerificationData}');
+
       // 使用 SubscribeService 在业务服务器 验证购买并创建订阅记录
       final result = await SubscribeService.createGooglePlaySubscribe(
         productId: purchaseDetails.productID,
@@ -561,5 +550,10 @@ class GooglePlayBillingService {
   // 释放资源
   void dispose() {
     _subscription?.cancel();
+    _subscription = null;
+    _isInitialized = false;
+    _purchaseCompleters.clear();
+    _productBasePlanIds.clear();
+    debugPrint('Google Play Billing服务已释放资源');
   }
 }

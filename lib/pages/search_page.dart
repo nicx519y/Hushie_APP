@@ -7,6 +7,8 @@ import '../models/audio_item.dart';
 import '../services/api/audio_search_service.dart';
 import '../services/audio_manager.dart';
 import '../router/navigation_utils.dart';
+import '../components/subscribe_dialog.dart';
+import '../services/subscribe_privilege_manager.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -25,6 +27,7 @@ class _SearchPageState extends State<SearchPage> {
   List<AudioItem> _searchResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
+  bool _canTapSearchItem = false;
 
   // 新增的分页相关状态
   bool _isLoadingMore = false;
@@ -35,10 +38,25 @@ class _SearchPageState extends State<SearchPage> {
   Timer? _debounceTimer;
   String? _currentSearchQuery; // 当前正在搜索的查询
   String? _lastRenderedQuery; // 最后渲染结果的查询
+  StreamSubscription? _privilegeSubscription;
 
   @override
   void initState() {
     super.initState();
+
+    setState(() {
+      _canTapSearchItem =
+          SubscribePrivilegeManager.instance.getCachedPrivilege()?.hasPremium ??
+          false;
+    });
+
+    // 监听订阅状态变化
+    _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges
+        .listen((privilege) {
+          setState(() {
+            _canTapSearchItem = privilege.hasPremium;
+          });
+        });
 
     _searchFocusNode = FocusNode();
 
@@ -56,6 +74,10 @@ class _SearchPageState extends State<SearchPage> {
     _debounceTimer?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
+
+    // 取消订阅状态变化监听
+    _privilegeSubscription?.cancel();
+
     super.dispose();
   }
 
@@ -245,6 +267,21 @@ class _SearchPageState extends State<SearchPage> {
     Navigator.pop(context);
   }
 
+  // 点击搜索结果项
+  void _onSearchItemTap(AudioItem audio) {
+    if (_canTapSearchItem) {
+      // 保存当前搜索查询到历史
+      _saveSearchHistory(_searchController.text);
+      // 播放音频
+      _playAudio(audio);
+      // 进入播放页面
+      NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
+    } else {
+      // 没有权限，提示用户订阅
+      showSubscribeDialog(context);
+    }
+  }
+
   // 点击搜索历史项
   void _onHistoryItemTap(String keyword) {
     _searchController.text = keyword;
@@ -319,7 +356,7 @@ class _SearchPageState extends State<SearchPage> {
                         color: Color(0xFF2A4EFF),
                         height: 1.3,
                       ),
-                    )
+                    ),
                   ),
                   const SizedBox(width: 4),
                 ],
@@ -327,9 +364,57 @@ class _SearchPageState extends State<SearchPage> {
             ),
             // 内容区域
             Expanded(
-              child: _hasSearched
-                  ? _buildSearchResults()
-                  : _buildSearchHistory(),
+              child: Stack(
+                children: [
+                  _hasSearched ? _buildSearchResults() : _buildSearchHistory(),
+                  // 没有权限时的提示按钮
+                  if (!_canTapSearchItem)
+                    Align(
+                      alignment: Alignment.center,
+                      child: ElevatedButton(
+                        onPressed: () => showSubscribeDialog(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFDE69),
+                          foregroundColor: const Color(0xFF502D19),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(32),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                padding: EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Color(0xFF502D19),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Image.asset(
+                                  'assets/images/crown_mini.png', //皇冠
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Unlock Search Result',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  height: 1,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -455,14 +540,7 @@ class _SearchPageState extends State<SearchPage> {
       hasMoreData: _hasMoreData,
       isLoadingMore: _isLoadingMore,
       enableRefresh: false,
-      onItemTap: (audio) {
-        // 保存当前搜索查询到历史
-        _saveSearchHistory(_searchController.text);
-        // 播放音频
-        _playAudio(audio);
-        // 进入播放页面
-        NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
-      },
+      onItemTap: _onSearchItemTap,
     );
   }
 }
