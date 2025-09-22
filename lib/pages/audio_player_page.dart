@@ -15,6 +15,7 @@ import '../router/navigation_utils.dart';
 import '../services/audio_state_proxy.dart';
 import 'package:just_audio/just_audio.dart';
 
+
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
@@ -55,7 +56,7 @@ class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
 
 class AudioPlayerPage extends StatefulWidget {
   final AudioItem? initialAudio;
-
+  
   const AudioPlayerPage({super.key, this.initialAudio});
 
   /// 使用标准上滑动画打开播放器页面
@@ -70,6 +71,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // Duration _currentPosition = Duration.zero;
 
   // 移除时长代理服务和渲染相关状态，现在由AudioProgressBar内部管理
+ 
 
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
@@ -85,10 +87,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
 
   bool _isDescExpended = false; // 描述是否展开
-
+  
   // StreamSubscription列表，用于在dispose时取消
   final List<StreamSubscription> _subscriptions = [];
-
+  
   // 本地状态缓存，用于差异对比
   AudioPlayerState? _lastAudioState;
 
@@ -98,7 +100,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     _audioManager = AudioManager.instance;
     // 只监听音频播放状态，不主动加载音频
     _listenToAudioState();
-
+    
     // 如果有初始音频，用初始音频信息渲染
     if (widget.initialAudio != null) {
       setState(() {
@@ -112,85 +114,76 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   void _listenToAudioState() {
     // 使用代理后的音频状态流，自动处理duration过滤
     final durationProxy = AudioStateProxy.createDurationFilter();
-    _subscriptions.add(
-      _audioManager.audioStateStream.proxy(durationProxy).listen((audioState) {
-        if (mounted) {
-          // 如果是第一次接收状态或状态发生变化，才进行处理
-          if (_lastAudioState == null ||
-              _hasStateChanged(_lastAudioState!, audioState)) {
-            bool needsUpdate = false;
-
-            // 检查当前音频是否变化
-            if (_lastAudioState?.currentAudio?.id !=
-                audioState.currentAudio?.id) {
-              _currentAudio = audioState.currentAudio;
-              _isLiked = _currentAudio?.isLiked ?? false;
-              // 初始化本地状态
-              _localIsLiked = _isLiked;
-              _localLikesCount = _currentAudio?.likesCount ?? 0;
-              needsUpdate = true;
-            }
-
-            // 检查播放状态是否变化
-            if (_lastAudioState?.isPlaying != audioState.isPlaying) {
-              _isPlaying = audioState.isPlaying;
-              needsUpdate = true;
-            }
-
-            // 检查播放器状态是否变化
-            if (_lastAudioState?.playerState.processingState !=
-                audioState.playerState.processingState) {
-              final playerState = audioState.playerState;
-              if (playerState != null) {
-                if (playerState.processingState == ProcessingState.loading ||
-                    playerState.processingState == ProcessingState.buffering) {
-                  _isAudioLoading = true;
-                } else {
-                  _isAudioLoading = false;
-                }
-              }
-              needsUpdate = true;
-            }
-
-            // 检查播放位置是否变化
-            if (_lastAudioState?.position != audioState.position) {
-              // _currentPosition = audioState.position;
-              needsUpdate = true;
-            }
-
-            // 只有在需要更新时才调用setState
-            if (needsUpdate) {
-              setState(() {});
-            }
-
-            // 更新本地状态缓存
-            _lastAudioState = audioState;
+    _subscriptions.add(_audioManager.audioStateStream
+        .proxy(durationProxy)
+        .listen((audioState) {
+      if (mounted) {
+        // 如果是第一次接收状态或状态发生变化，才进行处理
+        if (_lastAudioState == null || _hasStateChanged(_lastAudioState!, audioState)) {
+          bool needsUpdate = false;
+          
+          // 检查当前音频是否变化
+          if (_lastAudioState?.currentAudio?.id != audioState.currentAudio?.id) {
+            _currentAudio = audioState.currentAudio;
+            _isLiked = _currentAudio?.isLiked ?? false;
+            // 初始化本地状态
+            _localIsLiked = _isLiked;
+            _localLikesCount = _currentAudio?.likesCount ?? 0;
+            needsUpdate = true;
           }
+          
+          // 检查播放状态是否变化
+          if (_lastAudioState?.isPlaying != audioState.isPlaying) {
+            _isPlaying = audioState.isPlaying;
+            needsUpdate = true;
+          }
+          
+          // 检查播放器状态是否变化
+          if (_lastAudioState?.playerState.processingState != audioState.playerState.processingState) {
+            final playerState = audioState.playerState;
+            if (playerState != null) {
+              if (playerState.processingState == ProcessingState.loading ||
+                  playerState.processingState == ProcessingState.buffering) {
+                _isAudioLoading = true;
+              } else {
+                _isAudioLoading = false;
+              }
+            }
+            needsUpdate = true;
+          }
+          
+          // 检查播放位置是否变化
+          if (_lastAudioState?.position != audioState.position) {
+            // _currentPosition = audioState.position;
+            needsUpdate = true;
+          }
+          
+          // 只有在需要更新时才调用setState
+          if (needsUpdate) {
+            setState(() {});
+          }
+          
+          // 更新本地状态缓存
+          _lastAudioState = audioState;
         }
-      }),
-    );
+      }
+    }));
 
-    _subscriptions.add(
-      _audioManager.isPreviewModeStream.listen((isPreviewMode) {
-        if (mounted) {
-          setState(() {
-            _isPreviewMode = isPreviewMode;
-          });
-        }
-      }),
-    );
+    _subscriptions.add(_audioManager.isPreviewModeStream.listen((isPreviewMode) {
+      if (mounted) {
+        setState(() {
+          _isPreviewMode = isPreviewMode;
+        });
+      }
+    }));
 
     // 监听预览区间即将超出事件
-    _subscriptions.add(
-      AudioManager.previewOutEvents.listen((previewOutEvent) {
-        if (mounted) {
-          debugPrint(
-            '🎵 [PLAYER] 预览区间即将超出，触发解锁提示: ${previewOutEvent.position}',
-          );
-          _onUnlockFullAccessTap();
-        }
-      }),
-    );
+    _subscriptions.add(AudioManager.previewOutEvents.listen((previewOutEvent) {
+      if (mounted) {
+        debugPrint('🎵 [PLAYER] 预览区间即将超出，触发解锁提示: ${previewOutEvent.position}');
+        _onUnlockFullAccessTap();
+      }
+    }));
   }
 
   void _playAndPauseBtnPress() {
@@ -329,18 +322,17 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     _lastAudioState = null; // 清空状态缓存
     super.dispose();
   }
-
+  
   /// 检查音频状态是否发生实质性变化
   bool _hasStateChanged(AudioPlayerState oldState, AudioPlayerState newState) {
     return oldState.currentAudio?.id != newState.currentAudio?.id ||
-        oldState.isPlaying != newState.isPlaying ||
-        oldState.position != newState.position ||
-        oldState.duration != newState.duration ||
-        oldState.speed != newState.speed ||
-        oldState.playerState.processingState !=
-            newState.playerState.processingState ||
-        oldState.renderPreviewStart != newState.renderPreviewStart ||
-        oldState.renderPreviewEnd != newState.renderPreviewEnd;
+           oldState.isPlaying != newState.isPlaying ||
+           oldState.position != newState.position ||
+           oldState.duration != newState.duration ||
+           oldState.speed != newState.speed ||
+           oldState.playerState.processingState != newState.playerState.processingState ||
+           oldState.renderPreviewStart != newState.renderPreviewStart ||
+           oldState.renderPreviewEnd != newState.renderPreviewEnd;
   }
 
   @override
@@ -442,12 +434,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               Row(
                 children: [
                   Expanded(child: _buildProgressBar()),
-                  _isPreviewMode
-                      ? Transform.translate(
-                          offset: const Offset(0, -8),
-                          child: _buildUnlockFullAccessTip(),
-                        )
-                      : const SizedBox.shrink(),
+                  _isPreviewMode ? const SizedBox(width: 10) : const SizedBox.shrink(),
+                  _isPreviewMode ? Transform.translate(
+                    offset: const Offset(0, -8),
+                    child: _buildUnlockFullAccessTip(),
+                  ) : const SizedBox.shrink(),
                 ],
               ),
               const SizedBox(height: 20),
@@ -636,7 +627,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 构建进度条
   Widget _buildProgressBar() {
     return RepaintBoundary(
-      child: AudioProgressBar(onOutPreview: _onUnlockFullAccessTap),
+      child: AudioProgressBar(
+        onOutPreview: _onUnlockFullAccessTap,
+      ),
     );
   }
 
@@ -705,47 +698,44 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Widget _buildUnlockFullAccessTip() {
     return InkWell(
       onTap: _onUnlockFullAccessTap,
-      child: Container(
-        padding: EdgeInsets.only(left: 10),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              padding: EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(50),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Image.asset(
-                'assets/images/crown_mini.png',
-                fit: BoxFit.contain,
-              ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            padding: EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(50),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 4),
-            SizedBox(
-              // width: 92,
-              height: 40,
-              child: ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: [Color(0xFFFEED96), Color(0xFFFFC733)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ).createShader(bounds),
-                child: Text(
-                  'Unlock\nFull Access',
-                  maxLines: 2,
-                  style: TextStyle(
-                    color: Colors.white, // 这里必须设置颜色，会被shader覆盖
-                    fontSize: 16,
-                    height: 1.25,
-                    fontWeight: FontWeight.w700,
-                  ),
+            child: Image.asset(
+              'assets/images/crown_mini.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+          const SizedBox(width: 4),
+          SizedBox(
+            // width: 92,
+            height: 40,
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: [Color(0xFFFEED96), Color(0xFFFFC733)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ).createShader(bounds),
+              child: Text(
+                'Unlock\nFull Access',
+                maxLines: 2,
+                style: TextStyle(
+                  color: Colors.white, // 这里必须设置颜色，会被shader覆盖
+                  fontSize: 16,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

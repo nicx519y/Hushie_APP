@@ -51,4 +51,4 @@ class UserPrivilege {
     return 0;
   }
 
-} 
+}
