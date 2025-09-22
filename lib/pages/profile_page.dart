@@ -368,11 +368,6 @@ class _ProfilePageState extends State<ProfilePage>
     NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
   }
 
-  // 订阅按钮点击
-  void _onSubscribeTap() {
-    showSubscribeDialog(context);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -421,7 +416,7 @@ class _ProfilePageState extends State<ProfilePage>
             // Premium Access 卡片
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: PremiumAccessCard(onSubscribe: _onSubscribeTap),
+              child: PremiumAccessCard(),
             ),
 
             const SizedBox(height: 16),

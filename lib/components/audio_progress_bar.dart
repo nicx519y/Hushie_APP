@@ -94,8 +94,8 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
           if (mounted) {
             setState(() {
               _isPreviewMode = !event.hasPremium; // 有权限时不是预览模式，无权限时是预览模式
+              _resetAudioStateListener();
             });
-            _resetAudioStateListener();
           }
         });
   }

@@ -8,20 +8,23 @@ import 'api/product_service.dart';
 
 /// 用户权益变化事件
 class PrivilegeChangeEvent {
-  /// 当前是否拥有高级权限
-  final bool hasPremium;
+  /// 用户权限信息（包含 hasPremium 和 premiumExpireTime）
+  final UserPrivilege? privilege;
   
   /// 事件发生时间
   final DateTime timestamp;
 
   const PrivilegeChangeEvent({
-    required this.hasPremium,
+    required this.privilege,
     required this.timestamp,
   });
 
+  /// 获取是否拥有高级权限（向后兼容）
+  bool get hasPremium => privilege?.hasPremium ?? false;
+
   @override
   String toString() {
-    return 'PrivilegeChangeEvent{hasPremium: $hasPremium, timestamp: $timestamp}';
+    return 'PrivilegeChangeEvent{privilege: $privilege, timestamp: $timestamp}';
   }
 }
 
@@ -58,6 +61,10 @@ class SubscribePrivilegeManager {
   // 服务状态
   bool _isInitialized = false;
   bool _isDataLoading = false;
+  
+  // 避免重复执行的Future
+  Future<void>? _loadProductDataFuture;
+  Future<void>? _loadPrivilegeDataFuture;
 
   /// 初始化服务
   /// 
@@ -126,6 +133,24 @@ class SubscribePrivilegeManager {
 
   /// 加载商品数据
   Future<void> _loadProductData() async {
+    // 如果已有正在执行的请求，等待其完成
+    if (_loadProductDataFuture != null) {
+      debugPrint('🏆 [PRIVILEGE_SERVICE] 商品数据正在加载中，等待完成');
+      return _loadProductDataFuture!;
+    }
+
+    // 创建新的加载任务
+    _loadProductDataFuture = _doLoadProductData();
+    
+    try {
+      await _loadProductDataFuture!;
+    } finally {
+      // 清理Future引用，允许下次调用
+      _loadProductDataFuture = null;
+    }
+  }
+
+  Future<void> _doLoadProductData() async {
     try {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 开始加载商品数据');
       
@@ -143,6 +168,24 @@ class SubscribePrivilegeManager {
 
   /// 加载用户权限数据
   Future<void> _loadPrivilegeData() async {
+    // 如果已有正在执行的请求，等待其完成
+    if (_loadPrivilegeDataFuture != null) {
+      debugPrint('🏆 [PRIVILEGE_SERVICE] 用户权限数据正在加载中，等待完成');
+      return _loadPrivilegeDataFuture!;
+    }
+
+    // 创建新的加载任务
+    _loadPrivilegeDataFuture = _doLoadPrivilegeData();
+    
+    try {
+      await _loadPrivilegeDataFuture!;
+    } finally {
+      // 清理Future引用，允许下次调用
+      _loadPrivilegeDataFuture = null;
+    }
+  }
+
+  Future<void> _doLoadPrivilegeData() async {
     try {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 开始加载用户权限数据');
       
@@ -160,7 +203,7 @@ class SubscribePrivilegeManager {
       // final currentHasPremium = true;
       if (previousHasPremium != currentHasPremium) {
         debugPrint('🏆 [PRIVILEGE_SERVICE] 权限状态发生变化: $previousHasPremium -> $currentHasPremium');
-        _notifyPrivilegeChange(currentHasPremium);
+        _notifyPrivilegeChange(_cachedPrivilege);
       }
     } catch (e) {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 加载用户权限数据失败: $e');
@@ -232,7 +275,7 @@ class SubscribePrivilegeManager {
     // 如果之前有权限，现在清理了，发送状态变化事件
     if (previousHasPremium) {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 权限状态发生变化: true -> false (用户登出)');
-      _notifyPrivilegeChange(false);
+      _notifyPrivilegeChange(null);
     }
   }
 
@@ -319,41 +362,6 @@ class SubscribePrivilegeManager {
     }
   }
 
-  /// 获取权限状态描述
-  /// 
-  /// [forceRefresh] 是否强制刷新数据
-  /// 返回权限状态的中文描述
-  Future<String> getPrivilegeStatusDescription({bool forceRefresh = false}) async {
-    try {
-      final privilege = await getUserPrivilege(forceRefresh: forceRefresh);
-      if (privilege == null) {
-        return '未登录';
-      }
-
-      if (!privilege.hasPremium) {
-        return '未开通高级权限';
-      }
-
-      if (privilege.isValidPremium) {
-        final remainingDays = privilege.remainingDays;
-        if (remainingDays > 30) {
-          return '高级权限有效';
-        } else if (remainingDays > 7) {
-          return '高级权限即将到期（剩余$remainingDays天）';
-        } else if (remainingDays > 0) {
-          return '高级权限即将到期（剩余$remainingDays天）';
-        } else {
-          return '高级权限今日到期';
-        }
-      } else {
-        return '高级权限已过期';
-      }
-    } catch (e) {
-      debugPrint('🏆 [PRIVILEGE_SERVICE] 获取权限状态描述失败: $e');
-      return '权限状态未知';
-    }
-  }
-
   /// 手动刷新数据
   /// 
   /// 立即刷新权限和商品数据
@@ -418,9 +426,9 @@ class SubscribePrivilegeManager {
   }
 
   /// 发送权限变化事件通知
-  void _notifyPrivilegeChange(bool hasPremium) {
+  void _notifyPrivilegeChange(UserPrivilege? privilege) {
     final event = PrivilegeChangeEvent(
-      hasPremium: hasPremium,
+      privilege: privilege,
       timestamp: DateTime.now(),
     );
     

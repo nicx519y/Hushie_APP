@@ -52,9 +52,9 @@ class _SearchPageState extends State<SearchPage> {
 
     // 监听订阅状态变化
     _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges
-        .listen((privilege) {
+        .listen((event) {
           setState(() {
-            _canTapSearchItem = privilege.hasPremium;
+            _canTapSearchItem = event.hasPremium;
           });
         });
 

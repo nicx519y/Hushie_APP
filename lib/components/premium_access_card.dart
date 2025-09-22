@@ -1,24 +1,91 @@
 import 'package:flutter/material.dart';
+import 'package:hushie_app/components/subscribe_dialog.dart';
+import 'package:hushie_app/services/subscribe_privilege_manager.dart';
+import 'package:hushie_app/models/user_privilege_model.dart';
+import 'dart:async';
 
-class PremiumAccessCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String buttonText;
-  final VoidCallback? onSubscribe;
-  final Color? primaryColor;
-  final Color? secondaryColor;
-  final IconData? decorationIcon;
+class PremiumAccessCard extends StatefulWidget {
+  const PremiumAccessCard({super.key});
 
-  const PremiumAccessCard({
-    super.key,
-    this.title = 'Hushie Pro',
-    this.subtitle = 'Full Access to All Creations',
-    this.buttonText = 'Subscribe',
-    this.onSubscribe,
-    this.primaryColor = const Color(0xFFFFF4D6),
-    this.secondaryColor = const Color(0xFFFEE68B),
-    this.decorationIcon = Icons.music_note,
-  });
+  @override
+  State<PremiumAccessCard> createState() => _PremiumAccessCardState();
+}
+
+class _PremiumAccessCardState extends State<PremiumAccessCard> {
+  // 内部变量
+  final String _title = 'Hushie Pro';
+  late String _subtitle = 'Full Access to All Creations';
+  final String _buttonText = 'Subscribe';
+  final Color _primaryColor = const Color(0xFFFFF4D6);
+  final Color _secondaryColor = const Color(0xFFFEE68B);
+  
+  StreamSubscription<PrivilegeChangeEvent>? _privilegeSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    SubscribePrivilegeManager.instance.getUserPrivilege().then((privilege) {
+      if (mounted) {
+        _updateSubtitleBasedOnPrivilege(privilege);
+        _initializePrivilegeListener();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _privilegeSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// 初始化权益监听器
+  void _initializePrivilegeListener() {
+    // 监听权益变化
+    _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen(
+      (event) {
+        if (mounted) {
+          _updateSubtitleBasedOnPrivilege(event.privilege);
+        }
+      },
+      onError: (error) {
+        debugPrint('🏆 [PREMIUM_ACCESS_CARD] 权益监听异常: $error');
+      },
+    );
+
+  }
+
+  /// 根据权益状态更新 subtitle
+  void _updateSubtitleBasedOnPrivilege(UserPrivilege? privilege) {
+    setState(() {
+      if (privilege != null && privilege.hasPremium) {
+        // 有权益的情况下显示过期时间
+        if (privilege.premiumExpireTime != null) {
+          final expireDate = privilege.premiumExpireTime;
+          if (expireDate != null) {
+            _subtitle = _formatExpireTime(expireDate);
+          } else {
+            _subtitle = 'Premium Active';
+          }
+        } else {
+          _subtitle = 'Full Access to All Creations';
+        }
+      } else {
+        // 没权益的情况下显示默认文本
+        _subtitle = 'Full Access to All Creations';
+      }
+    });
+  }
+
+  /// 格式化过期时间显示
+  String _formatExpireTime(DateTime expireTime) {
+    if (expireTime.isBefore(DateTime.now())) {
+      return 'Premium Expired';
+    }
+    
+    // 2025-09-01
+    return 'Expires on ${expireTime.toLocal().toString().split(' ')[0]}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +94,7 @@ class PremiumAccessCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [primaryColor!, secondaryColor!],
+          colors: [_primaryColor, _secondaryColor],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -41,8 +108,8 @@ class PremiumAccessCard extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    primaryColor!.withAlpha(255),
-                    secondaryColor!.withAlpha(255),
+                    _primaryColor.withAlpha(255),
+                    _secondaryColor.withAlpha(255),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -82,7 +149,7 @@ class PremiumAccessCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            title,
+                            _title,
                             style: const TextStyle(
                               fontSize: 18,
                               height: 1,
@@ -94,7 +161,7 @@ class PremiumAccessCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        subtitle,
+                        _subtitle,
                         style: const TextStyle(
                           fontSize: 14,
                           height: 1,
@@ -103,7 +170,9 @@ class PremiumAccessCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 22),
                       InkWell(
-                        onTap: onSubscribe,
+                        onTap: () {
+                          showSubscribeDialog(context);
+                        },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -114,7 +183,7 @@ class PremiumAccessCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(25),
                           ),
                           child: Text(
-                            buttonText,
+                            _buttonText,
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,

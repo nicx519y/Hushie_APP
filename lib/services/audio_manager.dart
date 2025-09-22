@@ -124,7 +124,7 @@ class AudioManager {
       // 检查音频是否发生变化
       bool audioChanged = _lastAudioId != currentAudioId;
       bool playingStateChanged = _lastIsPlaying != isPlaying;
-      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 5);
+      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 500);
       // bool positionChanged = _lastPosition != position;
       // debugPrint('[checkWillOutPreview] positionChanged: $positionChanged; _lastPosition: $_lastPosition; position: $position');
       // 管理播放列表 - 只在音频ID发生变化时执行
@@ -143,6 +143,11 @@ class AudioManager {
           debugPrint('管理播放列表失败: $e');
         }
       }
+
+      // 检查播放是否完成并自动播放下一首
+      if(positionChanged && audioState.playerState.playing && position >= audioState.duration * 0.98) {
+        _checkPlaybackCompletion();
+      }
       // debugPrint('[checkWillOutPreview] 播放列表管理完成');
       
       // 检查预览区间 - 只在位置发生明显变化时检查
@@ -155,7 +160,7 @@ class AudioManager {
       // 更新播放器状态 - 只在状态发生变化时更新
       if (playingStateChanged || audioChanged) {
         _playerStateSubject.add(audioState.playerState);
-        _checkPlaybackCompletion(audioState.playerState);
+        
       }
       
       // 更新缓存的状态
@@ -235,11 +240,10 @@ class AudioManager {
   }
 
   /// 检查播放是否完成并自动播放下一首
-  void _checkPlaybackCompletion(PlayerState playerState) {
+  void _checkPlaybackCompletion() {
     final canAutoPlayNext = !_isPreviewMode;
     final currentAudio = this.currentAudio;
-    if (playerState.processingState == ProcessingState.completed &&
-        currentAudio != null) {
+    if (currentAudio != null) {
       if (canAutoPlayNext) {
         _playNextAudio(currentAudio.id);
       } else {

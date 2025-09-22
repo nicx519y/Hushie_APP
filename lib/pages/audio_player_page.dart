@@ -179,10 +179,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
 
     _subscriptions.add(
-      SubscribePrivilegeManager.instance.privilegeChanges.listen((detail) {
+      SubscribePrivilegeManager.instance.privilegeChanges.listen((event) {
         if (mounted) {
           setState(() {
-            _isPreviewMode = !detail.hasPremium;
+            _isPreviewMode = !event.hasPremium;
           });
         }
       }),
