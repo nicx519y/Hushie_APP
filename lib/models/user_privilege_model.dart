@@ -32,7 +32,7 @@ class UserPrivilege {
 
   @override
   int get hashCode {
-    return Object.hash(hasPremium);
+    return hasPremium.hashCode;
   }
 
   /// 检查高级权限是否有效

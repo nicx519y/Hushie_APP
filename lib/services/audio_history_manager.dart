@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_item.dart';
 import '../services/api/user_history_service.dart';
-import 'auth_service.dart';
+import 'auth_manager.dart';
 import 'audio_manager.dart';
 import 'audio_service.dart'; // 需要AudioPlayerState类型定义
 
@@ -71,7 +71,7 @@ class AudioHistoryManager {
       await _loadCachedHistory();
 
       // 检查用户登录状态
-      final bool isLogin = await AuthService.isSignedIn();
+      final bool isLogin = await AuthManager.instance.isSignedIn();
       if (!isLogin) {
         _clearCacheAfterLogout();
         _isInitialized = true;
@@ -222,7 +222,7 @@ class AudioHistoryManager {
         playProgress: _lastRecordedPosition,
       );
 
-      final bool isLogin = await AuthService.isSignedIn();
+      final bool isLogin = await AuthManager.instance.isSignedIn();
       if (isLogin) {
         await _updateLocalCache(updatedHistory);
       }
@@ -299,7 +299,7 @@ class AudioHistoryManager {
   
 
   Future<void> refreshHistory() async {
-    final bool isLogin = await AuthService.isSignedIn();
+    final bool isLogin = await AuthManager.instance.isSignedIn();
     if (!isLogin) {
       _clearCacheAfterLogout();
       return;
@@ -312,7 +312,7 @@ class AudioHistoryManager {
   void _subscribeToAuthChanges() {
     _authSubscription?.cancel(); // 取消之前的订阅
 
-    _authSubscription = AuthService.authStatusChanges.listen((event) {
+    _authSubscription = AuthManager.instance.authStatusChanges.listen((event) {
       debugPrint('🎵 [HISTORY] 收到认证状态变化事件: ${event.status}');
 
       switch (event.status) {

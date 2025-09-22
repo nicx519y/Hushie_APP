@@ -164,7 +164,6 @@ class _HistoryListState extends State<HistoryList> {
                         )
                       : AudioList(
                           audios: _historyList,
-                          activeId: _currentAudioId,
                           padding: const EdgeInsets.only(
                             top: 0,
                             bottom: 40,

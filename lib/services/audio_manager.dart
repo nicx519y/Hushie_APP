@@ -283,10 +283,6 @@ class AudioManager {
     await AudioPlaylist.instance.initialize();
     debugPrint('AudioManager: AudioPlaylist 初始化完成');
 
-    // 初始化权益管理器
-    await SubscribePrivilegeManager.instance.initialize();
-    debugPrint('AudioManager: SubscribePrivilegeManager 初始化完成');
-
     // 获取当前权益状态并设置播放权限
     await _initializePrivilegeStatus();
 

@@ -6,6 +6,7 @@ import '../pages/profile_page.dart';
 import '../services/audio_manager.dart';
 import '../router/navigation_utils.dart';
 import '../services/subscribe_privilege_manager.dart';
+import '../services/auth_manager.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -52,7 +53,12 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeServices() async {
     try {
+      await AuthManager.instance.initialize();
+
+      await SubscribePrivilegeManager.instance.initialize();
+      
       await AudioManager.instance.init();
+
       debugPrint('🔄 [SPLASH] _initializeServices 服务初始化完成');
       if (mounted) {
         setState(() {

@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import '../services/audio_manager.dart';
 import '../services/audio_service.dart';
 import '../services/audio_state_proxy.dart';
+import '../services/subscribe_privilege_manager.dart';
 
 class AudioProgressBar extends StatefulWidget {
   final Function()? onOutPreview;
@@ -41,6 +42,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   
   // 内部状态
   bool _isPreviewMode = true;
+  StreamSubscription<PrivilegeChangeEvent>? _previewModeSubscription;
   bool _disabled = false;
   
   // 渲染用的位置和时长（直接使用audioState中已代理的值）
@@ -69,8 +71,26 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   void initState() {
     super.initState();
     _audioManager = AudioManager.instance;
-    _isPreviewMode = _audioManager.isPreviewMode;
+    _initializePreviewMode();
+    _setupPreviewModeListener();
     _listenToAudioState();
+  }
+
+  void _initializePreviewMode() {
+    // 从权益管理器获取权限状态，然后计算预览模式
+    final privilege = SubscribePrivilegeManager.instance.getCachedPrivilege();
+    final hasPremium = privilege?.hasPremium ?? false;
+    _isPreviewMode = !hasPremium; // 有权限时不是预览模式，无权限时是预览模式
+  }
+
+  void _setupPreviewModeListener() {
+    _previewModeSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen((event) {
+      if (mounted) {
+        setState(() {
+          _isPreviewMode = !event.hasPremium; // 有权限时不是预览模式，无权限时是预览模式
+        });
+      }
+    });
   }
   
   void _listenToAudioState() {
@@ -156,16 +176,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
       }
     }));
 
-    // 监听预览模式变化
-    _subscriptions.add(_audioManager.isPreviewModeStream.listen((isPreviewMode) {
-      if (mounted) {
-        if (_isPreviewMode != isPreviewMode) {
-          setState(() {
-            _isPreviewMode = isPreviewMode;
-          });
-        }
-      }
-    }));
+    // 监听预览模式变化（已移除，现在使用SubscribePrivilegeManager）
   }
   
 
@@ -188,6 +199,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
       subscription.cancel();
     }
     _subscriptions.clear();
+    _previewModeSubscription?.cancel();
     _lastAudioState = null; // 清空状态缓存
     _proxyStream = null; // 清空代理流引用
     _realDuration = Duration.zero; // 清空真实时长
@@ -282,7 +294,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                 });
                 
                 // 检查是否超出预览区域
-                 if (_isPreviewMode && value < previewStart || value > previewEnd) {
+                 if (_isPreviewMode && (value < previewStart || value > previewEnd)) {
                    // 预览模式下，检查是否需要触发解锁回调
                     if(widget.onOutPreview != null) {
                       widget.onOutPreview!();

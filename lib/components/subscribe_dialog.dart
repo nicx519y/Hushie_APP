@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hushie_app/services/auth_service.dart';
+import 'package:hushie_app/services/auth_manager.dart';
 import '../components/notification_dialog.dart';
 import 'dart:async';
 import 'slide_up_overlay.dart';
@@ -80,7 +80,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
   void _onSubscribe() async {
     debugPrint('SubscribeDialog _onSubscribe selectedPlan: $_selectedPlan');
     
-    final isLogin = await AuthService.isSignedIn();
+    final isLogin = await AuthManager.instance.isSignedIn();
 
     if (!isLogin) {
       NavigationUtils.navigateToLogin(context);

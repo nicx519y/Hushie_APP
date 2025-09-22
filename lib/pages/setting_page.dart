@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hushie_app/components/confirm_dialog.dart';
-import '../services/auth_service.dart';
+import '../services/auth_manager.dart';
 import '../components/custom_outline_button.dart';
 import '../router/navigation_utils.dart';
 import '../utils/toast_helper.dart';
@@ -24,7 +24,7 @@ class _SettingPageState extends State<SettingPage> {
 
   Future<void> _checkLoginStatus() async {
     try {
-      final token = await AuthService.getAccessToken();
+      final token = await AuthManager.instance.getAccessToken();
       setState(() {
         _isLoggedIn = token != null && token.isNotEmpty;
       });
@@ -50,7 +50,7 @@ class _SettingPageState extends State<SettingPage> {
         confirmText: 'Log out',
         cancelText: 'Cancel',
         onConfirm: () async {
-          await AuthService.signOut();
+          await AuthManager.instance.signOut();
           if (mounted) {
             Navigator.of(context).pop();
           }

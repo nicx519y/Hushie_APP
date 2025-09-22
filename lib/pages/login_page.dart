@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import '../services/auth_service.dart';
+import '../services/auth_manager.dart';
 import '../router/navigation_utils.dart';
 import '../utils/toast_helper.dart';
 
@@ -264,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       // 调用AuthService进行Google登录
-      final result = await AuthService.signInWithGoogle();
+      final result = await AuthManager.instance.signInWithGoogle();
 
       if (result.errNo == 0 && result.data != null) {
         // 登录成功

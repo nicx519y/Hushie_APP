@@ -8,7 +8,7 @@ import '../components/audio_list.dart';
 import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
 import '../services/audio_history_manager.dart';
-import '../services/auth_service.dart';
+import '../services/auth_manager.dart';
 import '../utils/custom_icons.dart';
 import 'login_page.dart';
 import '../router/navigation_utils.dart';
@@ -76,7 +76,7 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _subscribeToAuthChanges() async {
     _authSubscription?.cancel(); // 取消之前的订阅
 
-    _authSubscription = AuthService.authStatusChanges.listen((event) async {
+    _authSubscription = AuthManager.instance.authStatusChanges.listen((event) async {
       debugPrint('👤 [PROFILE] 收到认证状态变化事件: ${event.status}');
 
       // 根据状态变化刷新数据
@@ -146,7 +146,7 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _initializeAuthState() async {
     try {
       // 先检查认证状态
-      final signedIn = await AuthService.isSignedIn();
+      final signedIn = await AuthManager.instance.isSignedIn();
       
       if (mounted) {
         setState(() {
@@ -156,7 +156,7 @@ class _ProfilePageState extends State<ProfilePage>
 
       if (signedIn) {
         // 获取用户信息
-        final user = await AuthService.getCurrentUser();
+        final user = await AuthManager.instance.getCurrentUser();
         final displayName = user?.displayName ?? user?.email ?? '';
         
         if (mounted) {
@@ -206,7 +206,7 @@ class _ProfilePageState extends State<ProfilePage>
   /// 刷新认证状态
   Future<void> _refreshAuthState() async {
     try {
-      final newLoginState = await AuthService.isSignedIn();
+      final newLoginState = await AuthManager.instance.isSignedIn();
 
       if (mounted) {
         setState(() {
@@ -240,7 +240,7 @@ class _ProfilePageState extends State<ProfilePage>
   /// 刷新用户信息
   Future<void> _refreshUserInfo() async {
     try {
-      final user = await AuthService.getCurrentUser();
+      final user = await AuthManager.instance.getCurrentUser();
       final displayName = user?.displayName ?? user?.email ?? '';
       
       debugPrint('👤 [PROFILE] 刷新用户信息: $displayName');
@@ -492,7 +492,6 @@ class _ProfilePageState extends State<ProfilePage>
                       ? _buildEmptyWidget('No liked content')
                       : AudioList(
                           audios: likedAudios,
-                          activeId: currentAudioId,
                           padding: const EdgeInsets.only(bottom: 120),
                           emptyWidget: _buildEmptyWidget('No liked content'),
                           onRefresh: _refreshLikedAudios, // 改为刷新方法
@@ -707,7 +706,6 @@ class _HistoryTabContentState extends State<_HistoryTabContent> {
     return AudioList(
       padding: const EdgeInsets.only(bottom: 120),
       audios: _historyList,
-      activeId: widget.currentAudioId,
       emptyWidget: Column(
         children: [
           Expanded(

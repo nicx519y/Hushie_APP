@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/user_privilege_model.dart';
 import '../models/product_model.dart';
-import 'auth_service.dart';
+import 'auth_manager.dart';
 import 'api/user_privilege_service.dart';
 import 'api/product_service.dart';
 
@@ -72,7 +72,7 @@ class SubscribePrivilegeManager {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 开始初始化权限服务');
 
       // 监听认证状态变化
-      _authStatusSubscription = AuthService.authStatusChanges.listen(
+      _authStatusSubscription = AuthManager.instance.authStatusChanges.listen(
         _handleAuthStatusChange,
         onError: (error) {
           debugPrint('🏆 [PRIVILEGE_SERVICE] 认证状态监听异常: $error');
@@ -80,7 +80,7 @@ class SubscribePrivilegeManager {
       );
 
       // 检查当前认证状态并初始化数据
-      final currentStatus = AuthService.currentAuthStatus;
+      final currentStatus = AuthManager.instance.currentAuthStatus;
       debugPrint('🏆 [PRIVILEGE_SERVICE] 当前认证状态: $currentStatus');
 
       if (currentStatus == AuthStatus.authenticated) {
@@ -201,7 +201,7 @@ class SubscribePrivilegeManager {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 定时刷新数据');
       
       // 根据登录状态决定刷新内容
-      if (AuthService.currentAuthStatus == AuthStatus.authenticated) {
+      if (AuthManager.instance.currentAuthStatus == AuthStatus.authenticated) {
         // 已登录：刷新权限和商品数据
         _loadPrivilegeAndProductData();
       } else {
@@ -250,7 +250,7 @@ class SubscribePrivilegeManager {
   Future<UserPrivilege?> getUserPrivilege({bool forceRefresh = false}) async {
     try {
       // 检查认证状态
-      if (AuthService.currentAuthStatus != AuthStatus.authenticated) {
+      if (AuthManager.instance.currentAuthStatus != AuthStatus.authenticated) {
         debugPrint('🏆 [PRIVILEGE_SERVICE] 用户未登录，无法获取权限信息');
         return null;
       }
@@ -369,7 +369,7 @@ class SubscribePrivilegeManager {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 订阅成功，开始更新权限数据');
       
       // 检查认证状态
-      if (AuthService.currentAuthStatus != AuthStatus.authenticated) {
+      if (AuthManager.instance.currentAuthStatus != AuthStatus.authenticated) {
         debugPrint('🏆 [PRIVILEGE_SERVICE] 用户未登录，无法更新权限数据');
         return;
       }

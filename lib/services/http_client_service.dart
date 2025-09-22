@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import '../config/api_config.dart';
 import 'device_info_service.dart';
-import 'auth_service.dart';
+import 'auth_manager.dart';
 import 'app_signature_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -442,7 +442,7 @@ class HttpClientService {
     if (!path.contains('/auth/google/refresh')) {
       try {
         // debugPrint('🔐 [HTTP] 开始获取访问令牌');
-        final accessToken = await AuthService.getAccessToken();
+        final accessToken = await AuthManager.instance.getAccessToken();
         if (accessToken != null && accessToken.isNotEmpty) {
           headers['Authorization'] = 'Bearer $accessToken';
           // debugPrint('🔐 [HTTP] 成功添加 Authorization 头，令牌长度: ${accessToken.length}');

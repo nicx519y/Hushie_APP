@@ -52,7 +52,7 @@ void main() async {
   ApiConfig.initialize(debugMode: true);
   
   // 2. 初始化认证状态
-  await AuthService.initializeAuthStatus();
+  await AuthManager.instance.initialize();
   
   // 3. 初始化数据管理器（它们会自动订阅认证状态变化）
   await UserLikesManager.instance.initialize();
@@ -65,7 +65,7 @@ void main() async {
 ### 登录流程
 ```dart
 // 用户点击登录按钮
-final result = await AuthService.signInWithGoogle();
+final result = await AuthManager.instance.signInWithGoogle();
 if (result.errNo == 0) {
   // 登录成功，UserLikesManager和AudioHistoryManager会自动收到通知
   // 并重新初始化它们的缓存数据
@@ -78,7 +78,7 @@ if (result.errNo == 0) {
 ### 登出流程
 ```dart
 // 用户点击登出按钮
-await AuthService.signOut();
+await AuthManager.instance.signOut();
 // UserLikesManager和AudioHistoryManager会自动收到通知
 // 并清空它们的缓存数据，AudioHistoryManager还会停止进度追踪
 ```
@@ -136,7 +136,7 @@ List<AudioItem> history = await AudioHistoryManager.instance.getAudioHistory();
 
 ## 注意事项
 
-1. **初始化顺序**：必须先初始化 `AuthService.initializeAuthStatus()`，再初始化其他管理器
+1. **初始化顺序**：必须先初始化 `AuthManager.instance.initialize()`，再初始化其他管理器
 2. **资源清理**：应用退出时调用各服务的 `dispose()` 方法清理资源
 3. **线程安全**：所有管理器都使用单例模式，但不是线程安全的，请在主线程使用
-4. **网络依赖**：所有数据同步都依赖网络连接，离线时只能使用缓存数据 
+4. **网络依赖**：所有数据同步都依赖网络连接，离线时只能使用缓存数据

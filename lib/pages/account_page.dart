@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hushie_app/components/custom_outline_button.dart';
-import '../services/auth_service.dart';
+import '../services/auth_manager.dart';
 import '../config/api_config.dart';
 import '../components/custom_webview.dart';
 import '../components/confirm_dialog.dart';
@@ -39,7 +39,7 @@ class _AccountPageState extends State<AccountPage> {
         cancelText: 'Cancel',
         onConfirm: () async {
           try {
-            await AuthService.deleteAccount();
+            await AuthManager.instance.deleteAccount();
             if (mounted) {
               Navigator.of(context).popUntil((route) => route.isFirst);
             }

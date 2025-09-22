@@ -3,10 +3,12 @@ import '../models/audio_item.dart';
 import 'audio_stats.dart';
 import '../utils/custom_icons.dart';
 import '../components/fallback_image.dart';
+import '../services/audio_manager.dart';
+import '../services/audio_service.dart';
+import 'dart:async';
 
 class AudioList extends StatefulWidget {
   final List<AudioItem> audios;
-  final String activeId;
   final EdgeInsetsGeometry? padding;
   final ScrollPhysics? physics;
   final bool shrinkWrap;
@@ -26,7 +28,6 @@ class AudioList extends StatefulWidget {
   const AudioList({
     super.key,
     required this.audios,
-    this.activeId = '',
     this.padding = const EdgeInsets.all(0),
     this.physics,
     this.shrinkWrap = false,
@@ -46,17 +47,42 @@ class AudioList extends StatefulWidget {
 
 class _AudioListState extends State<AudioList> {
   final ScrollController _scrollController = ScrollController();
+  String _activeId = '';
+  StreamSubscription<AudioPlayerState>? _audioStateSubscription;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _initializeActiveId();
+    _setupAudioStateListener();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _audioStateSubscription?.cancel();
     super.dispose();
+  }
+
+  void _initializeActiveId() {
+    final currentAudio = AudioManager.instance.currentAudio;
+    if (currentAudio != null) {
+      setState(() {
+        _activeId = currentAudio.id;
+      });
+    }
+  }
+
+  void _setupAudioStateListener() {
+    _audioStateSubscription = AudioManager.instance.audioStateStream.listen((audioState) {
+      final currentAudioId = audioState.currentAudio?.id ?? '';
+      if (_activeId != currentAudioId) {
+        setState(() {
+          _activeId = currentAudioId;
+        });
+      }
+    });
   }
 
   void _onScroll() {
@@ -71,7 +97,7 @@ class _AudioListState extends State<AudioList> {
   }
 
   bool _isActive(AudioItem item) {
-    return widget.activeId == item.id;
+    return _activeId == item.id;
   }
 
   @override
