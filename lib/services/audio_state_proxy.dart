@@ -247,10 +247,10 @@ class AudioStateProxyStream {
     Duration renderPreviewEnd = Duration.zero;
     
     // 打印真实原始值
-    debugPrint('[stateProxy] === 真实原始值 ===');
-    debugPrint('[stateProxy] 真实 duration: ${originalState.duration.inMilliseconds}ms');
-    debugPrint('[stateProxy] 真实 position: ${originalState.position.inMilliseconds}ms');
-    debugPrint('[stateProxy] 真实 bufferedPosition: ${originalState.bufferedPosition.inMilliseconds}ms');
+    // debugPrint('[stateProxy] === 真实原始值 ===');
+    // debugPrint('[stateProxy] 真实 duration: ${originalState.duration.inMilliseconds}ms');
+    // debugPrint('[stateProxy] 真实 position: ${originalState.position.inMilliseconds}ms');
+    // debugPrint('[stateProxy] 真实 bufferedPosition: ${originalState.bufferedPosition.inMilliseconds}ms');
     
     // 如果有当前音频且代理服务已初始化
     if (originalState.currentAudio != null) {
@@ -263,10 +263,10 @@ class AudioStateProxyStream {
         final previewStart = audio.previewStart ?? Duration.zero;
         final previewDuration = audio.previewDuration!;
         
-        debugPrint('[stateProxy] 预览配置:');
-        debugPrint('[stateProxy]   previewStart: ${previewStart.inMilliseconds}ms');
-        debugPrint('[stateProxy]   previewDuration: ${previewDuration.inMilliseconds}ms');
-        debugPrint('[stateProxy]   realDuration: ${realDuration.inMilliseconds}ms');
+        // debugPrint('[stateProxy] 预览配置:');
+        // debugPrint('[stateProxy]   previewStart: ${previewStart.inMilliseconds}ms');
+        // debugPrint('[stateProxy]   previewDuration: ${previewDuration.inMilliseconds}ms');
+        // debugPrint('[stateProxy]   realDuration: ${realDuration.inMilliseconds}ms');
         
         // 修复后的计算逻辑：优先保证预览区域在渲染窗口内
         // 1. 计算理想的渲染窗口时长（预览时长的3倍）
@@ -359,11 +359,11 @@ class AudioStateProxyStream {
         // 使用渲染窗口的时长作为代理后的duration
         proxiedDuration = renderDuration;
         
-        debugPrint('[stateProxy] 计算结果:');
-        debugPrint('[stateProxy]   renderStart: ${renderStart.inMilliseconds}ms');
-        debugPrint('[stateProxy]   renderDuration: ${renderDuration.inMilliseconds}ms');
-        debugPrint('[stateProxy]   renderPreviewStart: ${renderPreviewStart.inMilliseconds}ms');
-        debugPrint('[stateProxy]   renderPreviewEnd: ${renderPreviewEnd.inMilliseconds}ms');
+        // debugPrint('[stateProxy] 计算结果:');
+        // debugPrint('[stateProxy]   renderStart: ${renderStart.inMilliseconds}ms');
+        // debugPrint('[stateProxy]   renderDuration: ${renderDuration.inMilliseconds}ms');
+        // debugPrint('[stateProxy]   renderPreviewStart: ${renderPreviewStart.inMilliseconds}ms');
+        // debugPrint('[stateProxy]   renderPreviewEnd: ${renderPreviewEnd.inMilliseconds}ms');
       } else {
         // 非预览模式，预览区域覆盖整个渲染窗口
         renderPreviewStart = Duration.zero;
@@ -472,12 +472,12 @@ class AudioStateProxyStream {
     }
     
     // 打印转换后的渲染值
-    debugPrint('[stateProxy] === 转换后的渲染值 ===');
-    debugPrint('[stateProxy] 渲染 duration: ${proxiedDuration.inMilliseconds}ms (原始: ${originalState.duration.inMilliseconds}ms)');
-    debugPrint('[stateProxy] 渲染 position: ${proxiedPosition.inMilliseconds}ms (原始: ${originalState.position.inMilliseconds}ms)');
-    debugPrint('[stateProxy] 渲染 bufferedPosition: ${proxiedBufferedPosition.inMilliseconds}ms (原始: ${originalState.bufferedPosition.inMilliseconds}ms)');
-    debugPrint('[stateProxy] 渲染预览区域: ${renderPreviewStart.inMilliseconds}ms - ${renderPreviewEnd.inMilliseconds}ms');
-    debugPrint('[stateProxy] ==============================');
+    // debugPrint('[stateProxy] === 转换后的渲染值 ===');
+    // debugPrint('[stateProxy] 渲染 duration: ${proxiedDuration.inMilliseconds}ms (原始: ${originalState.duration.inMilliseconds}ms)');
+    // debugPrint('[stateProxy] 渲染 position: ${proxiedPosition.inMilliseconds}ms (原始: ${originalState.position.inMilliseconds}ms)');
+    // debugPrint('[stateProxy] 渲染 bufferedPosition: ${proxiedBufferedPosition.inMilliseconds}ms (原始: ${originalState.bufferedPosition.inMilliseconds}ms)');
+    // debugPrint('[stateProxy] 渲染预览区域: ${renderPreviewStart.inMilliseconds}ms - ${renderPreviewEnd.inMilliseconds}ms');
+    // debugPrint('[stateProxy] ==============================');
     
     // 返回代理后的状态
     return originalState.copyWith(

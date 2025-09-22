@@ -9,11 +9,11 @@ import '../services/subscribe_privilege_manager.dart';
 class AudioProgressBar extends StatefulWidget {
   final Function()? onOutPreview;
   final double? width; // 添加宽度参数
-  
+
   // 预览条样式参数
   final Color previewColor;
   final double previewOpacity;
-  
+
   // 缓冲条样式参数
   final Color bufferColor;
   final double bufferOpacity;
@@ -39,31 +39,31 @@ class AudioProgressBar extends StatefulWidget {
 class _AudioProgressBarState extends State<AudioProgressBar> {
   double _dragValue = 0.0;
   bool _isDragging = false;
-  
+
   // 内部状态
   bool _isPreviewMode = true;
   StreamSubscription<PrivilegeChangeEvent>? _previewModeSubscription;
   bool _disabled = false;
-  
+
   // 渲染用的位置和时长（直接使用audioState中已代理的值）
   Duration _renderPosition = Duration.zero;
   Duration _renderDuration = Duration.zero;
   Duration _renderPreviewStart = Duration.zero;
   Duration _renderPreviewEnd = Duration.zero;
   Duration _renderBufferedPosition = Duration.zero;
-  
+
   // 真实的音频时长（用于位置转换）
   Duration _realDuration = Duration.zero;
   Duration _realPosition = Duration.zero;
-  
+
   late AudioManager _audioManager;
-  
+
   // StreamSubscription列表，用于在dispose时取消
   final List<StreamSubscription> _subscriptions = [];
-  
+
   // 本地状态缓存，用于差异对比
   AudioPlayerState? _lastAudioState;
-  
+
   // 代理流引用，用于位置转换
   AudioStateProxyStream? _proxyStream;
 
@@ -71,116 +71,210 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   void initState() {
     super.initState();
     _audioManager = AudioManager.instance;
-    _initializePreviewMode();
-    _setupPreviewModeListener();
-    _listenToAudioState();
+    _initializePreviewMode().then((value) {
+      _resetAudioStateListener();
+      _setupPreviewModeListener();
+    });
   }
 
-  void _initializePreviewMode() {
+  Future<void> _initializePreviewMode() async {
     // 从权益管理器获取权限状态，然后计算预览模式
-    final privilege = SubscribePrivilegeManager.instance.getCachedPrivilege();
-    final hasPremium = privilege?.hasPremium ?? false;
-    _isPreviewMode = !hasPremium; // 有权限时不是预览模式，无权限时是预览模式
+    final hasPremium = await SubscribePrivilegeManager.instance
+        .hasValidPremium();
+    setState(() {
+      _isPreviewMode = !hasPremium; // 有权限时不是预览模式，无权限时是预览模式
+    });
   }
 
   void _setupPreviewModeListener() {
-    _previewModeSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen((event) {
-      if (mounted) {
-        setState(() {
-          _isPreviewMode = !event.hasPremium; // 有权限时不是预览模式，无权限时是预览模式
+    _previewModeSubscription = SubscribePrivilegeManager
+        .instance
+        .privilegeChanges
+        .listen((event) {
+          if (mounted) {
+            setState(() {
+              _isPreviewMode = !event.hasPremium; // 有权限时不是预览模式，无权限时是预览模式
+            });
+            _resetAudioStateListener();
+          }
         });
-      }
-    });
   }
-  
+
+  void _resetAudioStateListener() {
+    _unListenerToAudioState();
+    _listenToAudioState();
+  }
+
+  void _unListenerToAudioState() {
+    for (var subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+  }
+
   void _listenToAudioState() {
     // 监听原始音频状态流，获取真实duration
-    _subscriptions.add(_audioManager.audioStateStream.listen((originalState) {
-      if(mounted) {
-        if (originalState.duration != _realDuration) {
-          _realDuration = originalState.duration;
-        }
+    _subscriptions.add(
+      _audioManager.audioStateStream.listen((originalState) {
+        if (mounted) {
+          if (originalState.duration != _realDuration) {
+            _realDuration = originalState.duration;
+          }
 
-        if(originalState.position != _realPosition) {
-          _realPosition = originalState.position;
+          if (originalState.position != _realPosition) {
+            _realPosition = originalState.position;
+          }
         }
-      }
-    }));
-    
-    // 使用代理后的音频状态流，自动处理duration过滤
-    final durationProxy = AudioStateProxy.createDurationFilter();
-    _proxyStream = _audioManager.audioStateStream.proxy(durationProxy);
-    _subscriptions.add(_proxyStream!
-        .listen((audioState) {
-      if (mounted) {
-        // 如果是第一次接收状态或状态发生变化，才进行处理
-        if (_lastAudioState == null || _hasStateChanged(_lastAudioState!, audioState)) {
-          bool needsUpdate = false;
-          
-          // 检查当前音频是否变化
-          if (_lastAudioState?.currentAudio?.id != audioState.currentAudio?.id) {
-            needsUpdate = true;
-          }
-          
-          // 检查渲染预览区域是否变化
-          if (_lastAudioState?.renderPreviewStart != audioState.renderPreviewStart ||
-              _lastAudioState?.renderPreviewEnd != audioState.renderPreviewEnd) {
-            _renderPreviewStart = audioState.renderPreviewStart;
-            _renderPreviewEnd = audioState.renderPreviewEnd;
-            needsUpdate = true;
-          }
-          
-          // 检查duration是否变化（audioState.duration已经过代理处理）
-          if (_lastAudioState?.duration != audioState.duration) {
-            _renderDuration = audioState.duration;
-            needsUpdate = true;
-          }
-          
-          // 检查播放位置是否变化
-          if (_lastAudioState?.position != audioState.position) {
-            // debugPrint('[progressBar] 渲染位置：${audioState.position}');
-            _renderPosition = audioState.position;
-            if (!_isDragging) {
-              _dragValue = _renderDuration.inMilliseconds > 0
-                  ? _renderPosition.inMilliseconds / _renderDuration.inMilliseconds
-                  : 0.0;
-            }
-            needsUpdate = true;
-          }
-          
-          // 检查缓冲位置是否变化
-          if (_lastAudioState?.bufferedPosition != audioState.bufferedPosition) {
-            _renderBufferedPosition = audioState.bufferedPosition;
-            needsUpdate = true;
-          }
-          
-          // 检查播放器状态是否变化
-          if (_lastAudioState?.playerState.processingState != audioState.playerState.processingState) {
-            final playerState = audioState.playerState;
-            if (playerState != null) {
-              _disabled = playerState.processingState == ProcessingState.loading;
-            }
-            needsUpdate = true;
-          }
-          
-          // 只有在需要更新时才调用setState
-          if (needsUpdate) {
-            setState(() {
-              // 状态已在上面更新，这里只需要触发重建
-            });
-          }
-          
-          // 更新本地状态缓存
-          _lastAudioState = audioState;
-        }
-      }
-    }));
+      }),
+    );
 
-    // 监听预览模式变化（已移除，现在使用SubscribePrivilegeManager）
+
+    debugPrint('[progressBar] 初始化预览模式: $_isPreviewMode');
+
+    if (_isPreviewMode) {
+      // 使用代理后的音频状态流，自动处理duration过滤
+      final durationProxy = AudioStateProxy.createDurationFilter();
+      _proxyStream = _audioManager.audioStateStream.proxy(durationProxy);
+      _subscriptions.add(
+        _proxyStream!.listen((audioState) {
+          if (mounted) {
+            // 如果是第一次接收状态或状态发生变化，才进行处理
+            if (_lastAudioState == null ||
+                _hasStateChanged(_lastAudioState!, audioState)) {
+              bool needsUpdate = false;
+
+              // 检查当前音频是否变化
+              if (_lastAudioState?.currentAudio?.id !=
+                  audioState.currentAudio?.id) {
+                needsUpdate = true;
+              }
+
+              // 检查渲染预览区域是否变化
+              if (_lastAudioState?.renderPreviewStart !=
+                      audioState.renderPreviewStart ||
+                  _lastAudioState?.renderPreviewEnd !=
+                      audioState.renderPreviewEnd) {
+                _renderPreviewStart = audioState.renderPreviewStart;
+                _renderPreviewEnd = audioState.renderPreviewEnd;
+                needsUpdate = true;
+              }
+
+              // 检查duration是否变化（audioState.duration已经过代理处理）
+              if (_lastAudioState?.duration != audioState.duration) {
+                _renderDuration = audioState.duration;
+                needsUpdate = true;
+              }
+
+              // 检查播放位置是否变化
+              if (_lastAudioState?.position != audioState.position) {
+                debugPrint('[progressBar] 渲染位置：${audioState.position} 预览模式: $_isPreviewMode');
+                _renderPosition = audioState.position;
+                if (!_isDragging) {
+                  _dragValue = _renderDuration.inMilliseconds > 0
+                      ? _renderPosition.inMilliseconds /
+                            _renderDuration.inMilliseconds
+                      : 0.0;
+                }
+                needsUpdate = true;
+              }
+
+              // 检查缓冲位置是否变化
+              if (_lastAudioState?.bufferedPosition !=
+                  audioState.bufferedPosition) {
+                _renderBufferedPosition = audioState.bufferedPosition;
+                needsUpdate = true;
+              }
+
+              // 检查播放器状态是否变化
+              if (_lastAudioState?.playerState.processingState !=
+                  audioState.playerState.processingState) {
+                final playerState = audioState.playerState;
+                if (playerState != null) {
+                  _disabled =
+                      playerState.processingState == ProcessingState.loading;
+                }
+                needsUpdate = true;
+              }
+
+              // 只有在需要更新时才调用setState
+              if (needsUpdate) {
+                setState(() {
+                  // 状态已在上面更新，这里只需要触发重建
+                });
+              }
+
+              // 更新本地状态缓存
+              _lastAudioState = audioState;
+            }
+          }
+        }),
+      );
+    } else {
+      _subscriptions.add(_audioManager.audioStateStream.listen((audioState) {
+        if (mounted) {
+          // 如果是第一次接收状态或状态发生变化，才进行处理
+          if (_lastAudioState == null ||
+              _hasStateChanged(_lastAudioState!, audioState)) {
+            bool needsUpdate = false;
+
+            // 检查当前音频是否变化
+            if (_lastAudioState?.currentAudio?.id !=
+                audioState.currentAudio?.id) {
+              needsUpdate = true;
+            }
+
+            // 非预览模式下不需要预览区域，直接使用真实duration
+            if (_lastAudioState?.duration != audioState.duration) {
+              _renderDuration = audioState.duration ?? Duration.zero;
+              debugPrint('[progressBar] 渲染duration：${_renderDuration.inSeconds}');
+              needsUpdate = true;
+            }
+
+            // 检查播放位置是否变化（使用真实位置）
+            if (_lastAudioState?.position != audioState.position) {
+              _renderPosition = audioState.position ?? Duration.zero;
+              if (!_isDragging) {
+                _dragValue = _renderDuration.inMilliseconds > 0
+                    ? _renderPosition.inMilliseconds /
+                          _renderDuration.inMilliseconds
+                    : 0.0;
+              }
+              needsUpdate = true;
+            }
+
+            // 检查缓冲位置是否变化（使用真实缓冲位置）
+            if (_lastAudioState?.bufferedPosition !=
+                audioState.bufferedPosition) {
+              _renderBufferedPosition = audioState.bufferedPosition ?? Duration.zero;
+              needsUpdate = true;
+            }
+
+            // 检查播放器状态是否变化
+            if (_lastAudioState?.playerState.processingState !=
+                audioState.playerState.processingState) {
+              final playerState = audioState.playerState;
+              if (playerState != null) {
+                _disabled =
+                    playerState.processingState == ProcessingState.loading;
+              }
+              needsUpdate = true;
+            }
+
+            // 只有在需要更新时才调用setState
+            if (needsUpdate) {
+              setState(() {
+                // 状态已在上面更新，这里只需要触发重建
+              });
+            }
+
+            // 更新本地状态缓存
+            _lastAudioState = audioState;
+          }
+        }
+      }));
+    }
   }
-  
 
-  
   Future<void> _onSeek(Duration position) async {
     // 直接使用position进行seek，因为audio_state_proxy已经处理了位置转换
     await _audioManager.seek(position);
@@ -191,7 +285,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     super.didUpdateWidget(oldWidget);
     // 移除旧的逻辑，现在由内部监听处理
   }
-  
+
   @override
   void dispose() {
     // 手动取消所有StreamSubscription以避免内存泄漏
@@ -206,18 +300,19 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     _realPosition = Duration.zero; // 清空真实位置
     super.dispose();
   }
-  
+
   /// 检查音频状态是否发生实质性变化
   bool _hasStateChanged(AudioPlayerState oldState, AudioPlayerState newState) {
     return oldState.currentAudio?.id != newState.currentAudio?.id ||
-           oldState.isPlaying != newState.isPlaying ||
-           oldState.position != newState.position ||
-           oldState.duration != newState.duration ||
-           oldState.speed != newState.speed ||
-           oldState.bufferedPosition != newState.bufferedPosition ||
-           oldState.playerState.processingState != newState.playerState.processingState ||
-           oldState.renderPreviewStart != newState.renderPreviewStart ||
-           oldState.renderPreviewEnd != newState.renderPreviewEnd;
+        oldState.isPlaying != newState.isPlaying ||
+        oldState.position != newState.position ||
+        oldState.duration != newState.duration ||
+        oldState.speed != newState.speed ||
+        oldState.bufferedPosition != newState.bufferedPosition ||
+        oldState.playerState.processingState !=
+            newState.playerState.processingState ||
+        oldState.renderPreviewStart != newState.renderPreviewStart ||
+        oldState.renderPreviewEnd != newState.renderPreviewEnd;
   }
 
   String _formatDuration(Duration duration) {
@@ -235,19 +330,27 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     double previewStart = 0.0;
     double previewEnd = 1.0;
     double bufferedProgress = 0.0;
-    
+
     // 计算预览区域的相对位置
     if (_renderDuration.inMilliseconds > 0) {
       progress = _isDragging
           ? _dragValue
           : _renderPosition.inMilliseconds / _renderDuration.inMilliseconds;
-      previewStart = _renderPreviewStart.inMilliseconds / _renderDuration.inMilliseconds;
-      previewEnd = _renderPreviewEnd.inMilliseconds / _renderDuration.inMilliseconds;
+
+
+      // debugPrint('AudioProgressBar build, progress: $progress, _renderPosition: $_renderPosition.inSeconds, _renderDuration: $_renderDuration.inSeconds');
+
+      previewStart =
+          _renderPreviewStart.inMilliseconds / _renderDuration.inMilliseconds;
+      previewEnd =
+          _renderPreviewEnd.inMilliseconds / _renderDuration.inMilliseconds;
       // 确保预览区域在有效范围内
       previewStart = previewStart.clamp(0.0, 1.0);
       previewEnd = previewEnd.clamp(0.0, 1.0);
       // 计算缓冲进度
-      bufferedProgress = _renderBufferedPosition.inMilliseconds / _renderDuration.inMilliseconds;
+      bufferedProgress =
+          _renderBufferedPosition.inMilliseconds /
+          _renderDuration.inMilliseconds;
     }
 
     return Opacity(
@@ -256,111 +359,129 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
         absorbing: _disabled, // 禁用时阻止所有交互
         child: Column(
           children: [
-        // 进度条
-        SizedBox(
-          width: double.infinity,
-          height: 24,
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 2.0,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.0),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
-              activeTrackColor: Color(0xFF999999)/*.withAlpha(200)*/,
-              inactiveTrackColor: Color(0xFF999999)/*.withAlpha(200)*/,
-              thumbColor: Colors.white,
-              overlayColor: Colors.white/*.withAlpha(64)*/,
-              // 自定义轨道形状，传递预览区域参数
-              trackShape: CustomTrackShape(
-                previewStart: previewStart,
-                previewEnd: previewEnd,
-                showPreview: _isPreviewMode,
-                bufferedProgress: bufferedProgress,
-                // 预览条样式参数
-                previewColor: widget.previewColor,
-                previewOpacity: widget.previewOpacity,
-                showPreviewBar: true,
-                // 缓冲条样式参数
-                bufferColor: widget.bufferColor,
-                bufferOpacity: widget.bufferOpacity,
-                showBufferBar: widget.showBufferBar,
-              ),
-            ),
-            child: Slider( 
-              value: progress.clamp(0.0, 1.0),
-              onChanged: _disabled ? null : (value) async {
-                setState(() {
-                  _isDragging = true;
-                  _dragValue = value;
-                });
-                
-                // 检查是否超出预览区域
-                 if (_isPreviewMode && (value < previewStart || value > previewEnd)) {
-                   // 预览模式下，检查是否需要触发解锁回调
-                    if(widget.onOutPreview != null) {
-                      widget.onOutPreview!();
-                    }
-                 }
-                
-                final realValue = _isPreviewMode ? value.clamp(previewStart, previewEnd) : value;
-                
-                // 计算渲染位置（避免往返转换的精度损失）
-                final renderPosition = Duration(
-                  milliseconds: (realValue * _renderDuration.inMilliseconds).round(),
-                );
-                // debugPrint('[progressBar] 转换前渲染值: ${Duration(milliseconds: (realValue * _renderDuration.inMilliseconds).round())}');
-                
-                // 使用代理流的方法将渲染值转换为真实位置进行seek
-                Duration position;
-                if (_proxyStream != null && _lastAudioState != null && _realDuration > Duration.zero) {
-                  position = _proxyStream!.renderValueToRealPosition(realValue, _lastAudioState!, _realDuration);
-                  // debugPrint('[progressBar] 转换后真实位置: $position');
-                } else {
-                  // 降级处理：直接使用渲染位置
-                  position = renderPosition;
-                }
-                
-                // 直接更新渲染位置，避免往返转换
-                // _renderPosition = renderPosition;
-                // debugPrint('[progressBar] 渲染位置：$_renderPosition');
+            // 进度条
+            SizedBox(
+              width: double.infinity,
+              height: 24,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 1.0,
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 4.0,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 16.0,
+                  ),
+                  activeTrackColor: Color(0xff999999) /*.withAlpha(200)*/,
+                  inactiveTrackColor: Color(0xff999999) /*.withAlpha(200)*/,
+                  thumbColor: Colors.white,
+                  overlayColor: Colors.white /*.withAlpha(64)*/,
+                  // 自定义轨道形状，传递预览区域参数
+                  trackShape: CustomTrackShape(
+                    previewStart: previewStart,
+                    previewEnd: previewEnd,
+                    showPreview: _isPreviewMode,
+                    bufferedProgress: bufferedProgress,
+                    // 预览条样式参数
+                    previewColor: widget.previewColor,
+                    previewOpacity: widget.previewOpacity,
+                    showPreviewBar: true,
+                    // 缓冲条样式参数
+                    bufferColor: widget.bufferColor,
+                    bufferOpacity: widget.bufferOpacity,
+                    showBufferBar: widget.showBufferBar,
+                  ),
+                ),
+                child: Slider(
+                  value: progress.clamp(0.0, 1.0),
+                  onChanged: _disabled
+                      ? null
+                      : (value) async {
+                          setState(() {
+                            _isDragging = true;
+                            _dragValue = value;
+                          });
 
-                // 直接seek到目标位置
-                await _onSeek(position);
-              },
-              onChangeEnd: (value) {
-                 setState(() {
-                   _isDragging = false;
-                 });
-               },
-            ),
-          ),
-        ),
+                          // 检查是否超出预览区域
+                          if (_isPreviewMode &&
+                              (value < previewStart || value > previewEnd)) {
+                            // 预览模式下，检查是否需要触发解锁回调
+                            if (widget.onOutPreview != null) {
+                              widget.onOutPreview!();
+                            }
+                          }
 
-        // 时间显示
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _formatDuration(_realPosition),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w400,
+                          final realValue = _isPreviewMode
+                              ? value.clamp(previewStart, previewEnd)
+                              : value;
+
+                          // 计算渲染位置（避免往返转换的精度损失）
+                          final renderPosition = Duration(
+                            milliseconds:
+                                (realValue * _renderDuration.inMilliseconds)
+                                    .round(),
+                          );
+                          // debugPrint('[progressBar] 转换前渲染值: ${Duration(milliseconds: (realValue * _renderDuration.inMilliseconds).round())}');
+
+                          // 使用代理流的方法将渲染值转换为真实位置进行seek
+                          Duration position;
+                          if (_isPreviewMode &&
+                              _proxyStream != null &&
+                              _lastAudioState != null &&
+                              _realDuration > Duration.zero) {
+                            position = _proxyStream!.renderValueToRealPosition(
+                              realValue,
+                              _lastAudioState!,
+                              _realDuration,
+                            );
+                            // debugPrint('[progressBar] 转换后真实位置: $position');
+                          } else {
+                            // 降级处理：直接使用渲染位置
+                            position = renderPosition;
+                          }
+
+                          // 直接更新渲染位置，避免往返转换
+                          // _renderPosition = renderPosition;
+                          // debugPrint('[progressBar] 渲染位置：$_renderPosition');
+
+                          // 直接seek到目标位置
+                          await _onSeek(position);
+                        },
+                  onChangeEnd: (value) {
+                    setState(() {
+                      _isDragging = false;
+                    });
+                  },
                 ),
               ),
-              Text(
-                _formatDuration(_realDuration), // 显示真实时长
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w400,
-                ),
+            ),
+
+            // 时间显示
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatDuration(_realPosition),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  Text(
+                    _formatDuration(_realDuration), // 显示真实时长
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        ],
+            ),
+          ],
         ),
       ),
     );
@@ -373,12 +494,12 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
   final double previewEnd;
   final bool showPreview;
   final double bufferedProgress;
-  
+
   // 预览条样式参数
   final Color previewColor;
   final double previewOpacity;
   final bool showPreviewBar;
-  
+
   // 缓冲条样式参数
   final Color bufferColor;
   final double bufferOpacity;
@@ -426,7 +547,7 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
     Offset? secondaryOffset,
     bool isEnabled = false,
     bool isDiscrete = false,
-    double additionalActiveTrackHeight = 2.0,
+    double additionalActiveTrackHeight = 0.0,
   }) {
     // 先绘制默认轨道
     super.paint(
@@ -476,10 +597,9 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
 
     // 如果需要显示预览区域，绘制预览条
     if (showPreview && showPreviewBar) {
-
       final previewLeft = trackRect.left + (trackRect.width * previewStart);
       final previewWidth = trackRect.width * (previewEnd - previewStart);
-      
+
       final previewRect = Rect.fromLTWH(
         previewLeft,
         trackRect.top,

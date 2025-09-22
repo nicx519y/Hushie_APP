@@ -44,10 +44,10 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
 
-    setState(() {
-      _canTapSearchItem =
-          SubscribePrivilegeManager.instance.getCachedPrivilege()?.hasPremium ??
-          false;
+    SubscribePrivilegeManager.instance.hasValidPremium().then((value) {
+      setState(() {
+        _canTapSearchItem = value;
+      });
     });
 
     // 监听订阅状态变化

@@ -312,9 +312,9 @@ class GooglePlayBillingService {
       }
       
       // 完成购买处理 server调用，端就不调了
-      if (purchaseDetails.pendingCompletePurchase) {
-        _inAppPurchase.completePurchase(purchaseDetails);
-      }
+      // if (purchaseDetails.pendingCompletePurchase) {
+      //   _inAppPurchase.completePurchase(purchaseDetails);
+      // }
     }
   }
   

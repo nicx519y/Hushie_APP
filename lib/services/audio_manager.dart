@@ -36,13 +36,12 @@ class AudioManager {
       BehaviorSubject<PlayerState>.seeded(
         PlayerState(false, ProcessingState.idle),
       );
-  final BehaviorSubject<bool> _isPreviewModeSubject =
-      BehaviorSubject<bool>.seeded(true);
 
   // 缓存本地状态，用于比对变化
   String? _lastAudioId;
   bool _lastIsPlaying = false;
   Duration _lastPosition = Duration.zero;
+  bool _isPreviewMode = false;
 
   // 播放列表管理状态标志位
   bool _isManagingPlaylist = false;
@@ -115,7 +114,7 @@ class AudioManager {
     debugPrint('Setting up AudioManager stream listeners...');
     // 监听统一的音频状态流
     _audioService!.audioStateStream.listen((audioState) async {
-      debugPrint('[checkWillOutPreview] AudioManager received audioState: isPlaying=${audioState.isPlaying}');
+      // debugPrint('[checkWillOutPreview] AudioManager received audioState: isPlaying=${audioState.isPlaying}');
       
       final audio = audioState.currentAudio;
       final currentAudioId = audio?.id;
@@ -127,7 +126,7 @@ class AudioManager {
       bool playingStateChanged = _lastIsPlaying != isPlaying;
       bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 5);
       // bool positionChanged = _lastPosition != position;
-      debugPrint('[checkWillOutPreview] positionChanged: $positionChanged; _lastPosition: $_lastPosition; position: $position');
+      // debugPrint('[checkWillOutPreview] positionChanged: $positionChanged; _lastPosition: $_lastPosition; position: $position');
       // 管理播放列表 - 只在音频ID发生变化时执行
       if (audioChanged && audio != null) {
         debugPrint('Audio changed from ${_lastAudioId} to ${currentAudioId}');
@@ -144,7 +143,7 @@ class AudioManager {
           debugPrint('管理播放列表失败: $e');
         }
       }
-      debugPrint('[checkWillOutPreview] 播放列表管理完成');
+      // debugPrint('[checkWillOutPreview] 播放列表管理完成');
       
       // 检查预览区间 - 只在位置发生明显变化时检查
       if (positionChanged && _checkWillOutPreview(position)) {
@@ -170,10 +169,9 @@ class AudioManager {
 
   // 检查是否超出预览区间
   bool _checkWillOutPreview(Duration position) {
-    debugPrint('[checkWillOutPreview] canPlayAllDuration: ${!_isPreviewModeSubject.value}');
     if (currentAudio == null ||
         !isPlaying ||
-        !_isPreviewModeSubject.value) {
+        !_isPreviewMode) {
       return false;
     }
 
@@ -182,7 +180,7 @@ class AudioManager {
     final hasPreview =
         previewStart >= Duration.zero && previewDuration > Duration.zero;
 
-    debugPrint('[checkWillOutPreview] position: $position previewStart: $previewStart previewDuration: $previewDuration, hasPreview: $hasPreview');    
+    // debugPrint('[checkWillOutPreview] position: $position previewStart: $previewStart previewDuration: $previewDuration, hasPreview: $hasPreview');    
 
     if (hasPreview && (position >= previewStart + previewDuration || position < previewStart)) {
       debugPrint('[playAudio] position: $position previewStart: $previewStart previewDuration: $previewDuration');
@@ -193,7 +191,7 @@ class AudioManager {
 
   Duration _transformPosition(Duration position, {AudioItem? audio}) {
     // 如果能播放全部时长，直接返回原位置
-    if (!_isPreviewModeSubject.value) {
+    if (!_isPreviewMode) {
       return position;
     }
 
@@ -238,7 +236,7 @@ class AudioManager {
 
   /// 检查播放是否完成并自动播放下一首
   void _checkPlaybackCompletion(PlayerState playerState) {
-    final canAutoPlayNext = !_isPreviewModeSubject.value;
+    final canAutoPlayNext = !_isPreviewMode;
     final currentAudio = this.currentAudio;
     if (playerState.processingState == ProcessingState.completed &&
         currentAudio != null) {
@@ -379,7 +377,7 @@ class AudioManager {
   // 检查当前播放位置是否超出预览区间
   bool get isOutOfPreview {
     // 如果不是预览模式，返回false
-    if (!isPreviewMode) {
+    if (!_isPreviewMode) {
       return false;
     }
     
@@ -577,30 +575,14 @@ class AudioManager {
     return _playerStateSubject.value;
   }
 
-  bool get isPreviewMode {
-    return _isPreviewModeSubject.value;
-  }
-
   Duration get bufferedPosition {
     return _audioService?.currentState.bufferedPosition ?? Duration.zero;
-  }
-
-  // 获取预览模式流
-  Stream<bool> get isPreviewModeStream {
-    return _isPreviewModeSubject.stream;
-  }
-
-  // 新增：直接设置预览模式的方法
-  void setPreviewMode(bool isPreview) {
-    _isPreviewModeSubject.add(isPreview);
-    debugPrint('设置预览模式: $isPreview');
   }
 
   /// 初始化权益状态
   Future<void> _initializePrivilegeStatus() async {
     try {
-      final privilege = await SubscribePrivilegeManager.instance.getUserPrivilege();
-      final hasPremium = privilege?.hasPremium ?? false;
+      final hasPremium = await SubscribePrivilegeManager.instance.hasValidPremium();
       
       debugPrint('AudioManager: 初始化权益状态 - hasPremium: $hasPremium');
       _updatePlaybackPermissions(hasPremium);
@@ -630,7 +612,7 @@ class AudioManager {
     debugPrint('AudioManager: 更新播放权限 - hasPremium: $hasPremium');
     
     // 根据权益状态设置预览模式（hasPremium为true时，预览模式为false）
-    setPreviewMode(!hasPremium);
+    _isPreviewMode = !hasPremium;
     
     debugPrint('AudioManager: 播放权限已更新 - 预览模式: ${!hasPremium}');
   }
@@ -648,7 +630,6 @@ class AudioManager {
 
     // 关闭所有BehaviorSubject
     await _playerStateSubject.close();
-    await _isPreviewModeSubject.close();
 
     // 关闭StreamController
     await _previewOutController.close();

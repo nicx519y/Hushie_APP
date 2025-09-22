@@ -157,6 +157,7 @@ class SubscribePrivilegeManager {
       
       // 检查权限状态是否发生变化
       final currentHasPremium = _cachedPrivilege?.hasPremium ?? false;
+      // final currentHasPremium = true;
       if (previousHasPremium != currentHasPremium) {
         debugPrint('🏆 [PRIVILEGE_SERVICE] 权限状态发生变化: $previousHasPremium -> $currentHasPremium');
         _notifyPrivilegeChange(currentHasPremium);
@@ -311,6 +312,7 @@ class SubscribePrivilegeManager {
     try {
       final privilege = await getUserPrivilege(forceRefresh: forceRefresh);
       return privilege?.isValidPremium ?? false;
+      // return true;
     } catch (e) {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 检查高级权限失败: $e');
       return false;

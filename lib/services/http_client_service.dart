@@ -172,7 +172,6 @@ class HttpClientService {
 
   /// 生成动态签名（带缓存和并发控制）
   static Future<Map<String, dynamic>?> _generateDynamicSignatureWithCache() async {
-    debugPrint('🔐 [DYNAMIC_SIGNATURE] 开始生成动态签名...');
 
     // 检查缓存是否有效
     if (_cachedDynamicSignature != null && _signatureCacheTime != null) {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hushie_app/components/subscribe_dialog.dart';
 import 'package:hushie_app/services/auth_manager.dart';
+import 'package:hushie_app/services/subscribe_privilege_manager.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
 import '../services/audio_service.dart';
@@ -14,7 +15,6 @@ import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
 import '../services/audio_state_proxy.dart';
 import 'package:just_audio/just_audio.dart';
-
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -56,7 +56,7 @@ class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
 
 class AudioPlayerPage extends StatefulWidget {
   final AudioItem? initialAudio;
-  
+
   const AudioPlayerPage({super.key, this.initialAudio});
 
   /// 使用标准上滑动画打开播放器页面
@@ -71,7 +71,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // Duration _currentPosition = Duration.zero;
 
   // 移除时长代理服务和渲染相关状态，现在由AudioProgressBar内部管理
- 
 
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
@@ -87,10 +86,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
 
   bool _isDescExpended = false; // 描述是否展开
-  
+
   // StreamSubscription列表，用于在dispose时取消
   final List<StreamSubscription> _subscriptions = [];
-  
+
   // 本地状态缓存，用于差异对比
   AudioPlayerState? _lastAudioState;
 
@@ -100,13 +99,20 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     _audioManager = AudioManager.instance;
     // 只监听音频播放状态，不主动加载音频
     _listenToAudioState();
-    
+
+    SubscribePrivilegeManager.instance
+        .hasValidPremium(forceRefresh: false)
+        .then((value) {
+          setState(() {
+            _isPreviewMode = !value;
+          });
+        });
+
     // 如果有初始音频，用初始音频信息渲染
     if (widget.initialAudio != null) {
       setState(() {
         _currentAudio = widget.initialAudio;
         _isAudioLoading = true;
-        _isPreviewMode = _audioManager.isPreviewMode;
       });
     }
   }
@@ -114,76 +120,85 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   void _listenToAudioState() {
     // 使用代理后的音频状态流，自动处理duration过滤
     final durationProxy = AudioStateProxy.createDurationFilter();
-    _subscriptions.add(_audioManager.audioStateStream
-        .proxy(durationProxy)
-        .listen((audioState) {
-      if (mounted) {
-        // 如果是第一次接收状态或状态发生变化，才进行处理
-        if (_lastAudioState == null || _hasStateChanged(_lastAudioState!, audioState)) {
-          bool needsUpdate = false;
-          
-          // 检查当前音频是否变化
-          if (_lastAudioState?.currentAudio?.id != audioState.currentAudio?.id) {
-            _currentAudio = audioState.currentAudio;
-            _isLiked = _currentAudio?.isLiked ?? false;
-            // 初始化本地状态
-            _localIsLiked = _isLiked;
-            _localLikesCount = _currentAudio?.likesCount ?? 0;
-            needsUpdate = true;
-          }
-          
-          // 检查播放状态是否变化
-          if (_lastAudioState?.isPlaying != audioState.isPlaying) {
-            _isPlaying = audioState.isPlaying;
-            needsUpdate = true;
-          }
-          
-          // 检查播放器状态是否变化
-          if (_lastAudioState?.playerState.processingState != audioState.playerState.processingState) {
-            final playerState = audioState.playerState;
-            if (playerState != null) {
-              if (playerState.processingState == ProcessingState.loading ||
-                  playerState.processingState == ProcessingState.buffering) {
-                _isAudioLoading = true;
-              } else {
-                _isAudioLoading = false;
-              }
-            }
-            needsUpdate = true;
-          }
-          
-          // 检查播放位置是否变化
-          if (_lastAudioState?.position != audioState.position) {
-            // _currentPosition = audioState.position;
-            needsUpdate = true;
-          }
-          
-          // 只有在需要更新时才调用setState
-          if (needsUpdate) {
-            setState(() {});
-          }
-          
-          // 更新本地状态缓存
-          _lastAudioState = audioState;
-        }
-      }
-    }));
+    _subscriptions.add(
+      _audioManager.audioStateStream.proxy(durationProxy).listen((audioState) {
+        if (mounted) {
+          // 如果是第一次接收状态或状态发生变化，才进行处理
+          if (_lastAudioState == null ||
+              _hasStateChanged(_lastAudioState!, audioState)) {
+            bool needsUpdate = false;
 
-    _subscriptions.add(_audioManager.isPreviewModeStream.listen((isPreviewMode) {
-      if (mounted) {
-        setState(() {
-          _isPreviewMode = isPreviewMode;
-        });
-      }
-    }));
+            // 检查当前音频是否变化
+            if (_lastAudioState?.currentAudio?.id !=
+                audioState.currentAudio?.id) {
+              _currentAudio = audioState.currentAudio;
+              _isLiked = _currentAudio?.isLiked ?? false;
+              // 初始化本地状态
+              _localIsLiked = _isLiked;
+              _localLikesCount = _currentAudio?.likesCount ?? 0;
+              needsUpdate = true;
+            }
+
+            // 检查播放状态是否变化
+            if (_lastAudioState?.isPlaying != audioState.isPlaying) {
+              _isPlaying = audioState.isPlaying;
+              needsUpdate = true;
+            }
+
+            // 检查播放器状态是否变化
+            if (_lastAudioState?.playerState.processingState !=
+                audioState.playerState.processingState) {
+              final playerState = audioState.playerState;
+              if (playerState != null) {
+                if (playerState.processingState == ProcessingState.loading ||
+                    playerState.processingState == ProcessingState.buffering) {
+                  _isAudioLoading = true;
+                } else {
+                  _isAudioLoading = false;
+                }
+              }
+              needsUpdate = true;
+            }
+
+            // 检查播放位置是否变化
+            if (_lastAudioState?.position != audioState.position) {
+              // _currentPosition = audioState.position;
+              needsUpdate = true;
+            }
+
+            // 只有在需要更新时才调用setState
+            if (needsUpdate) {
+              setState(() {});
+            }
+
+            // 更新本地状态缓存
+            _lastAudioState = audioState;
+          }
+        }
+      }),
+    );
+
+    _subscriptions.add(
+      SubscribePrivilegeManager.instance.privilegeChanges.listen((detail) {
+        if (mounted) {
+          setState(() {
+            _isPreviewMode = !detail.hasPremium;
+          });
+        }
+      }),
+    );
 
     // 监听预览区间即将超出事件
-    _subscriptions.add(AudioManager.previewOutEvents.listen((previewOutEvent) {
-      if (mounted) {
-        debugPrint('🎵 [PLAYER] 预览区间即将超出，触发解锁提示: ${previewOutEvent.position}');
-        _onUnlockFullAccessTap();
-      }
-    }));
+    _subscriptions.add(
+      AudioManager.previewOutEvents.listen((previewOutEvent) {
+        if (mounted) {
+          debugPrint(
+            '🎵 [PLAYER] 预览区间即将超出，触发解锁提示: ${previewOutEvent.position}',
+          );
+          _onUnlockFullAccessTap();
+        }
+      }),
+    );
   }
 
   void _playAndPauseBtnPress() {
@@ -322,17 +337,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     _lastAudioState = null; // 清空状态缓存
     super.dispose();
   }
-  
+
   /// 检查音频状态是否发生实质性变化
   bool _hasStateChanged(AudioPlayerState oldState, AudioPlayerState newState) {
     return oldState.currentAudio?.id != newState.currentAudio?.id ||
-           oldState.isPlaying != newState.isPlaying ||
-           oldState.position != newState.position ||
-           oldState.duration != newState.duration ||
-           oldState.speed != newState.speed ||
-           oldState.playerState.processingState != newState.playerState.processingState ||
-           oldState.renderPreviewStart != newState.renderPreviewStart ||
-           oldState.renderPreviewEnd != newState.renderPreviewEnd;
+        oldState.isPlaying != newState.isPlaying ||
+        oldState.position != newState.position ||
+        oldState.duration != newState.duration ||
+        oldState.speed != newState.speed ||
+        oldState.playerState.processingState !=
+            newState.playerState.processingState ||
+        oldState.renderPreviewStart != newState.renderPreviewStart ||
+        oldState.renderPreviewEnd != newState.renderPreviewEnd;
   }
 
   @override
@@ -434,11 +450,15 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               Row(
                 children: [
                   Expanded(child: _buildProgressBar()),
-                  _isPreviewMode ? const SizedBox(width: 10) : const SizedBox.shrink(),
-                  _isPreviewMode ? Transform.translate(
-                    offset: const Offset(0, -8),
-                    child: _buildUnlockFullAccessTip(),
-                  ) : const SizedBox.shrink(),
+                  _isPreviewMode
+                      ? const SizedBox(width: 10)
+                      : const SizedBox.shrink(),
+                  _isPreviewMode
+                      ? Transform.translate(
+                          offset: const Offset(0, -8),
+                          child: _buildUnlockFullAccessTip(),
+                        )
+                      : const SizedBox.shrink(),
                 ],
               ),
               const SizedBox(height: 20),
@@ -627,9 +647,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 构建进度条
   Widget _buildProgressBar() {
     return RepaintBoundary(
-      child: AudioProgressBar(
-        onOutPreview: _onUnlockFullAccessTap,
-      ),
+      child: AudioProgressBar(onOutPreview: _onUnlockFullAccessTap),
     );
   }
 
