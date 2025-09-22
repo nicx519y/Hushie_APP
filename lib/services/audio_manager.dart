@@ -380,6 +380,34 @@ class AudioManager {
     }
   }
 
+  // 检查当前播放位置是否超出预览区间
+  bool get isOutOfPreview {
+    // 如果不是预览模式，返回false
+    if (!isPreviewMode) {
+      return false;
+    }
+    
+    // 如果没有当前音频，返回false
+    if (currentAudio == null) {
+      return false;
+    }
+    
+    final audio = currentAudio!;
+    final currentPosition = position;
+    final previewStart = audio.previewStart ?? Duration.zero;
+    final previewDuration = audio.previewDuration ?? Duration.zero;
+    
+    // 检查预览参数是否有效
+    if (previewStart < Duration.zero || previewDuration <= Duration.zero) {
+      return false;
+    }
+    
+    final previewEnd = previewStart + previewDuration;
+    
+    // 判断当前位置是否在预览区域之外
+    return currentPosition < previewStart || currentPosition >= previewEnd;
+  }
+
   /// 管理播放列表（清理和补充）
   Future<void> _managePlaylist(String currentAudioId) async {
     // 防止频繁触发：如果正在管理播放列表或者是同一个音频ID，直接返回

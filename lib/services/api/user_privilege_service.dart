@@ -58,7 +58,6 @@ class UserPrivilegeService {
         _cachedPrivilege = privilege;
         _lastFetchTime = DateTime.now();
         
-        debugPrint('👑 [USER_PRIVILEGE_SERVICE] 成功获取用户权限: hasPremium=${privilege.hasPremium}, endDate=${privilege.premiumEndDate}');
         return privilege;
       } else {
         debugPrint('👑 [USER_PRIVILEGE_SERVICE] API返回错误: errNo=${apiResponse.errNo}');
@@ -95,19 +94,6 @@ class UserPrivilegeService {
     } catch (e) {
       debugPrint('👑 [USER_PRIVILEGE_SERVICE] 获取剩余天数失败: $e');
       return 0;
-    }
-  }
-  
-  /// 获取格式化的权限到期时间
-  /// 
-  /// 返回友好的时间显示格式
-  Future<String> getFormattedEndDate({bool forceRefresh = false}) async {
-    try {
-      final privilege = await checkUserPrivilege(forceRefresh: forceRefresh);
-      return privilege.formattedEndDate;
-    } catch (e) {
-      debugPrint('👑 [USER_PRIVILEGE_SERVICE] 获取格式化时间失败: $e');
-      return '未知';
     }
   }
   

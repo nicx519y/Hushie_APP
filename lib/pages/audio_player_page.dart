@@ -186,7 +186,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     }));
   }
 
-  void _togglePlay() {
+  void _playAndPauseBtnPress() {
     // 如果正在加载metadata，不允许播放
     debugPrint(
       '点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id',
@@ -205,7 +205,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         _audioManager.playAudio(_currentAudio!);
       } else {
         // 如果是同一首音频，直接恢复播放
-        _audioManager.togglePlayPause();
+        if (!_audioManager.isOutOfPreview) {
+          _audioManager.togglePlayPause();
+        } else {
+          // 预览区间已超出，提示用户解锁完整访问
+          _onUnlockFullAccessTap();
+        }
       }
     } else {
       // 暂停播放
@@ -666,7 +671,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
       ),
-      onPressed: _togglePlay,
+      onPressed: _playAndPauseBtnPress,
       icon: _isAudioLoading
           ? const SizedBox(
               width: 24,

@@ -37,7 +37,6 @@ class _ProfilePageState extends State<ProfilePage>
   // 音频数据
   List<AudioItem> likedAudios = [];
   bool _isLoadingLiked = false;
-  bool _isRefreshingAuth = false;
 
   // 当前播放音频ID
   String currentAudioId = '';
@@ -64,14 +63,13 @@ class _ProfilePageState extends State<ProfilePage>
       }
     });
 
-    // 订阅登录状态变化事件
-    _subscribeToAuthChanges();
-
-    // 订阅音频流变化事件
-    _subscribeToAudioChanges();
-
-    // 异步初始化登录状态
-    _initializeAuthState();
+    // 先初始化登录状态渲染，再监听登录状态变化，否则可能会产生状态冲突
+    _initializeAuthState().then((_) {
+        // 订阅登录状态变化事件
+      _subscribeToAuthChanges();
+      // 订阅音频流变化事件
+      _subscribeToAudioChanges();
+    });
   }
 
   /// 订阅认证状态变化事件
