@@ -13,7 +13,7 @@ class SubscribeService {
   /// 
   /// [request] 创建订阅请求参数
   /// 返回创建的订阅信息
-  static Future<ApiResponse<SubscribeModel>> createSubscribe(CreateSubscribeRequest request) async {
+  static Future<ApiResponse<bool>> createSubscribe(CreateSubscribeRequest request) async {
     try {
       // 构建请求URI
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.subscribeCreate));
@@ -29,8 +29,8 @@ class SubscribeService {
 
       // 使用统一的ApiResponse处理响应
       return ApiResponse.fromJson(
-        jsonData,
-        (dataJson) => SubscribeModel.fromJson(dataJson),
+        jsonData, 
+        (dataJson) => true,
       );
     } catch (e) {
       return ApiResponse.error(errNo: -1);
@@ -43,7 +43,7 @@ class SubscribeService {
   /// [basePlanId] Google Play基础方案ID
   /// [purchaseToken] Google Play购买凭证
   /// 返回创建的订阅信息
-  static Future<ApiResponse<SubscribeModel>> createGooglePlaySubscribe({
+  static Future<ApiResponse<bool>> createGooglePlaySubscribe({
     required String productId,
     required String basePlanId,
     required String purchaseToken,

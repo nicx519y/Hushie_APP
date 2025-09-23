@@ -401,10 +401,9 @@ class GooglePlayBillingService {
         purchaseToken: purchaseDetails.verificationData.serverVerificationData,
       );
       
-      if (result.data != null) {
+      // 检查服务端返回的结果
+      if (result.data == true) {
         debugPrint('✅ 购买验证成功: ${purchaseDetails.productID}');
-        debugPrint('  - 订阅ID: ${result.data!.id}');
-        debugPrint('  - 订阅状态: ${result.data!.status}');
         return true;
       } else {
         debugPrint('❌ 购买验证失败: errNo=${result.errNo}');
