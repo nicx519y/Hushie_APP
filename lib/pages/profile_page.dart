@@ -362,14 +362,20 @@ class _ProfilePageState extends State<ProfilePage>
                 controller: _tabController,
                 children: [
                   // History 标签页 - 使用封装的 AudioHistoryList 组件
-                  AudioHistoryList(
-                    onItemTap: _onAudioListItemTap,
-                    padding: const EdgeInsets.only(bottom: 120),
+                  _KeepAliveWrapper(
+                    child: AudioHistoryList(
+                      key: const PageStorageKey('history_list'),
+                      onItemTap: _onAudioListItemTap,
+                      padding: const EdgeInsets.only(bottom: 120),
+                    ),
                   ),
                   // Like 标签页 - 使用封装的 LikesList 组件
-                  LikesList(
-                    onItemTap: _onAudioListItemTap,
-                    padding: const EdgeInsets.only(bottom: 120),
+                  _KeepAliveWrapper(
+                    child: LikesList(
+                      key: const PageStorageKey('likes_list'),
+                      onItemTap: _onAudioListItemTap,
+                      padding: const EdgeInsets.only(bottom: 120),
+                    ),
                   ),
                 ],
               ),
@@ -449,5 +455,27 @@ class _ProfilePageState extends State<ProfilePage>
         ],
       ),
     );
+  }
+}
+
+/// KeepAlive 包装器，用于保持 TabBarView 中页面的状态
+class _KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+
+  const _KeepAliveWrapper({required this.child});
+
+  @override
+  State<_KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<_KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // 必须调用 super.build(context)
+    return widget.child;
   }
 }
