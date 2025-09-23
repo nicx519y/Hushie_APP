@@ -79,10 +79,6 @@ class _PremiumAccessCardState extends State<PremiumAccessCard> {
 
   /// 格式化过期时间显示
   String _formatExpireTime(DateTime expireTime) {
-    if (expireTime.isBefore(DateTime.now())) {
-      return 'Premium Expired';
-    }
-    
     // 2025-09-01
     return 'Expires on ${expireTime.toLocal().toString().split(' ')[0]}';
   }

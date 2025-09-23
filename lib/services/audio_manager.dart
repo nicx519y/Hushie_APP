@@ -83,11 +83,12 @@ class AudioManager {
       _audioService = await AudioService.init(
         builder: () => AudioPlayerService(),
         config: const AudioServiceConfig(
-          androidNotificationChannelId: 'com.hushie.ai',
+          androidNotificationChannelId: 'com.hushie.audio',
           androidNotificationChannelName: 'Hushie.AI',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
-          androidNotificationIcon: 'drawable/ic_notification',
+          androidNotificationIcon: 'drawable/ic_notification_stat',
+          preloadArtwork: true,
         ),
       );
 

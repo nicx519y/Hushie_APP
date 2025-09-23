@@ -170,7 +170,7 @@ class AudioPlayerService extends BaseAudioHandler {
       // 安全地获取封面URL
       String? coverUrlString;
       try {
-        final bestResolution = audio.cover.getBestResolution(80);
+        final bestResolution = audio.cover.getBestResolution(160);
         final url = bestResolution.url;
         
         // 验证URL有效性，避免设置无效的artUri

@@ -34,7 +34,7 @@ class AudioStats extends StatelessWidget {
           style: TextStyle(
             fontSize: fontSize,
             color: textColor,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
           ),
         ),
         SizedBox(width: spacing),
@@ -47,7 +47,7 @@ class AudioStats extends StatelessWidget {
           style: TextStyle(
             fontSize: fontSize,
             color: textColor,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
           ),
         ),
         SizedBox(width: spacing),
@@ -61,7 +61,7 @@ class AudioStats extends StatelessWidget {
             style: TextStyle(
               fontSize: fontSize,
               color: textColor,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w500,
             ),
             overflow: TextOverflow.ellipsis,
           ),

@@ -52,7 +52,7 @@
             </intent-filter>
             <meta-data
                 android:name="com.ryanheise.audioservice.smallIcon"
-                android:resource="@drawable/ic_notification" />
+                android:resource="@drawable/ic_notification_stat" />
         </service>
         
         <!-- 媒体按钮接收器 -->
