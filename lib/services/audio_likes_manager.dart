@@ -458,6 +458,87 @@ class AudioLikesManager {
     }
   }
 
+  /// 设置音频点赞状态
+  /// 
+  /// [audioId] 音频ID
+  /// [isLike] 是否点赞，true为点赞，false为取消点赞
+  /// 返回操作是否成功
+  Future<bool> setLike(AudioItem audio, bool isLike) async {
+
+    try {
+
+      // 检查登录状态
+      final bool isLogin = await AuthManager.instance.isSignedIn();
+      if (!isLogin) {
+        debugPrint('🎵 [LIKES] 用户未登录，无法设置点赞状态');
+        return false;
+      }
+
+      // 调用 AudioLikeService.likeAudio 接口
+      final Map<String, dynamic> result = await AudioLikeService.likeAudio(
+        audioId: audio.id,
+        isLiked: isLike,
+      );
+
+      // 打印完整的 API 返回结果进行调试
+      debugPrint('🎵 [LIKES] API 完整返回结果: $result');
+      debugPrint('🎵 [LIKES] result.keys: ${result.keys}');
+      debugPrint('🎵 [LIKES] result.values: ${result.values}');
+
+      final bool isLikedResult = result['is_liked'] as bool? ?? false;
+      final int likesCountResult = result['likes_count'] as int? ?? 0;
+      // 从日志可以看出，API 返回的字段名是 'cid'，但值可能为 null
+      // 我们需要安全地处理这个字段
+      final String? cid = result.containsKey('cid') ? result['cid']?.toString() : null;
+
+      debugPrint('🎵 [LIKES] API 返回结果: isLiked=$isLikedResult, likesCount=$likesCountResult, cid=$cid');
+      debugPrint('🎵 [LIKES] 当前音频ID: ${audio.id}');
+
+      // 由于 API 返回的 cid 可能为 null，我们直接使用传入的 audio.id 进行处理
+      // 这样可以确保点赞逻辑正常执行
+      if (isLikedResult) {
+        // 如果点赞成功，检查本地缓存中是否存在该音频
+        final existingIndex = _likesCache.indexWhere((item) => item.id == audio.id);
+        
+        // 创建更新后的音频对象
+        final updatedAudio = audio.copyWith(
+          isLiked: true,
+          likesCount: likesCountResult,
+        );
+        
+        if (existingIndex != -1) {
+          // 如果存在，先删除原位置的音频
+          _likesCache.removeAt(existingIndex);
+        }
+        
+        // 将音频添加到列表顶部
+        _likesCache.insert(0, updatedAudio);
+        
+        debugPrint('🎵 [LIKES] 音频已添加到点赞列表顶部: ${audio.id}');
+      } else {
+        // 如果取消点赞，从本地缓存中移除该音频
+        final existingIndex = _likesCache.indexWhere((item) => item.id == audio.id);
+        if (existingIndex != -1) {
+          _likesCache.removeAt(existingIndex);
+          debugPrint('🎵 [LIKES] 音频已从点赞列表中移除: ${audio.id}');
+        }
+      }
+
+      // 保存到本地存储
+      await _saveLikesToStorage(_likesCache);
+      
+      // 通知UI更新
+      _likesNotifier.value = List.from(_likesCache);
+      _likesStreamController.add(List.from(_likesCache));
+      
+      debugPrint('🎵 [LIKES] 缓存长度: ${_likesCache.length}, 通知器值长度: ${_likesNotifier.value.length}');
+      return true;
+    } catch (e) {
+      debugPrint('🎵 [LIKES] 设置音频点赞状态失败: $e');
+      return false;
+    }
+  }
+
   /// 清理资源
   Future<void> dispose() async {
     // 取消认证状态订阅

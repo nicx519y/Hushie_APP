@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hushie_app/components/subscribe_dialog.dart';
+import 'package:hushie_app/services/audio_likes_manager.dart';
 import 'package:hushie_app/services/auth_manager.dart';
 import 'package:hushie_app/services/subscribe_privilege_manager.dart';
 import '../models/audio_item.dart';
@@ -264,10 +265,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     try {
       // 调用API
-      await AudioLikeService.likeAudio(
-        audioId: _currentAudio!.id,
-        isLiked: newIsLiked,
-      );
+      await AudioLikesManager.instance.setLike( _currentAudio!, newIsLiked);
 
       // 请求成功，不需要再更改本地状态，保持当前状态
     } catch (e) {

@@ -10,6 +10,7 @@ import 'audio_history_manager.dart';
 import 'api/audio_list_service.dart';
 import 'subscribe_privilege_manager.dart';
 import 'package:flutter/foundation.dart';
+import 'audio_likes_manager.dart';
 
 /// 预览区间即将超出事件
 class PreviewOutEvent {
@@ -281,6 +282,9 @@ class AudioManager {
     // 先初始化音频历史管理器（确保数据库可用）
     await AudioHistoryManager.instance.initialize();
     debugPrint('AudioManager: AudioHistoryManager 初始化完成');
+
+    await AudioLikesManager.instance.initialize();
+    debugPrint('AudioManager: AudioLikesManager 初始化完成');
 
     // 初始化AudioPlaylist
     await AudioPlaylist.instance.initialize();

@@ -138,7 +138,7 @@ class AudioItem {
   }
 
   AudioItem copyWith({
-    Int32? id,
+    String? id,
     String? cid,
     ImageModel? cover,
     String? title,
@@ -161,7 +161,7 @@ class AudioItem {
     Duration? playProgress,
   }) {
     return AudioItem(
-      id: id as String,
+      id: id ?? this.id,
       cover: cover ?? this.cover,
       title: title ?? this.title,
       desc: desc ?? this.desc,
