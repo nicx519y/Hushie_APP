@@ -8,6 +8,7 @@ import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
 import '../services/audio_service.dart';
 import '../services/api/audio_like_service.dart';
+import '../services/api/audio_detail_service.dart';
 import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
 import '../components/audio_history_dialog.dart';
@@ -82,6 +83,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isLikeRequesting = false; // 是否正在请求点赞
   bool _localIsLiked = false; // 本地点赞状态
   int _localLikesCount = 0; // 本地点赞数
+  bool _isLikeButtonVisible = false; // 点赞按钮是否可见
 
   // 播放列表相关状态管理
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
@@ -104,7 +106,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       setState(() {
         _currentAudio = widget.initialAudio;
         _isAudioLoading = true;
+        _isLikeButtonVisible = false; // 初始化时隐藏点赞按钮
+        // 获取音频详情并更新点赞状态
+        _fetchAudioDetailAndUpdateLikeState(widget.initialAudio!.id);
       });
+      
     }
 
     SubscribePrivilegeManager.instance
@@ -136,7 +142,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               // 初始化本地状态
               _localIsLiked = _isLiked;
               _localLikesCount = _currentAudio?.likesCount ?? 0;
+              _isLikeButtonVisible = false; // 音频变化时隐藏点赞按钮
               needsUpdate = true;
+              
+              // 获取音频详情并更新点赞状态
+              if (_currentAudio != null) {
+                _fetchAudioDetailAndUpdateLikeState(_currentAudio!.id);
+              }
             }
 
             // 检查播放状态是否变化
@@ -276,6 +288,36 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       setState(() {
         _isLikeRequesting = false;
       });
+    }
+  }
+
+  /// 获取音频详情并更新点赞状态
+  Future<void> _fetchAudioDetailAndUpdateLikeState(String audioId) async {
+    try {
+      debugPrint('🎵 [PLAYER] 开始获取音频详情: $audioId');
+      
+      // 获取最新的音频详情
+      final audioDetail = await AudioDetailService.getAudioDetail(audioId);
+      
+      if (mounted && _currentAudio?.id == audioId) {
+        // 只有当前音频ID匹配时才更新状态
+        setState(() {
+          _localIsLiked = audioDetail.isLiked ?? false;
+          _localLikesCount = audioDetail.likesCount ?? 0;
+          _isLikeButtonVisible = true; // 获取成功后显示点赞按钮
+        });
+        
+        debugPrint('🎵 [PLAYER] 音频详情获取成功，更新点赞状态: isLiked=${audioDetail.isLiked}, likesCount=${audioDetail.likesCount}');
+      }
+    } catch (e) {
+      debugPrint('🎵 [PLAYER] 获取音频详情失败: $e');
+      
+      if (mounted) {
+        // 获取失败时也要显示点赞按钮，使用当前的状态
+        setState(() {
+          _isLikeButtonVisible = true;
+        });
+      }
     }
   }
 
@@ -604,6 +646,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建点赞按钮
   Widget _buildLikeButton() {
+    // 如果点赞按钮不可见，返回占位符
+    if (!_isLikeButtonVisible) {
+      return const SizedBox(width: 48, height: 48);
+    }
+
     return Column(
       children: [
         IconButton(
