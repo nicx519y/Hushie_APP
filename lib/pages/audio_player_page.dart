@@ -9,7 +9,7 @@ import '../services/audio_service.dart';
 import '../services/api/audio_like_service.dart';
 import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
-import '../components/history_list.dart';
+import '../components/audio_history_dialog.dart';
 import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
@@ -297,7 +297,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       _isShowingPlaylist = true;
     });
 
-    await showHistoryListWithAnimation(
+    await showAudioHistoryDialog(
       context,
       onItemTap: (audio) {
         _audioManager.playAudio(audio);

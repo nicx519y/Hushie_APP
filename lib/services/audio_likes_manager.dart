@@ -233,10 +233,10 @@ class AudioLikesManager {
   Future<List<AudioItem>> loadMore() async {
     try {
       // 检查是否还有更多数据
-      if (!_hasMoreData) {
-        debugPrint('🎵 [LIKES] 没有更多点赞数据可加载');
-        return [];
-      }
+      // if (!_hasMoreData) {
+      //   debugPrint('🎵 [LIKES] 没有更多点赞数据可加载');
+      //   return [];
+      // }
 
       // 检查登录状态
       final bool isLogin = await AuthManager.instance.isSignedIn();

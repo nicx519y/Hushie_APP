@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:hushie_app/components/subscribe_dialog.dart';
-import 'package:hushie_app/services/api/user_likes_service.dart';
 import '../models/audio_item.dart';
 import '../models/tab_item.dart';
 import '../components/custom_tab_bar.dart';
-import '../components/audio_list.dart';
 import '../components/user_header.dart';
 import '../components/premium_access_card.dart';
-import '../services/audio_history_manager.dart';
+import '../components/likes_list.dart';
+import '../components/audio_history_list.dart';
 import '../services/auth_manager.dart';
 import '../utils/custom_icons.dart';
 import 'login_page.dart';
@@ -33,10 +31,6 @@ class _ProfilePageState extends State<ProfilePage>
   late List<TabItemModel> _tabItems;
   late TabController _tabController;
   int currentTabIndex = 0;
-
-  // 音频数据
-  List<AudioItem> likedAudios = [];
-  bool _isLoadingLiked = false;
 
   // 当前播放音频ID
   String currentAudioId = '';
@@ -100,6 +94,8 @@ class _ProfilePageState extends State<ProfilePage>
     debugPrint('👤 [PROFILE] 已订阅认证状态变化事件');
   }
 
+
+
   /// 订阅音频流变化事件
   void _subscribeToAudioChanges() {
     _audioSubscription?.cancel(); // 取消之前的订阅
@@ -123,11 +119,8 @@ class _ProfilePageState extends State<ProfilePage>
 
   /// 登录后加载数据
   Future<void> _loadDataAfterLogin() async {
-    // 并行加载历史和喜欢数据
-    await Future.wait([
-      _loadLikedAudios(),
-      // AudioHistoryManager.instance.refreshHistory(),
-    ]);
+    // 历史数据和点赞数据都由各自的管理器自动处理登录状态变化
+    // AudioHistoryManager 和 LikesList 组件会自动监听认证状态并刷新数据
   }
 
   /// 登出后清空页面数据
@@ -136,7 +129,6 @@ class _ProfilePageState extends State<ProfilePage>
 
     if (mounted) {
       setState(() {
-        likedAudios.clear();
         userName = '';
       });
     }
@@ -172,7 +164,6 @@ class _ProfilePageState extends State<ProfilePage>
         if (mounted) {
           setState(() {
             userName = '';
-            likedAudios.clear();
           });
         }
       }
@@ -183,7 +174,6 @@ class _ProfilePageState extends State<ProfilePage>
         setState(() {
           isLoggedIn = false;
           userName = '';
-          likedAudios.clear();
         });
       }
     }
@@ -220,7 +210,6 @@ class _ProfilePageState extends State<ProfilePage>
           // 如果登录状态变为false，清空用户信息和数据
           setState(() {
             userName = '';
-            likedAudios.clear();
           });
         }
       }
@@ -231,7 +220,6 @@ class _ProfilePageState extends State<ProfilePage>
         setState(() {
           isLoggedIn = false;
           userName = '';
-          likedAudios.clear();
         });
       }
     } 
@@ -256,108 +244,6 @@ class _ProfilePageState extends State<ProfilePage>
       if (mounted && userName.isEmpty) {
         setState(() {
           userName = 'User';
-        });
-      }
-    }
-  }
-
-  // 加载喜欢数据
-  Future<void> _loadLikedAudios() async {
-    debugPrint(
-      '👤 [PROFILE] 加载喜欢数据, _isLoadingLiked: ${_isLoadingLiked}, isLoggedIn: ${isLoggedIn}',
-    );
-    
-    if (_isLoadingLiked || !isLoggedIn) return;
-
-    setState(() {
-      _isLoadingLiked = true;
-    });
-
-    try {
-      // 使用 UserLikesManager 获取喜欢列表
-      final likesList = await UserLikesService.getUserLikedAudios();
-
-      if (mounted) {
-        setState(() {
-          likedAudios = likesList;
-        });
-        debugPrint('👤 [PROFILE] 成功加载 ${likesList.length} 个喜欢的音频');
-      }
-    } catch (e) {
-      debugPrint('加载喜欢数据失败: $e');
-      // 加载失败时，确保UI状态正确
-      if (mounted) {
-        setState(() {
-          likedAudios = [];
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingLiked = false;
-        });
-      }
-    }
-  }
-
-  // 1. 修复下拉刷新 - 应该重新加载第一页
-  Future<void> _refreshLikedAudios() async {
-    if (_isLoadingLiked || !isLoggedIn) return;
-
-    setState(() {
-      _isLoadingLiked = true;
-    });
-
-    try {
-      // 重新获取第一页数据
-      final refreshedAudios = await UserLikesService.getUserLikedAudios(
-        count: 20, // 不传cid，获取第一页
-      );
-
-      if (mounted) {
-        setState(() {
-          likedAudios = refreshedAudios; // 替换整个列表
-        });
-      }
-    } catch (e) {
-      debugPrint('刷新喜欢数据失败: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingLiked = false;
-        });
-      }
-    }
-  }
-
-  // 2. 修复上拉加载更多
-  Future<void> _loadMoreLikedAudios() async {
-    if (_isLoadingLiked || !isLoggedIn) return;
-
-    // 检查是否有数据用于分页
-    if (likedAudios.isEmpty) return;
-
-    setState(() {
-      _isLoadingLiked = true;
-    });
-
-    try {
-      final moreLikedAudios = await UserLikesService.getUserLikedAudios(
-        cid: likedAudios.last.id, // 移除 ?? ''，因为上面已经检查了
-        count: 20,
-      );
-
-      if (moreLikedAudios.isNotEmpty) {
-        setState(() {
-          likedAudios.addAll(moreLikedAudios); // 追加数据
-        });
-      }
-    } catch (e) {
-      debugPrint('加载更多喜欢数据失败: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingLiked = false;
         });
       }
     }
@@ -475,26 +361,16 @@ class _ProfilePageState extends State<ProfilePage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // History 标签页 - 从AudioHistoryManager获取数据并监听事件流
-                  _HistoryTabContent(
-                    currentAudioId: currentAudioId,
+                  // History 标签页 - 使用封装的 AudioHistoryList 组件
+                  AudioHistoryList(
                     onItemTap: _onAudioListItemTap,
+                    padding: const EdgeInsets.only(bottom: 120),
                   ),
-                  // Like 标签页
-                  _isLoadingLiked && likedAudios.isEmpty
-                      ? _buildLoadingWidget()
-                      : likedAudios.isEmpty
-                      ? _buildEmptyWidget('No liked content')
-                      : AudioList(
-                          audios: likedAudios,
-                          padding: const EdgeInsets.only(bottom: 120),
-                          emptyWidget: _buildEmptyWidget('No liked content'),
-                          onRefresh: _refreshLikedAudios, // 改为刷新方法
-                          onLoadMore: _loadMoreLikedAudios,
-                          hasMoreData: true,
-                          isLoadingMore: _isLoadingLiked, // 添加加载状态
-                          onItemTap: _onAudioListItemTap,
-                        ),
+                  // Like 标签页 - 使用封装的 LikesList 组件
+                  LikesList(
+                    onItemTap: _onAudioListItemTap,
+                    padding: const EdgeInsets.only(bottom: 120),
+                  ),
                 ],
               ),
             ),
@@ -572,151 +448,6 @@ class _ProfilePageState extends State<ProfilePage>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildEmptyWidget(String text) {
-    return Column(
-      children: [
-        Expanded(
-          child: Center(
-            child: Text(
-              text,
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-          ),
-        ),
-        const SizedBox(height: 180),
-      ],
-    );
-  }
-
-  Widget _buildLoadingWidget() {
-    return Column(
-      children: [
-        Expanded(child: Center(child: CircularProgressIndicator())),
-        const SizedBox(height: 180),
-      ],
-    );
-  }
-}
-
-/// 历史记录标签页内容组件
-class _HistoryTabContent extends StatefulWidget {
-  final String currentAudioId;
-  final void Function(AudioItem) onItemTap;
-
-  const _HistoryTabContent({
-    required this.currentAudioId,
-    required this.onItemTap,
-  });
-
-  @override
-  State<_HistoryTabContent> createState() => _HistoryTabContentState();
-}
-
-class _HistoryTabContentState extends State<_HistoryTabContent> {
-  List<AudioItem> _historyList = [];
-  StreamSubscription<List<AudioItem>>? _historyStreamSubscription;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeHistory();
-  }
-
-  /// 初始化历史记录数据
-  Future<void> _initializeHistory() async {
-    try {
-      // 获取初始历史记录数据
-      final historyList = await AudioHistoryManager.instance.getAudioHistory();
-      if (mounted) {
-        setState(() {
-          _historyList = historyList;
-          _isLoading = false;
-        });
-      }
-
-      // 监听历史记录变更事件流
-      _historyStreamSubscription = AudioHistoryManager.instance.historyStream
-          .listen((updatedHistory) {
-            if (mounted) {
-              setState(() {
-                _historyList = updatedHistory;
-              });
-            }
-          });
-    } catch (e) {
-      debugPrint('初始化历史记录失败: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _refreshHistory() async {
-    try {
-      await AudioHistoryManager.instance.refreshHistory();
-    } catch (e) {
-      debugPrint('刷新历史记录失败: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _historyStreamSubscription?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Column(
-        children: [
-          Expanded(child: Center(child: CircularProgressIndicator())),
-          const SizedBox(height: 180),
-        ],
-      );
-    }
-
-    if (_historyList.isEmpty) {
-      return Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                'No history',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            ),
-          ),
-          const SizedBox(height: 180),
-        ],
-      );
-    }
-
-    return AudioList(
-      padding: const EdgeInsets.only(bottom: 120),
-      audios: _historyList,
-      emptyWidget: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                'No history',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            ),
-          ),
-          const SizedBox(height: 180),
-        ],
-      ),
-      onRefresh: _refreshHistory,
-      hasMoreData: false,
-      onItemTap: widget.onItemTap,
     );
   }
 }
