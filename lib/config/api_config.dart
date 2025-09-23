@@ -99,6 +99,7 @@ class ApiEndpoints {
   static const String audioList = '/audio/list';
   static const String audioSearch = '/audio/search';
   static const String audioLike = '/audio/like';
+  static const String audioDetail = '/audios'; // 音频详情接口，需要拼接ID
 
   // 用户相关接口
   static const String userProfile = '/user/profile';

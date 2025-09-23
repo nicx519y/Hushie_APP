@@ -97,24 +97,23 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   void initState() {
     super.initState();
     _audioManager = AudioManager.instance;
-    // 只监听音频播放状态，不主动加载音频
-    _listenToAudioState();
 
-    SubscribePrivilegeManager.instance
-        .hasValidPremium(forceRefresh: false)
-        .then((value) {
-          setState(() {
-            _isPreviewMode = !value;
-          });
-        });
-
-    // 如果有初始音频，用初始音频信息渲染
+    // 用初始音频初始化状态
     if (widget.initialAudio != null) {
       setState(() {
         _currentAudio = widget.initialAudio;
         _isAudioLoading = true;
       });
     }
+
+    SubscribePrivilegeManager.instance
+        .hasValidPremium(forceRefresh: false)
+        .then((value) {
+          setState(() {
+            _isPreviewMode = !value;
+            _listenToAudioState();
+          });
+        });
   }
 
   void _listenToAudioState() {
