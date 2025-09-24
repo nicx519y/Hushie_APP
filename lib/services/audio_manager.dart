@@ -130,7 +130,7 @@ class AudioManager {
       // 检查音频是否发生变化
       bool audioChanged = _lastAudioId != currentAudioId;
       bool playingStateChanged = _lastIsPlaying != isPlaying;
-      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 500);
+      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 200);
       // bool positionChanged = _lastPosition != position;
       // debugPrint('[checkWillOutPreview] positionChanged: $positionChanged; _lastPosition: $_lastPosition; position: $position');
       // 管理播放列表 - 只在音频ID发生变化时执行
@@ -159,6 +159,12 @@ class AudioManager {
       // 检查预览区间 - 只在位置发生明显变化时检查
       if (positionChanged && _checkWillOutPreview(position)) {
         // 发送预览区间即将超出事件
+        
+        // 在暂停之前，跳转到预览区域中离当前位置最近的点
+        final nearestPosition = _transformPosition(position);
+        debugPrint('[AudioManager] 超出预览区间，从 $position 跳转到最近位置 $nearestPosition');
+        await seek(nearestPosition);
+        
         pause();
         _previewOutController.add(PreviewOutEvent(position: position));
       }
