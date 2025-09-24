@@ -88,6 +88,19 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       return;
     }
 
+    // 已经在订阅中，不能重复订阅
+    if (_isSelectedPlanSubscribing) {
+      _closeDialog();
+      showNotificationDialog(
+        context,
+        title: 'Notification',
+        message:
+            'Subscribing. Please don\'t repeat.',
+        buttonText: 'Got It',
+      );
+      return;
+    }
+
     // 不可用 就是不能降级 已经订阅了更高级的计划
     if (!_isSelectedPlanAvailable) {
       _closeDialog();
@@ -101,11 +114,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       return;
     }
 
-    // 已经在订阅中，不能重复订阅
-    if (_isSelectedPlanSubscribing) {
-      ToastHelper.showInfo(ToastMessages.subscriptionAlreadySubscribed);
-      return;
-    }
+    
 
     // 启动Google Play Billing支付流程
     _initiateGooglePlayBillingPurchase();
@@ -120,7 +129,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
     try {
 
-      _closeDialog();
+      
 
       // 显示加载状态
       ToastHelper.showInfo(ToastMessages.subscriptionInitializing);
@@ -131,9 +140,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       // 初始化服务
       final isInitialized = await billingService.initialize();
       if (!isInitialized) {
-        ToastHelper.showError(
-          'Google Play Billing service unavailable, please check device settings',
-        );
+        ToastHelper.showError(ToastMessages.billingServiceUnavailable);
         return;
       }
 
@@ -142,9 +149,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       final basePlanId = basePlan?.googlePlayBasePlanId ?? '';
 
       if (basePlanId.isEmpty) {
-        ToastHelper.showError(
-          'Product configuration error, unable to purchase',
-        );
+        ToastHelper.showError(ToastMessages.productConfigError);
         return;
       }
 
@@ -162,9 +167,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       }
 
       if (basePlanId.isEmpty) {
-        ToastHelper.showError(
-          'Product configuration error, unable to purchase',
-        );
+        ToastHelper.showError(ToastMessages.productConfigError);
         return;
       }
 
@@ -185,16 +188,12 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
         // 根据购买结果处理不同情况
         switch (purchaseResult.result) {
           case PurchaseResult.success:
-            ToastHelper.showSuccess(
-              'Purchase successful! Subscription activated',
-            );
+            ToastHelper.showSuccess(ToastMessages.subscriptionSuccess);
             // 购买成功，关闭对话框
-            // _closeDialog();
+            _closeDialog();
             break;
           case PurchaseResult.pending:
-            ToastHelper.showInfo(
-              'Purchase pending, please check subscription status later',
-            );
+            ToastHelper.showInfo(ToastMessages.subscriptionPending);
             break;
           case PurchaseResult.canceled:
             ToastHelper.showInfo(ToastMessages.subscriptionCanceled);
@@ -202,37 +201,19 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
           case PurchaseResult.error:
           case PurchaseResult.failed:
             ToastHelper.showError(
-              purchaseResult.message ?? 'Purchase failed, please try again',
+              purchaseResult.message ?? ToastMessages.subscriptionFailed,
             );
             break;
         }
       } catch (e) {
         debugPrint('Google Play Billing购买异常: $e');
-        ToastHelper.showError(
-          'An exception occurred during purchase, please try again',
-        );
+        ToastHelper.showError(ToastMessages.subscriptionException);
       }
     } catch (e) {
       debugPrint('Google Play Billing购买失败: $e');
 
-      // 根据错误类型提供具体的错误信息
-      String errorMessage = 'Purchase failed, please try again';
-
-      if (e.toString().contains('BILLING_UNAVAILABLE')) {
-        errorMessage = 'Google Play Billing service unavailable';
-      } else if (e.toString().contains('ITEM_UNAVAILABLE')) {
-        errorMessage = 'Product temporarily unavailable';
-      } else if (e.toString().contains('DEVELOPER_ERROR')) {
-        errorMessage = 'App configuration error, please contact developer';
-      } else if (e.toString().contains('USER_CANCELED')) {
-        errorMessage = 'User canceled the purchase';
-      } else if (e.toString().contains('SERVICE_DISCONNECTED')) {
-        errorMessage =
-            'Network connection failed, please check network and try again';
-      } else if (e.toString().contains('SERVICE_TIMEOUT')) {
-        errorMessage = 'Request timeout, please try again';
-      }
-
+      // 使用统一的错误消息处理
+      final errorMessage = ToastMessages.getBillingErrorMessage(e);
       ToastHelper.showError(errorMessage);
     } finally {
       // 恢复订阅按钮状态
@@ -367,14 +348,12 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                   width: double.infinity,
                   height: 44,
                   child: ElevatedButton(
-                    onPressed: (_isSelectedPlanSubscribing || _isPurchasing)
-                        ? null
-                        : _onSubscribe,
+                    onPressed: _onSubscribe,
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          (_isSelectedPlanSubscribing || _isPurchasing)
+                          /*(_isPurchasing)
                           ? const Color(0xFFCCCCCC)
-                          : const Color(0xFFFFDE69),
+                          : */const Color(0xFFFFDE69),
                       foregroundColor: Colors.black,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -382,17 +361,17 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                       ),
                     ),
                     child: Text(
-                      _isPurchasing
+                      /*_isPurchasing
                           ? 'Processing...'
-                          : (_isSelectedPlanSubscribing
+                          : */(_isSelectedPlanSubscribing
                                 ? 'Subscribing'
                                 : 'Subscribe'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: (_isSelectedPlanSubscribing || _isPurchasing)
+                        color: /*(_isPurchasing)
                             ? const Color(0xFF999999)
-                            : const Color(0xFF502D19),
+                            : */const Color(0xFF502D19),
                       ),
                     ),
                   ),
