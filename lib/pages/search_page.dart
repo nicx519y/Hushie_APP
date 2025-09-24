@@ -369,7 +369,7 @@ class _SearchPageState extends State<SearchPage> {
                 children: [
                   _hasSearched ? _buildSearchResults() : _buildSearchHistory(),
                   // 没有权限时的提示按钮
-                  if (!_canTapSearchItem && _hasSearched)
+                  if (!_canTapSearchItem && _hasSearched && _searchResults.isNotEmpty)
                     Align(
                       alignment: Alignment.center,
                       child: ElevatedButton(
