@@ -151,6 +151,10 @@ class AudioPlaylist {
     return null;
   }
 
+  AudioItem? getFirstAudio() {
+    return _playlist.isNotEmpty ? _playlist.first : null;
+  }
+
   /// 获取当前音频
   AudioItem? getCurrentAudio() {
     if (_playlist.isEmpty ||

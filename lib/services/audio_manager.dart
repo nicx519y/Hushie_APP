@@ -309,25 +309,49 @@ class AudioManager {
 
     // 开启播放历史记录监听（通过AudioManager的状态流）
     if(await AuthManager.instance.isSignedIn()) {
-      AudioHistoryManager.instance.startListening();
+      signedInit();
     } else {
-      AudioHistoryManager.instance.stopListening();
-    }
-
-    
-
-    // 从播放历史列表中获取最后一条播放记录
-    final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
-    if (lastHistory.isNotEmpty) {
-      debugPrint('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
-      playAudio(lastHistory.first, autoPlay: false);
-    } else {
-      debugPrint('AudioManager: 没有播放历史记录');
+      signedOutInit();
     }
 
     // 不在这里强制初始化AudioService，而是标记为可以初始化
     // 实际初始化将在第一次使用时进行
     return;
+  }
+
+  Future<void> signedInit() async {
+    AudioHistoryManager.instance.startListening();
+    // 从播放历史列表中获取最后一条播放记录
+    final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
+    if (lastHistory.isNotEmpty) {
+      debugPrint('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
+      await playAudio(lastHistory.first, autoPlay: false);
+    } else {
+      debugPrint('AudioManager: 没有播放历史记录');
+      await _supplementPlaylist();
+      final playlist = AudioPlaylist.instance;
+      if(playlist.playlistSize > 0) {
+        final firstAudio = playlist.getFirstAudio();
+        if(firstAudio != null) {
+          await playAudio(firstAudio, autoPlay: false);
+        }
+      }
+    }
+  }
+
+  Future<void> signedOutInit() async {
+    AudioHistoryManager.instance.stopListening();
+    final playlist = AudioPlaylist.instance;
+    if(playlist.playlistSize <= 0) {
+      await _supplementPlaylist();
+      final playlist = AudioPlaylist.instance;
+      if(playlist.playlistSize > 0) {
+        final firstAudio = playlist.getFirstAudio();
+        if(firstAudio != null) {
+          await playAudio(firstAudio, autoPlay: false);
+        }
+      }
+    }
   }
 
   // 获取音频服务实例
@@ -649,11 +673,11 @@ class AudioManager {
     
     if (status == AuthStatus.authenticated) {
       // 登录时开始监听播放历史
-      AudioHistoryManager.instance.startListening();
+      signedInit();
       debugPrint('AudioManager: 已登录，开始监听播放历史');
     } else {
       // 登出时停止监听播放历史
-      AudioHistoryManager.instance.stopListening();
+      signedOutInit();
       debugPrint('AudioManager: 已登出，停止监听播放历史');
     }
   }
