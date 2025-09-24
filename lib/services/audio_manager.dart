@@ -293,6 +293,8 @@ class AudioManager {
     await AudioHistoryManager.instance.initialize();
     debugPrint('AudioManager: AudioHistoryManager 初始化完成');
 
+    await reloadCurrentPlayStateCache();
+
     await AudioLikesManager.instance.initialize();
     debugPrint('AudioManager: AudioLikesManager 初始化完成');
 
@@ -325,9 +327,33 @@ class AudioManager {
     return;
   }
 
+  // 重新加载当前播放状态缓存
+  Future<void> reloadCurrentPlayStateCache() async {
+    final currentPlayStateCache = await AudioHistoryManager.instance.getCurrentPlayStateCache();
+    if (currentPlayStateCache != null) {
+      try {
+        final audioItemMap = currentPlayStateCache['audioItem'] as Map<String, dynamic>;
+        final audioItem = AudioItem.fromMap(audioItemMap);
+        final position = Duration(milliseconds: currentPlayStateCache['position'] as int);
+        
+        debugPrint('AudioManager: 从当前播放状态缓存恢复: ${audioItem.title} -> ${position.inMinutes}:${(position.inSeconds % 60).toString().padLeft(2, '0')}');
+        await playAudio(audioItem, autoPlay: false);
+        return;
+      } catch (e) {
+        debugPrint('AudioManager: 从当前播放状态缓存恢复失败: $e');
+      }
+    }
+  }
+
   Future<void> signedInit() async {
-    AudioHistoryManager.instance.startListening();
-    // 从播放历史列表中获取最后一条播放记录
+    AudioHistoryManager.instance.startListening(needRecord: true);
+    
+    // 首先尝试从当前播放状态缓存中恢复
+    
+    if(currentAudio != null) {
+      return;
+    }
+    // 如果缓存恢复失败，从播放历史列表中获取最后一条播放记录
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
     if (lastHistory.isNotEmpty) {
       debugPrint('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
@@ -346,7 +372,13 @@ class AudioManager {
   }
 
   Future<void> signedOutInit() async {
-    AudioHistoryManager.instance.stopListening();
+    AudioHistoryManager.instance.startListening(needRecord: false);
+    
+    if(currentAudio != null) {
+      return;
+    }
+    
+    // 如果缓存恢复失败，从播放列表获取音频
     final playlist = AudioPlaylist.instance;
     if(playlist.playlistSize <= 0) {
       await _supplementPlaylist();

@@ -97,28 +97,11 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               _isPreviewMode = !event.hasPremium; // 有权限时不是预览模式，无权限时是预览模式
               _resetAudioStateListener();
             });
-            
-            // // 如果从非预览模式切换到预览模式，将播放位置设置到预览开始位置
-            // if (!oldPreviewMode && _isPreviewMode) {
-            //   _seekToPreviewStart();
-            // }
+          
           }
         });
   }
 
-  /// 将播放位置跳转到预览开始位置
-  // void _seekToPreviewStart() async {
-  //   if (_renderPreviewStart > Duration.zero && _realDuration > Duration.zero) {
-  //     // 计算预览开始位置在真实时长中的对应位置
-  //     final previewStartRatio = _renderPreviewStart.inMilliseconds / _renderDuration.inMilliseconds;
-  //     final realPreviewStartPosition = Duration(
-  //       milliseconds: (previewStartRatio * _realDuration.inMilliseconds).round(),
-  //     );
-      
-  //     debugPrint('[AudioProgressBar] 切换到预览模式，跳转到预览开始位置: ${_renderPreviewStart.inSeconds}s (真实位置: ${realPreviewStartPosition.inSeconds}s)');
-  //     await _onSeek(Duration.zero);
-  //   }
-  // }
 
   void _resetAudioStateListener() {
     _unListenerToAudioState();

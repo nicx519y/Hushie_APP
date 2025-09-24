@@ -12,6 +12,7 @@ import '../services/subscribe_privilege_manager.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../router/navigation_utils.dart';
+import 'webview_page.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -53,11 +54,8 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       }
 
       // 如果没有获取到商品数据，使用默认的 sampleProduct
-      _product ??= sampleProduct;
     } catch (e) {
       debugPrint('🏆 [SUBSCRIBE_DIALOG] 获取商品数据失败: $e');
-      // 使用默认的 sampleProduct
-      _product = sampleProduct;
     } finally {
       if (mounted) {
         setState(() {
@@ -70,6 +68,53 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
   void _closeDialog() {
     Navigator.of(context, rootNavigator: true).pop();
   }
+
+  /// 打开自动续费说明页面
+  void _openAutoRenewInfo() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WebViewPage(
+          url: 'assets/html/renew_info.html',
+          title: 'Auto-renew Information',
+        ),
+      ),
+    );
+  }
+
+  /// 打开隐私政策页面
+  void _openPrivacyPolicy() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WebViewPage(
+          url: 'assets/html/privacy_policy.html',
+          title: 'Privacy Policy',
+        ),
+      ),
+    );
+  }
+
+  /// 打开使用条款页面
+  void _openTermsOfUse() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WebViewPage(
+          url: 'assets/html/terms_of_use.html',
+          title: 'Terms of Use',
+        ),
+      ),
+    );
+  }
+
+  // 打开成功提示框
+  void _openSuccessNotification() {
+    showNotificationDialog(
+      context,
+      title: 'Congratulations！',
+      message: 'You have successfully activated Hushie Pro Membership.',
+      buttonText: 'Enjoy It',
+    );
+  }
+
 
   @override
   void dispose() {
@@ -188,9 +233,10 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
         // 根据购买结果处理不同情况
         switch (purchaseResult.result) {
           case PurchaseResult.success:
-            ToastHelper.showSuccess(ToastMessages.subscriptionSuccess);
+            // ToastHelper.showSuccess(ToastMessages.subscriptionSuccess);
             // 购买成功，关闭对话框
             _closeDialog();
+            _openSuccessNotification();
             break;
           case PurchaseResult.pending:
             ToastHelper.showInfo(ToastMessages.subscriptionPending);
@@ -381,9 +427,16 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
               const SizedBox(height: 13),
 
               // 自动续费说明
-              Text(
-                'Auto-renews monthly. Cancel anytime.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
+              InkWell(
+                onTap: _openAutoRenewInfo,
+                child: Text(
+                  'Auto-renews monthly. Cancel anytime.',
+                  style: TextStyle(
+                    fontSize: 14, 
+                    color: Color(0xFF666666),
+                    decoration: TextDecoration.none,
+                  ),
+                ),
               ),
 
               const SizedBox(height: 16),
@@ -393,22 +446,24 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   InkWell(
-                    // onTap: () { },
+                    onTap: _openPrivacyPolicy,
                     child: Text(
                       'Privacy Policy',
                       style: TextStyle(
                         fontSize: 14,
                         color: const Color(0xFF666666),
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ),
                   InkWell(
-                    // onTap: () { },
+                    onTap: _openTermsOfUse,
                     child: Text(
                       'Terms of Use',
                       style: TextStyle(
                         fontSize: 14,
                         color: const Color(0xFF666666),
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ),
@@ -614,51 +669,51 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
   }
 }
 
-// 示例数据 - 创建一个示例Product
-final sampleProduct = Product(
-  googlePlayProductId: 'hushie_premium',
-  name: 'Pro',
-  description: 'Premium subscription with full access',
-  productType: 'subscription',
-  basePlans: [
-    BasePlan(
-      googlePlayBasePlanId: 'monthly_plan',
-      name: 'Monthly',
-      price: 9.99,
-      originalPrice: 12.99,
-      currency: 'USD',
-      billingPeriod: 'monthly',
-      durationDays: 30,
-      isAvailable: true,
-      isSubscribing: false,
-      isShowDiscount: true,
-      offers: [
-        Offer.fromJson({
-          'offer_id': 'monthly_plan',
-          'name': 'First Month',
-          'price': 3.99,
-          'original_price': 12.99,
-          'currency': 'USD',
-          'description': 'Monthly subscription',
-          'is_available': true,
-        }),
-      ],
-    ),
-    BasePlan(
-      googlePlayBasePlanId: 'yearly_plan',
-      name: 'Yearly',
-      price: 99.99,
-      originalPrice: 119.99,
-      currency: 'USD',
-      billingPeriod: 'yearly',
-      durationDays: 365,
-      isAvailable: false,
-      isSubscribing: true,
-      isShowDiscount: false,
-      offers: [],
-    ),
-  ],
-);
+// // 示例数据 - 创建一个示例Product
+// final sampleProduct = Product(
+//   googlePlayProductId: 'hushie_premium',
+//   name: 'Pro',
+//   description: 'Premium subscription with full access',
+//   productType: 'subscription',
+//   basePlans: [
+//     BasePlan(
+//       googlePlayBasePlanId: 'monthly_plan',
+//       name: 'Monthly',
+//       price: 9.99,
+//       originalPrice: 12.99,
+//       currency: 'USD',
+//       billingPeriod: 'monthly',
+//       durationDays: 30,
+//       isAvailable: true,
+//       isSubscribing: false,
+//       isShowDiscount: true,
+//       offers: [
+//         Offer.fromJson({
+//           'offer_id': 'monthly_plan',
+//           'name': 'First Month',
+//           'price': 3.99,
+//           'original_price': 12.99,
+//           'currency': 'USD',
+//           'description': 'Monthly subscription',
+//           'is_available': true,
+//         }),
+//       ],
+//     ),
+//     BasePlan(
+//       googlePlayBasePlanId: 'yearly_plan',
+//       name: 'Yearly',
+//       price: 99.99,
+//       originalPrice: 119.99,
+//       currency: 'USD',
+//       billingPeriod: 'yearly',
+//       durationDays: 365,
+//       isAvailable: false,
+//       isSubscribing: true,
+//       isShowDiscount: false,
+//       offers: [],
+//     ),
+//   ],
+// );
 
 // 显示订阅对话框的便捷方法
 Future<void> showSubscribeDialog(BuildContext context) async {

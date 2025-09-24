@@ -4,6 +4,7 @@ import '../services/auth_manager.dart';
 import '../router/navigation_utils.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
+import '../components/webview_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -298,16 +299,36 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showTermsOfUse() {
-    // ToastHelper.showSuccess('Open Terms of Use page.');
-    // 这里可以导航到服务条款页面
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WebViewPage(
+          url: 'assets/html/renew_info.html',
+          title: 'Auto-renew Information',
+        ),
+      ),
+    );
   }
 
   void _showLicenseAgreement() {
-    // ToastHelper.showSuccess('Open End User License Agreement page.');
-    // 这里可以导航到许可协议页面
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WebViewPage(
+          url: 'assets/html/end_user_license_greement.html',
+          title: 'End User License Agreement',
+        ),
+      ),
+    ); 
   }
 
   void _showPrivacyPolicy() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WebViewPage(
+          url: 'assets/html/privacy_policy.html',
+          title: 'Privacy Policy',
+        ),
+      ),
+    );
     // _showSnackBar('Open Privacy Policy page.');
     // 这里可以导航到隐私政策页面
   }

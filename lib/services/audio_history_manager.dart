@@ -45,6 +45,7 @@ class AudioHistoryManager {
 
   static const int progressUpdateIntervalS = 30; // 30秒更新一次
   static const String _historyCacheKey = 'audio_history_cache'; // 本地存储键名
+  static const String _currentPlayStateCacheKey = 'current_play_state_cache'; // 当前播放状态缓存键名
 
   AudioHistoryManager._internal();
 
@@ -92,8 +93,8 @@ class AudioHistoryManager {
   }
 
   /// 开始监听音频播放状态（通过AudioManager）
-  void startListening() {
-    _startPlaybackListening();
+  void startListening({bool needRecord = true}) {
+    _startPlaybackListening(needRecord: needRecord);
   }
 
   void stopListening() {
@@ -101,7 +102,7 @@ class AudioHistoryManager {
   }
 
   /// 开始监听播放状态变化
-  void _startPlaybackListening() {
+  void _startPlaybackListening({bool needRecord = true}) {
     // 取消之前的监听
     _stopPlaybackListening();
 
@@ -113,17 +114,17 @@ class AudioHistoryManager {
       if (_lastAudioState == null || _hasStateChanged(_lastAudioState!, audioState)) {
         // 检查当前音频是否变化
         if (_lastAudioState?.currentAudio?.id != audioState.currentAudio?.id) {
-          _onCurrentAudioChanged(audioState.currentAudio);
+          _onCurrentAudioChanged(audioState.currentAudio, needRecord: needRecord);
         }
         
         // 检查播放状态是否变化
         if (_lastAudioState?.isPlaying != audioState.isPlaying) {
-          _onPlayingStateChanged(audioState.isPlaying);
+          _onPlayingStateChanged(audioState.isPlaying, needRecord: needRecord);
         }
         
         // 检查播放位置是否变化（避免频繁的位置更新）
         if (_lastAudioState?.position != audioState.position) {
-          _onPositionChanged(audioState.position);
+          _onPositionChanged(audioState.position, needRecord: needRecord);
         }
         
         // 更新本地状态缓存
@@ -154,7 +155,7 @@ class AudioHistoryManager {
   }
 
   /// 当前播放音频变化回调
-  void _onCurrentAudioChanged(AudioItem? audio) {
+  void _onCurrentAudioChanged(AudioItem? audio, {bool needRecord = true}) {
     debugPrint('🎵 [HISTORY] 当前播放音频变化: ${audio?.id ?? 'null'}');
 
     // 保存旧的音频ID用于比较
@@ -174,12 +175,16 @@ class AudioHistoryManager {
 
     // 记录新音频开始播放（只在正在播放时记录）
     if (audio != null && _isCurrentlyPlaying) {
-      _recordPlayStart(isFirst: true);
+      if (needRecord) {
+        _recordPlayStart(isFirst: true);
+      }
+      // 无论登录状态如何，都保存当前播放状态到本地缓存
+      _saveCurrentPlayState();
     }
   }
 
   /// 播放状态变化回调
-  void _onPlayingStateChanged(bool isPlaying) {
+  void _onPlayingStateChanged(bool isPlaying, {bool needRecord = true}) {
     debugPrint('🎵 [HISTORY] 播放状态变化: $isPlaying');
 
     final wasPlaying = _isCurrentlyPlaying;
@@ -189,20 +194,30 @@ class AudioHistoryManager {
       if (isPlaying && !wasPlaying) {
         // 开始播放（从暂停恢复或首次播放）
         _recordPlayStart();
+        // 无论登录状态如何，都保存当前播放状态到本地缓存
+        _saveCurrentPlayState();
       } else if (!isPlaying && wasPlaying) {
         // 停止播放
-        _recordPlayStop();
+        if (needRecord) {
+          _recordPlayStop();
+        }
+        // 无论登录状态如何，都保存当前播放状态到本地缓存
+        _saveCurrentPlayState();
       }
     }
   }
 
   /// 播放位置变化回调
-  void _onPositionChanged(Duration position) {
+  void _onPositionChanged(Duration position, {bool needRecord = true}) {
     _lastRecordedPosition = position;
 
     // 检查是否需要记录进度（基于时间间隔）
     if (_currentPlayingAudio != null && _isCurrentlyPlaying) {
-      _checkAndRecordProgress();
+      if (needRecord) {
+        _checkAndRecordProgress();
+      }
+      // 无论登录状态如何，都保存当前播放状态到本地缓存（但不要太频繁）
+      _saveCurrentPlayState();
     }
   }
 
@@ -286,6 +301,9 @@ class AudioHistoryManager {
         _lastProgressRecordTime = DateTime.now();
       },
     );
+    
+    // 注意：这里不再调用 _saveCurrentPlayState()，因为在调用此方法的地方已经调用了
+    // 避免重复调用
   }
 
   /// 记录播放停止
@@ -298,6 +316,9 @@ class AudioHistoryManager {
         _lastProgressRecordTime = null;
       },
     );
+    
+    // 注意：这里不再调用 _saveCurrentPlayState()，因为在调用此方法的地方已经调用了
+    // 避免重复调用
   }
 
   
@@ -378,6 +399,9 @@ class AudioHistoryManager {
     
     // 清空本地存储
     _clearLocalStorage();
+    
+    // 注意：不再清空当前播放状态缓存，让它在非登录状态下也能保持
+    // _clearCurrentPlayState();
     
     // 推送空历史记录事件
     _historyStreamController.add([]);
@@ -547,11 +571,65 @@ class AudioHistoryManager {
     }
   }
 
+  /// 保存当前播放状态到本地存储
+  Future<void> _saveCurrentPlayState() async {
+    if (_currentPlayingAudio == null) {
+      // 如果没有当前播放音频，清空缓存
+      await _clearCurrentPlayState();
+      return;
+    }
+
+    try {
+      final playState = {
+        'audioItem': _currentPlayingAudio!.toMap(),
+        'position': _lastRecordedPosition.inMilliseconds,
+        'isPlaying': _isCurrentlyPlaying,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      
+      final playStateJson = json.encode(playState);
+      await _prefs?.setString(_currentPlayStateCacheKey, playStateJson);
+      debugPrint('🎵 [HISTORY] 当前播放状态已保存到本地存储: ${_currentPlayingAudio!.title} -> ${_formatDuration(_lastRecordedPosition)}');
+    } catch (e) {
+      debugPrint('🎵 [HISTORY] 保存当前播放状态到本地存储失败: $e');
+    }
+  }
+
+  /// 从本地存储加载当前播放状态
+  Future<Map<String, dynamic>?> _loadCurrentPlayState() async {
+    try {
+      final playStateJson = _prefs?.getString(_currentPlayStateCacheKey);
+      if (playStateJson != null && playStateJson.isNotEmpty) {
+        final Map<String, dynamic> playState = json.decode(playStateJson);
+        debugPrint('🎵 [HISTORY] 从本地存储加载当前播放状态: ${playState['audioItem']?['title']}');
+        return playState;
+      }
+    } catch (e) {
+      debugPrint('🎵 [HISTORY] 从本地存储加载当前播放状态失败: $e');
+    }
+    return null;
+  }
+
+  /// 清空当前播放状态缓存
+  Future<void> _clearCurrentPlayState() async {
+    try {
+      await _prefs?.remove(_currentPlayStateCacheKey);
+      debugPrint('🎵 [HISTORY] 当前播放状态缓存已清空');
+    } catch (e) {
+      debugPrint('🎵 [HISTORY] 清空当前播放状态缓存失败: $e');
+    }
+  }
+
   /// 格式化时长为字符串
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds.remainder(60);
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  /// 获取当前播放状态缓存（供外部调用）
+  Future<Map<String, dynamic>?> getCurrentPlayStateCache() async {
+    return await _loadCurrentPlayState();
   }
 
   /// 清理资源
