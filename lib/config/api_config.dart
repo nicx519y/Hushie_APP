@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class ApiConfig {
   // API 基础配置
   static const String baseUrl = 'https://api.hushie.ai/api/v1';
@@ -15,6 +18,23 @@ class ApiConfig {
   static const String appId = 'hushie_app_v1';
   static const String apiVersion = 'v1';
   static const String clientPlatform = 'flutter';
+
+  // 应用版本配置（可动态修改）
+  static String _appVersion = '1.0.0';
+
+  /// 初始化应用版本（从存储中加载）
+  static Future<void> _initializeAppVersion() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storedVersion = prefs.getString('app_version');
+      if (storedVersion != null && storedVersion.isNotEmpty) {
+        _appVersion = storedVersion;
+      }
+    } catch (e) {
+      debugPrint('初始化应用版本失败: $e');
+      // 使用默认版本
+    }
+  }
 
   // 注意：在生产环境中，appSecret应该通过以下方式之一获取：
   // 1. 环境变量
@@ -41,7 +61,9 @@ class ApiConfig {
   }
 
   /// 初始化 API 配置
-  static void initialize({bool? debugMode = false}) {}
+  static Future<void> initialize({bool? debugMode = false}) async {
+    await _initializeAppVersion();
+  }
 
   /// 获取完整的 API URL
   static String getFullUrl(String endpoint) {
@@ -57,11 +79,28 @@ class ApiConfig {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'User-Agent': 'HushieApp/1.0.0',
+      'App-Version': _appVersion,
       'X-API-Version': apiVersion,
       'X-App-ID': appId,
       'X-Client-Platform': clientPlatform,
     };
+  }
+
+  /// 获取当前应用版本
+  static String getAppVersion() {
+    return _appVersion;
+  }
+
+  /// 设置应用版本
+  static Future<void> setAppVersion(String version) async {
+    _appVersion = version;
+    // 保存到存储中
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_version', version);
+    } catch (e) {
+      debugPrint('保存应用版本到存储失败: $e');
+    }
   }
 
   /// 获取认证请求头（如果需要）

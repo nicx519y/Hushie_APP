@@ -5,6 +5,7 @@ import '../pages/setting_page.dart';
 import '../pages/account_page.dart';
 import '../pages/about_us_page.dart';
 import '../pages/search_page.dart';
+import '../pages/app_version_setting_page.dart';
 import '../models/audio_item.dart';
 
 class NavigationUtils {
@@ -132,6 +133,22 @@ class NavigationUtils {
       debugPrint('🔍 [SEARCH] 搜索页面已关闭');
     } catch (e) {
       debugPrint('🔍 [SEARCH] 导航到搜索页面时发生错误: $e');
+    }
+  }
+
+  /// 导航到应用版本设置页面
+  static Future<void> navigateToAppVersionSetting(BuildContext context) async {
+    try {
+      debugPrint('📱 [APP_VERSION] 打开应用版本设置页面');
+      await Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) => const AppVersionSettingPage(),
+          settings: const RouteSettings(name: '/app_version_setting'),
+        ),
+      );
+      debugPrint('📱 [APP_VERSION] 应用版本设置页面已关闭');
+    } catch (e) {
+      debugPrint('📱 [APP_VERSION] 导航到应用版本设置页面时发生错误: $e');
     }
   }
 

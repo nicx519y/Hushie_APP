@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:hushie_app/services/auth_manager.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -54,6 +55,9 @@ class AudioManager {
 
   // 权益状态监听
   StreamSubscription<PrivilegeChangeEvent>? _privilegeSubscription;
+  
+  // 认证状态监听
+  StreamSubscription<AuthStatusChangeEvent>? _authStatusSubscription;
 
   /// 预览区间即将超出事件流（供外部订阅）
   static Stream<PreviewOutEvent> get previewOutEvents =>
@@ -296,12 +300,21 @@ class AudioManager {
     // 监听权益变化事件
     _setupPrivilegeListener();
 
+    // 监听认证状态变化事件
+    _setupAuthStatusListener();
+
     // 使用统一的初始化方法，避免重复初始化
     await _ensureInitialized();
     debugPrint('AudioManager: AudioService 初始化完成');
 
     // 开启播放历史记录监听（通过AudioManager的状态流）
-    AudioHistoryManager.instance.startListening();
+    if(await AuthManager.instance.isSignedIn()) {
+      AudioHistoryManager.instance.startListening();
+    } else {
+      AudioHistoryManager.instance.stopListening();
+    }
+
+    
 
     // 从播放历史列表中获取最后一条播放记录
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
@@ -616,6 +629,35 @@ class AudioManager {
     debugPrint('AudioManager: 权益状态监听器已设置');
   }
 
+  /// 设置认证状态监听器
+  void _setupAuthStatusListener() {
+    _authStatusSubscription = AuthManager.instance.authStatusChanges.listen(
+      (event) {
+        debugPrint('AudioManager: 收到认证状态变化事件 - status: ${event.status}');
+        _handleAuthStatusChange(event.status);
+      },
+      onError: (error) {
+        debugPrint('AudioManager: 认证状态监听异常: $error');
+      },
+    );
+    debugPrint('AudioManager: 认证状态监听器已设置');
+  }
+
+  /// 处理认证状态变化
+  void _handleAuthStatusChange(AuthStatus status) {
+    debugPrint('AudioManager: 处理认证状态变化 - status: $status');
+    
+    if (status == AuthStatus.authenticated) {
+      // 登录时开始监听播放历史
+      AudioHistoryManager.instance.startListening();
+      debugPrint('AudioManager: 已登录，开始监听播放历史');
+    } else {
+      // 登出时停止监听播放历史
+      AudioHistoryManager.instance.stopListening();
+      debugPrint('AudioManager: 已登出，停止监听播放历史');
+    }
+  }
+
   /// 根据权益状态更新播放权限
   void _updatePlaybackPermissions(bool hasPremium) {
     debugPrint('AudioManager: 更新播放权限 - hasPremium: $hasPremium');
@@ -636,6 +678,10 @@ class AudioManager {
     // 清理权益状态监听
     await _privilegeSubscription?.cancel();
     _privilegeSubscription = null;
+
+    // 清理认证状态监听
+    await _authStatusSubscription?.cancel();
+    _authStatusSubscription = null;
 
     // 关闭所有BehaviorSubject
     await _playerStateSubject.close();

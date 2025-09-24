@@ -93,7 +93,7 @@ HMAC-SHA256(signature_string, app_secret)
 |--------|------|------|--------|
 | Content-Type | 基础 | 内容类型 | `application/json` |
 | Accept | 基础 | 接受类型 | `application/json` |
-| User-Agent | 基础 | 用户代理 | `HushieApp/1.0.0` |
+| App-Version | 基础 | 应用版本 | `HushieApp/1.0.0` |
 | X-API-Version | 身份 | API版本标识 | `v1` |
 | X-App-ID | 身份 | 应用标识 | `hushie_app_v1` |
 | X-Client-Platform | 身份 | 客户端平台 | `flutter` |
@@ -113,7 +113,7 @@ GET /audio/list?tag=rock&count=20 HTTP/1.1
 Host: api.example.com
 Content-Type: application/json
 Accept: application/json
-User-Agent: HushieApp/1.0.0
+App-Version: HushieApp/1.0.0
 X-API-Version: v1
 X-App-ID: hushie_app_v1
 X-Client-Platform: flutter
@@ -140,7 +140,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 |--------|----------------|----------|----------|
 | Content-Type | 解析请求体格式 | 验证是否为 `application/json` | `if (contentType !== 'application/json') return 400` |
 | Accept | 确定响应格式 | 验证客户端接受的格式 | `if (!accept.includes('application/json')) return 406` |
-| User-Agent | 日志记录、统计分析 | 检查是否为合法客户端 | `if (!userAgent.startsWith('HushieApp/')) log('unknown_client')` |
+| App-Version | 日志记录、统计分析 | 检查是否为合法客户端 | `if (!appVersion.startsWith('HushieApp/')) log('unknown_client')` |
 
 #### 2. 身份识别请求头
 
@@ -413,7 +413,7 @@ def validate_device_behavior(headers, user_context):
     设备行为风控验证
     """
     device_id = headers.get('X-Device-ID')
-    user_agent = headers.get('User-Agent')
+    app_version = headers.get('App-Version')
     
     # 设备风险评估
     risk_score = calculate_device_risk(device_id, user_context)

@@ -96,6 +96,10 @@ class AudioHistoryManager {
     _startPlaybackListening();
   }
 
+  void stopListening() {
+    _stopPlaybackListening();
+  }
+
   /// 开始监听播放状态变化
   void _startPlaybackListening() {
     // 取消之前的监听

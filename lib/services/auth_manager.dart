@@ -83,7 +83,6 @@ class AuthManager {
       // 如果有Token，设置为已认证状态，否则设置为未认证状态
       if (isLogin) {
         _notifyAuthStatusChange(AuthStatus.authenticated, user: _currentUser);
-        await _refreshTokenIfNeeded(force: false);
         // 启动定时器检查Token过期时间
         _startTokenRefreshTimer();
       } else {
@@ -297,25 +296,45 @@ class AuthManager {
     }
   }
 
-  /// 检查本地是否有登录凭证（不检查过期时间）
+  /// 检查本地是否有有效的登录凭证（检查过期时间并自动刷新）
   Future<bool> isSignedIn() async {
     try {
-      // 如果内存中有Token，直接检查
-      if (_currentToken != null && 
-          _currentToken!.accessToken.isNotEmpty && 
-          _currentToken!.refreshToken.isNotEmpty) {
-        return true;
+      // 如果内存中没有Token，从存储中加载
+      if (_currentToken == null) {
+        await _loadTokenFromStorage();
+      }
+      
+      // 检查是否有Token
+      if (_currentToken == null || 
+          _currentToken!.accessToken.isEmpty || 
+          _currentToken!.refreshToken.isEmpty) {
+        debugPrint('🔐 [AUTH] 没有有效的Token');
+        return false;
       }
 
-      // 从存储中加载Token
-      await _loadTokenFromStorage();
-      
-      // 检查是否有有效的Token
-      return _currentToken != null && 
-             _currentToken!.accessToken.isNotEmpty && 
-             _currentToken!.refreshToken.isNotEmpty;
+      // 检查Token是否过期
+      if (_currentToken!.isExpiringSoon) {
+        debugPrint('🔐 [AUTH] Token已过期或即将过期，尝试刷新');
+        
+        // 尝试刷新Token
+        final refreshSuccess = await _refreshTokenIfNeeded(force: true);
+        
+        if (!refreshSuccess) {
+          debugPrint('🔐 [AUTH] Token刷新失败，退出登录态');
+          // 刷新失败，清除本地数据并退出登录态
+          await clearAllAuthData();
+          return false;
+        }
+        
+        debugPrint('🔐 [AUTH] Token刷新成功');
+      }
+
+      // Token有效且未过期
+      return true;
     } catch (e) {
-      debugPrint('🔐 [AUTH] isSign异常: $e');
+      debugPrint('🔐 [AUTH] isSignedIn异常: $e');
+      // 发生异常时，为了安全起见，退出登录态
+      await clearAllAuthData();
       return false;
     }
   }
@@ -418,23 +437,29 @@ class AuthManager {
       } else {
         debugPrint('🔐 [AUTH] Token刷新失败: errNo=${result.errNo}');
         debugPrint('🔐 [AUTH] 响应数据为空: ${result.data == null}');
-        // 只有在服务器明确返回错误时才清除Token并进入非登录态
-        if (result.errNo != 0) {
-          debugPrint('🔐 [AUTH] 服务器返回错误，清除Token并进入非登录态');
-          await _clearTokenFromSecureStorage();
-          _currentToken = null;
-          // 通知Token失效
-          _notifyAuthStatusChange(AuthStatus.unauthenticated);
-        }
+        // 服务器明确返回错误时，清除Token并进入非登录态
+        debugPrint('🔐 [AUTH] 服务器返回错误，清除Token并进入非登录态');
+        await _clearTokenFromSecureStorage();
+        _currentToken = null;
+        // 通知Token失效
+        _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return false;
       }
     } catch (e) {
       debugPrint('🔐 [AUTH] Token刷新异常: $e');
       debugPrint('🔐 [AUTH] 异常类型: ${e.runtimeType}');
+      
+      // 对于网络超时异常，不清除Token，保持当前状态
       if (e is TimeoutException) {
         debugPrint('🔐 [AUTH] 这是一个超时异常，不进入非登录态');
+        return false;
       }
-      // 网络异常或其他异常时，不清除Token，不进入非登录态
+      
+      // 对于其他异常（如网络错误、解析错误等），也清除Token并退出登录态
+      debugPrint('🔐 [AUTH] 刷新Token发生严重异常，清除Token并进入非登录态');
+      await _clearTokenFromSecureStorage();
+      _currentToken = null;
+      _notifyAuthStatusChange(AuthStatus.unauthenticated);
       return false;
     }
   }

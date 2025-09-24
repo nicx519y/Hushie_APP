@@ -26,6 +26,7 @@ class SecureStorageService {
   static const String _tokenExpiresAtKey = 'token_expires_at';
   static const String _userInfoKey = 'user_info';
   static const String _deviceIdKey = 'device_id';
+  static const String _appVersionKey = 'app_version';
 
   /// 存储访问令牌
   static Future<bool> saveAccessToken(String token) async {
@@ -272,6 +273,38 @@ class SecureStorageService {
       return true;
     } catch (e) {
       debugPrint('删除键失败 key=$key: $e');
+      return false;
+    }
+  }
+
+  /// 存储应用版本号
+  static Future<bool> saveAppVersion(String version) async {
+    try {
+      await _storage.write(key: _appVersionKey, value: version);
+      return true;
+    } catch (e) {
+      debugPrint('保存应用版本号失败: $e');
+      return false;
+    }
+  }
+
+  /// 获取应用版本号
+  static Future<String?> getAppVersion() async {
+    try {
+      return await _storage.read(key: _appVersionKey);
+    } catch (e) {
+      debugPrint('获取应用版本号失败: $e');
+      return null;
+    }
+  }
+
+  /// 删除应用版本号
+  static Future<bool> deleteAppVersion() async {
+    try {
+      await _storage.delete(key: _appVersionKey);
+      return true;
+    } catch (e) {
+      debugPrint('删除应用版本号失败: $e');
       return false;
     }
   }

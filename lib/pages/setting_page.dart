@@ -102,6 +102,14 @@ class _SettingPageState extends State<SettingPage> {
               },
             ),
 
+            // App Version Setting 选项
+            _buildSettingItem(
+              title: 'App Version Setting',
+              onTap: () {
+                NavigationUtils.navigateToAppVersionSetting(context);
+              },
+            ),
+
             // Account 选项（仅登录状态显示）
             if (_isLoggedIn) ...[
               _buildSettingItem(
