@@ -6,6 +6,8 @@ import '../config/api_config.dart';
 import 'device_info_service.dart';
 import 'auth_manager.dart';
 import 'app_signature_service.dart';
+import '../utils/toast_helper.dart';
+import '../utils/toast_messages.dart';
 import 'package:flutter/foundation.dart';
 
 /// HTTP客户端服务
@@ -14,7 +16,7 @@ class HttpClientService {
 
   // 重试配置参数
   static int _maxRetries = 3; // 默认重试3次
-  static Duration _retryDelay = Duration(milliseconds: 500); // 重试间隔1秒
+  static Duration _retryDelay = Duration(milliseconds: 500); // 重试间隔500ms
   static List<int> _retryStatusCodes = [404, 500, 502, 503, 504]; // 需要重试的状态码
 
   // 缓存设备ID，避免重复获取
@@ -45,12 +47,15 @@ class HttpClientService {
     Uri uri,
   ) async {
     int attempt = 0;
+    http.Response? lastResponse;
+    dynamic lastException;
     
     while (attempt <= _maxRetries) {
       try {
         debugPrint('🔄 [RETRY] $requestType 请求尝试 ${attempt + 1}/${_maxRetries + 1}: $uri');
         
         final response = await request();
+        lastResponse = response;
         
         // 检查是否需要重试
         if (_shouldRetry(response.statusCode, attempt)) {
@@ -59,7 +64,17 @@ class HttpClientService {
           if (attempt <= _maxRetries) {
             await Future.delayed(_retryDelay);
             continue;
+          } else {
+            // 重试次数用尽，显示状态码相关的Toast提示
+            final errorMessage = _getStatusCodeMessage(response.statusCode);
+            _showErrorToast(errorMessage);
+            debugPrint('💥 [RETRY] $requestType 请求重试次数用尽，状态码: ${response.statusCode}');
           }
+        } else if (response.statusCode >= 400) {
+          // 不需要重试的错误状态码，直接显示Toast提示
+          final errorMessage = _getStatusCodeMessage(response.statusCode);
+          _showErrorToast(errorMessage);
+          debugPrint('💥 [RETRY] $requestType 请求失败，不重试，状态码: ${response.statusCode}');
         }
         
         debugPrint('✅ [RETRY] $requestType 请求成功，状态码: ${response.statusCode}');
@@ -68,6 +83,7 @@ class HttpClientService {
       } catch (e) {
         debugPrint('❌ [RETRY] $requestType 请求异常: $e');
         debugPrint('🔄 [RETRY] 异常类型: ${e.runtimeType}');
+        lastException = e;
         
         // 检查是否是需要重试的异常
         if (_shouldRetryException(e, attempt)) {
@@ -76,15 +92,32 @@ class HttpClientService {
           if (attempt <= _maxRetries) {
             await Future.delayed(_retryDelay);
             continue;
+          } else {
+            // 重试次数用尽，显示异常相关的Toast提示
+            final errorMessage = _getExceptionMessage(e);
+            _showErrorToast(errorMessage);
+            debugPrint('💥 [RETRY] $requestType 请求重试次数用尽，异常: $e');
           }
+        } else {
+          // 不需要重试的异常，直接显示Toast并抛出
+          final errorMessage = _getExceptionMessage(e);
+          _showErrorToast(errorMessage);
+          debugPrint('💥 [RETRY] $requestType 请求最终失败，不再重试');
+          rethrow;
         }
-        
-        debugPrint('💥 [RETRY] $requestType 请求最终失败，不再重试');
-        rethrow;
       }
     }
     
-    throw Exception('HTTP请求重试次数已用完');
+    // 如果有最后的响应，返回它；否则抛出最后的异常
+    if (lastResponse != null) {
+      return lastResponse;
+    } else if (lastException != null) {
+      throw lastException;
+    } else {
+      final errorMessage = ToastMessages.httpRetryExhausted;
+      _showErrorToast(errorMessage);
+      throw Exception(errorMessage);
+    }
   }
 
   /// 判断是否需要重试（基于状态码）
@@ -110,6 +143,25 @@ class HttpClientService {
     }
     
     return false;
+  }
+
+  /// 根据状态码获取错误消息
+  static String _getStatusCodeMessage(int statusCode) {
+    return ToastMessages.getHttpStatusMessage(statusCode);
+  }
+
+  /// 根据异常类型获取错误消息
+  static String _getExceptionMessage(dynamic exception) {
+    return ToastMessages.getNetworkExceptionMessage(exception);
+  }
+
+  /// 显示错误Toast提示
+  static void _showErrorToast(String message) {
+    try {
+      ToastHelper.showError(message);
+    } catch (e) {
+      debugPrint('❌ [TOAST] 显示Toast失败: $e');
+    }
   }
 
   /// 获取应用密钥
@@ -438,7 +490,7 @@ class HttpClientService {
 
     // 自动添加用户Token（如果存在）
     // 注意：对于Token刷新请求，跳过Token获取以避免循环依赖
-    if (!path.contains('/auth/google/refresh')) {
+    if (!path.contains(ApiEndpoints.googleRefreshToken)) {
       try {
         // debugPrint('🔐 [HTTP] 开始获取访问令牌');
         final accessToken = await AuthManager.instance.getAccessToken();

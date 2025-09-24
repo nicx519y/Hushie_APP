@@ -5,6 +5,7 @@ import '../config/api_config.dart';
 import '../components/custom_webview.dart';
 import '../components/confirm_dialog.dart';
 import '../utils/toast_helper.dart';
+import '../utils/toast_messages.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -40,17 +41,21 @@ class _AccountPageState extends State<AccountPage> {
         onConfirm: () async {
           try {
             await AuthManager.instance.deleteAccount();
+
+            // 账户删除成功后，提示用户并关闭页面
+            ToastHelper.showSuccess(ToastMessages.accountDeleteSuccess);
+
             if (mounted) {
               Navigator.of(context).popUntil((route) => route.isFirst);
             }
           } catch (e) {
-            ToastHelper.showError('Account delete failed.');
+            ToastHelper.showError(ToastMessages.accountDeleteFailed);
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        ToastHelper.showError('Account delete failed.');
+        ToastHelper.showError(ToastMessages.accountDeleteFailed);
       }
     }
   }

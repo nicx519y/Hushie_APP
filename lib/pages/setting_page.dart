@@ -4,6 +4,7 @@ import '../services/auth_manager.dart';
 import '../components/custom_outline_button.dart';
 import '../router/navigation_utils.dart';
 import '../utils/toast_helper.dart';
+import '../utils/toast_messages.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -24,9 +25,9 @@ class _SettingPageState extends State<SettingPage> {
 
   Future<void> _checkLoginStatus() async {
     try {
-      final token = await AuthManager.instance.getAccessToken();
+      final isSignedIn = await AuthManager.instance.isSignedIn();
       setState(() {
-        _isLoggedIn = token != null && token.isNotEmpty;
+        _isLoggedIn = isSignedIn;
       });
     } catch (e) {
       debugPrint('Check login status failed: $e');
@@ -58,7 +59,7 @@ class _SettingPageState extends State<SettingPage> {
       );
     } catch (e) {
       if (mounted) {
-        ToastHelper.showError('Logout failed: $e');
+        ToastHelper.showError(ToastMessages.logoutFailed(e.toString()));
       }
     } finally {
       setState(() {

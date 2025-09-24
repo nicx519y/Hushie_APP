@@ -141,9 +141,36 @@ class _LikesListState extends State<LikesList> {
       children: [
         Expanded(
           child: Center(
-            child: Text(
-              'No liked content',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'No liked content',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+                SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: _isLoading ? null : _refreshLikes,
+                  style: ElevatedButton.styleFrom(
+                    // backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.grey,
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                child: _isLoading
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text('Refresh'),
+                ),
+              ],
             ),
           ),
         ),

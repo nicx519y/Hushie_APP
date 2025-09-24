@@ -20,6 +20,7 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   // 配置常量
   static const int _debounceDelay = 800; // 防抖延迟时间（毫秒），可配置
+  static const int _historyLimit = 10; // 搜索历史记录限制数量
 
   final TextEditingController _searchController = TextEditingController();
   late FocusNode _searchFocusNode;
@@ -104,9 +105,9 @@ class _SearchPageState extends State<SearchPage> {
       history.remove(keyword);
       // 添加到开头
       history.insert(0, keyword);
-      // 限制历史记录数量为20条
-      if (history.length > 20) {
-        history = history.take(20).toList();
+      // 限制历史记录数量为10条
+      if (history.length > _historyLimit) {
+        history = history.take(_historyLimit).toList();
       }
 
       await prefs.setStringList('search_history', history);

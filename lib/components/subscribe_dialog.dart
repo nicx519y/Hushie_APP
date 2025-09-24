@@ -10,6 +10,7 @@ import '../services/dialog_state_manager.dart';
 import '../services/google_play_billing_service.dart';
 import '../services/subscribe_privilege_manager.dart';
 import '../utils/toast_helper.dart';
+import '../utils/toast_messages.dart';
 import '../router/navigation_utils.dart';
 
 class SubscribeDialog extends StatefulWidget {
@@ -37,7 +38,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
   Future<void> _loadProductData() async {
     try {
       final productData = await SubscribePrivilegeManager.instance
-          .getProductData(forceRefresh: true);
+          .getProductData(forceRefresh: false); // 不强制刷新，使用缓存数据
       if (productData != null && productData.products.isNotEmpty) {
         // 获取第一个订阅类型的商品，或者使用第一个商品
         final subscriptionProducts = productData.products
@@ -102,7 +103,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
     // 已经在订阅中，不能重复订阅
     if (_isSelectedPlanSubscribing) {
-      ToastHelper.showInfo('You have subscribed to this plan.');
+      ToastHelper.showInfo(ToastMessages.subscriptionAlreadySubscribed);
       return;
     }
 
@@ -122,7 +123,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       _closeDialog();
 
       // 显示加载状态
-      ToastHelper.showInfo('Initializing purchase...');
+      ToastHelper.showInfo(ToastMessages.subscriptionInitializing);
 
       // 获取Google Play Billing服务实例
       final billingService = GooglePlayBillingService();
@@ -169,7 +170,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
       try {
         // 显示加载状态
-        ToastHelper.showInfo('Processing purchase request...');
+        ToastHelper.showInfo(ToastMessages.subscriptionProcessing);
 
         // 发起购买 - 修复：使用basePlanId作为第一个参数
         debugPrint(
@@ -196,7 +197,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
             );
             break;
           case PurchaseResult.canceled:
-            ToastHelper.showInfo('Purchase canceled');
+            ToastHelper.showInfo(ToastMessages.subscriptionCanceled);
             break;
           case PurchaseResult.error:
           case PurchaseResult.failed:

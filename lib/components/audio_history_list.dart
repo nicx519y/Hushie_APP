@@ -96,6 +96,28 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
                   'Your recently played audio will appear here',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
+                SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: _isLoading ? null : _refreshHistory,
+                  style: ElevatedButton.styleFrom(
+                    // backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.grey,
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text('Refresh'),
+                ),
               ],
             ),
           ),

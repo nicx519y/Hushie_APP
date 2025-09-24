@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import '../services/auth_manager.dart';
 import '../router/navigation_utils.dart';
 import '../utils/toast_helper.dart';
+import '../utils/toast_messages.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -268,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (result.errNo == 0 && result.data != null) {
         // 登录成功
-        ToastHelper.showSuccess('Login success!');
+        ToastHelper.showSuccess(ToastMessages.loginSuccess);
 
         // 延迟一下让用户看到成功消息，然后关闭登录页面
         await Future.delayed(const Duration(milliseconds: 500));
@@ -285,7 +286,7 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       // 处理异常
       debugPrint('Google登录异常: $e');
-      ToastHelper.showError('Login failed, retry please.');
+      ToastHelper.showError(ToastMessages.loginFailed);
     } finally {
       // 隐藏加载状态
       if (mounted) {

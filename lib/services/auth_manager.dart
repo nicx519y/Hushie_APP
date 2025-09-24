@@ -78,23 +78,28 @@ class AuthManager {
       // 加载存储的Token和用户信息
       await _loadTokenFromStorage();
       
-      // 检查登录状态并刷新Token
-      final isValid = await _refreshTokenIfNeeded(force: false);
-      
-      // 设置认证状态
-      _notifyAuthStatusChange(
-        isValid ? AuthStatus.authenticated : AuthStatus.unauthenticated,
-        user: _currentUser,
-      );
-      
-      // 启动定时刷新
-      _startTokenRefreshTimer();
+      final isLogin = await isSignedIn();
+
+      // 如果有Token，设置为已认证状态，否则设置为未认证状态
+      if (isLogin) {
+        _notifyAuthStatusChange(AuthStatus.authenticated, user: _currentUser);
+        await _refreshTokenIfNeeded(force: false);
+        // 启动定时器检查Token过期时间
+        _startTokenRefreshTimer();
+      } else {
+        _notifyAuthStatusChange(AuthStatus.unauthenticated);
+      }
       
       _isInitialized = true;
       debugPrint('🔐 [AUTH] AuthManager初始化完成: ${_currentStatus}');
     } catch (e) {
       debugPrint('🔐 [AUTH] 初始化AuthManager失败: $e');
-      _notifyAuthStatusChange(AuthStatus.unauthenticated);
+      // 初始化失败时，如果有Token就保持认证状态，否则设为未认证
+      if (_currentToken != null && _currentToken!.accessToken.isNotEmpty) {
+        _notifyAuthStatusChange(AuthStatus.authenticated, user: _currentUser);
+      } else {
+        _notifyAuthStatusChange(AuthStatus.unauthenticated);
+      }
       _isInitialized = true; // 即使失败也标记为已初始化
     }
   }
@@ -104,28 +109,30 @@ class AuthManager {
     // 取消现有定时器
     _refreshTimer?.cancel();
     
-    // 设置定时器，每30分钟检查一次Token是否需要刷新
-    _refreshTimer = Timer.periodic(const Duration(minutes: 30), (timer) async {
-      debugPrint('🔐 [AUTH] 定时检查Token状态');
+    // 设置定时器，每30秒检查一次Token过期时间
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      debugPrint('🔐 [AUTH] 定时检查Token过期时间');
       try {
-        final refreshed = await _refreshTokenIfNeeded(force: false);
-        if (!refreshed && _currentStatus == AuthStatus.authenticated) {
-          debugPrint('🔐 [AUTH] Token刷新失败，更新认证状态为未认证');
-          _notifyAuthStatusChange(AuthStatus.unauthenticated);
+        if (_currentToken == null) {
+          debugPrint('🔐 [AUTH] 当前Token为空，停止定时检查');
+          timer.cancel();
+          return;
         }
+        // 如果距离过期时间小于1分钟（60秒），则自动刷新
+        _refreshTokenIfNeeded();
+
       } catch (e) {
-        debugPrint('🔐 [AUTH] 定时刷新Token异常: $e');
+        debugPrint('🔐 [AUTH] 定时检查Token异常: $e');
       }
     });
     
-    debugPrint('🔐 [AUTH] Token定时刷新器已启动');
+    debugPrint('🔐 [AUTH] Token定时检查器已启动（每30秒检查一次）');
   }
   /// 获取当前访问Token
   Future<String?> getAccessToken() async {
     // 先从内存中检查
     if (_currentToken != null &&
-        _currentToken!.accessToken.isNotEmpty &&
-        !_currentToken!.isExpiringSoon) {
+        _currentToken!.accessToken.isNotEmpty) {
       return _currentToken!.accessToken;
     }
 
@@ -195,11 +202,16 @@ class AuthManager {
       // 通知登录状态变化
       _notifyAuthStatusChange(AuthStatus.authenticated, user: googleAuth);
 
+      _startTokenRefreshTimer();
+
       return googleAuthResult;
     } catch (e) {
       debugPrint('Google登录流程失败: $e');
       // 通知登录失败
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
+
+      _refreshTimer?.cancel();
+
       return ApiResponse.error(errNo: -1);
     }
   }
@@ -221,6 +233,9 @@ class AuthManager {
 
       // 通知登出状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
+
+      _refreshTimer?.cancel();
+
     } catch (e) {
       debugPrint('登出失败，但是强行登出: $e');
       // 即使服务器登出失败，也要清除本地数据
@@ -231,6 +246,8 @@ class AuthManager {
 
       // 通知登出状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
+
+      _refreshTimer?.cancel();
     }
   }
 
@@ -251,6 +268,8 @@ class AuthManager {
 
       // 通知账户删除状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
+
+      _refreshTimer?.cancel();
     } catch (e) {
       debugPrint('删除账户失败，但是强行清除本地数据: $e');
       // 即使服务器删除失败，也要清除本地数据
@@ -261,6 +280,8 @@ class AuthManager {
 
       // 通知账户删除状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
+
+      _refreshTimer?.cancel();
       rethrow; // 重新抛出异常，让调用者处理
     }
   }
@@ -276,27 +297,25 @@ class AuthManager {
     }
   }
 
-  /// 检查是否已登录
+  /// 检查本地是否有登录凭证（不检查过期时间）
   Future<bool> isSignedIn() async {
     try {
-      // 判断token是否存在 并且不为空 并且没过期，如果过期 强制刷新
-      final isTokenValid = await _refreshTokenIfNeeded(force: false);
-
-      // 更新认证状态（如果状态未知）
-      if (_currentStatus == AuthStatus.unknown) {
-        _notifyAuthStatusChange(
-          isTokenValid ? AuthStatus.authenticated : AuthStatus.unauthenticated,
-          user: _currentUser,
-        );
+      // 如果内存中有Token，直接检查
+      if (_currentToken != null && 
+          _currentToken!.accessToken.isNotEmpty && 
+          _currentToken!.refreshToken.isNotEmpty) {
+        return true;
       }
 
-      return isTokenValid;
+      // 从存储中加载Token
+      await _loadTokenFromStorage();
+      
+      // 检查是否有有效的Token
+      return _currentToken != null && 
+             _currentToken!.accessToken.isNotEmpty && 
+             _currentToken!.refreshToken.isNotEmpty;
     } catch (e) {
-      debugPrint('🔐 [AUTH] isSignedIn异常: $e');
-      // 通知认证状态为未知
-      if (_currentStatus != AuthStatus.unauthenticated) {
-        _notifyAuthStatusChange(AuthStatus.unauthenticated);
-      }
+      debugPrint('🔐 [AUTH] isSign异常: $e');
       return false;
     }
   }
@@ -399,87 +418,23 @@ class AuthManager {
       } else {
         debugPrint('🔐 [AUTH] Token刷新失败: errNo=${result.errNo}');
         debugPrint('🔐 [AUTH] 响应数据为空: ${result.data == null}');
-        // 刷新失败，清除Token
-        await _clearTokenFromSecureStorage();
-        _currentToken = null;
-        // 通知Token失效
-        _notifyAuthStatusChange(AuthStatus.unauthenticated);
-        return false;
-      }
-    } catch (e) {
-      debugPrint('🔐 [AUTH] Token刷新异常: $e');
-      debugPrint('🔐 [AUTH] 异常类型: ${e.runtimeType}');
-      if (e is TimeoutException) {
-        debugPrint('🔐 [AUTH] 这是一个超时异常');
-      }
-      // 刷新异常，清除Token
-      await _clearTokenFromSecureStorage();
-      _currentToken = null;
-      // 通知Token失效
-      _notifyAuthStatusChange(AuthStatus.unauthenticated);
-      return false;
-    }
-    debugPrint('🔐 [AUTH] 开始刷新Token...');
-    debugPrint('🔐 [AUTH] 当前RefreshToken长度: ${_currentToken?.refreshToken.length ?? 0}');
-    
-    try {
-      debugPrint('🔐 [AUTH] 调用GoogleAuthService.refreshAccessToken...');
-      final result = await GoogleAuthService.refreshAccessToken(
-        refreshToken: _currentToken!.refreshToken,
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          debugPrint('🔐 [AUTH] Token刷新请求超时(30秒)');
-          throw TimeoutException('Token refresh timeout', const Duration(seconds: 30));
-        },
-      );
-
-      debugPrint('🔐 [AUTH] GoogleAuthService返回结果: errNo=${result.errNo}');
-      
-      if (result.errNo == 0 && result.data != null) {
-        var newToken = result.data!;
-        debugPrint('🔐 [AUTH] 获得新Token，AccessToken长度: ${newToken.accessToken.length}');
-        debugPrint('🔐 [AUTH] 新Token过期时间: ${newToken.expiresAt}');
-
-        // 保留原有的refresh token（如果新的为空）
-        if (newToken.refreshToken.isEmpty && _currentToken != null) {
-          debugPrint('🔐 [AUTH] 新RefreshToken为空，保留原有RefreshToken');
-          newToken = AccessTokenResponse(
-            accessToken: newToken.accessToken,
-            refreshToken: _currentToken!.refreshToken,
-            expiresIn: newToken.expiresIn,
-            tokenType: newToken.tokenType,
-            expiresAt: newToken.expiresAt,
-          );
+        // 只有在服务器明确返回错误时才清除Token并进入非登录态
+        if (result.errNo != 0) {
+          debugPrint('🔐 [AUTH] 服务器返回错误，清除Token并进入非登录态');
+          await _clearTokenFromSecureStorage();
+          _currentToken = null;
+          // 通知Token失效
+          _notifyAuthStatusChange(AuthStatus.unauthenticated);
         }
-
-        debugPrint('🔐 [AUTH] 保存新Token到安全存储...');
-        await _saveTokenToSecureStorage(newToken);
-        _currentToken = newToken;
-
-        debugPrint('🔐 [AUTH] Token刷新成功');
-        return true;
-      } else {
-        debugPrint('🔐 [AUTH] Token刷新失败: errNo=${result.errNo}');
-        debugPrint('🔐 [AUTH] 响应数据为空: ${result.data == null}');
-        // 刷新失败，清除Token
-        await _clearTokenFromSecureStorage();
-        _currentToken = null;
-        // 通知Token失效
-        _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return false;
       }
     } catch (e) {
       debugPrint('🔐 [AUTH] Token刷新异常: $e');
       debugPrint('🔐 [AUTH] 异常类型: ${e.runtimeType}');
       if (e is TimeoutException) {
-        debugPrint('🔐 [AUTH] 这是一个超时异常');
+        debugPrint('🔐 [AUTH] 这是一个超时异常，不进入非登录态');
       }
-      // 刷新异常，清除Token
-      await _clearTokenFromSecureStorage();
-      _currentToken = null;
-      // 通知Token失效
-      _notifyAuthStatusChange(AuthStatus.unauthenticated);
+      // 网络异常或其他异常时，不清除Token，不进入非登录态
       return false;
     }
   }
@@ -581,4 +536,6 @@ class AuthManager {
     await _authStatusController.close();
     debugPrint('🔐 [AUTH] 认证管理器已关闭');
   }
+
+  
 }
