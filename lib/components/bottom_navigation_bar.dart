@@ -26,6 +26,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   late AudioManager _audioManager;
   bool _isPlaying = false;
   AudioItem? _currentAudio;
+  AudioItem? _preloadAudio;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
 
@@ -89,6 +90,21 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
       },
       onError: (error) {
         debugPrint('Error in audioStateStream: $error');
+      },
+    );
+
+    // 监听 preloadAudio 流
+    _audioManager.preloadAudioStream.listen(
+      (preloadAudio) {
+        debugPrint('[bottom_navigation_bar] Received preloadAudio: ${preloadAudio?.title}');
+        if (mounted) {
+          setState(() {
+            _preloadAudio = preloadAudio;
+          });
+        }
+      },
+      onError: (error) {
+        debugPrint('Error in preloadAudioStream: $error');
       },
     );
   }
@@ -212,10 +228,14 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
           _currentPosition.inMilliseconds / _totalDuration.inMilliseconds;
     }
 
-    // 安全地获取封面图片URL
+    // 安全地获取封面图片URL - 优先使用 preloadAudio，如果没有则使用 currentAudio
     String? coverImageUrl;
     try {
-      if (_currentAudio?.cover != null) {
+      // 优先使用 preloadAudio 的封面
+      if (_preloadAudio?.cover != null) {
+        final bestResolution = _preloadAudio!.cover.getBestResolution(60.0);
+        coverImageUrl = bestResolution.url;
+      } else if (_currentAudio?.cover != null) {
         final bestResolution = _currentAudio!.cover.getBestResolution(60.0);
         coverImageUrl = bestResolution.url;
       }

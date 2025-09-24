@@ -93,7 +93,7 @@ class AudioHistoryManager {
   }
 
   /// 开始监听音频播放状态（通过AudioManager）
-  void startListening({bool needRecord = true}) {
+  void startListening({bool needRecord = false}) {
     _startPlaybackListening(needRecord: needRecord);
   }
 
@@ -102,7 +102,7 @@ class AudioHistoryManager {
   }
 
   /// 开始监听播放状态变化
-  void _startPlaybackListening({bool needRecord = true}) {
+  void _startPlaybackListening({bool needRecord = false}) {
     // 取消之前的监听
     _stopPlaybackListening();
 
@@ -155,7 +155,7 @@ class AudioHistoryManager {
   }
 
   /// 当前播放音频变化回调
-  void _onCurrentAudioChanged(AudioItem? audio, {bool needRecord = true}) {
+  void _onCurrentAudioChanged(AudioItem? audio, {bool needRecord = false}) {
     debugPrint('🎵 [HISTORY] 当前播放音频变化: ${audio?.id ?? 'null'}');
 
     // 保存旧的音频ID用于比较
@@ -184,7 +184,7 @@ class AudioHistoryManager {
   }
 
   /// 播放状态变化回调
-  void _onPlayingStateChanged(bool isPlaying, {bool needRecord = true}) {
+  void _onPlayingStateChanged(bool isPlaying, {bool needRecord = false}) {
     debugPrint('🎵 [HISTORY] 播放状态变化: $isPlaying');
 
     final wasPlaying = _isCurrentlyPlaying;
@@ -193,7 +193,9 @@ class AudioHistoryManager {
     if (_currentPlayingAudio != null) {
       if (isPlaying && !wasPlaying) {
         // 开始播放（从暂停恢复或首次播放）
-        _recordPlayStart();
+        if(needRecord) {
+          _recordPlayStart();
+        }
         // 无论登录状态如何，都保存当前播放状态到本地缓存
         _saveCurrentPlayState();
       } else if (!isPlaying && wasPlaying) {
@@ -208,7 +210,7 @@ class AudioHistoryManager {
   }
 
   /// 播放位置变化回调
-  void _onPositionChanged(Duration position, {bool needRecord = true}) {
+  void _onPositionChanged(Duration position, {bool needRecord = false}) {
     _lastRecordedPosition = position;
 
     // 检查是否需要记录进度（基于时间间隔）

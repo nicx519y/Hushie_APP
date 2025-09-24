@@ -16,6 +16,7 @@ class AudioPlayerState {
   final PlayerState playerState;
   final Duration renderPreviewStart;
   final Duration renderPreviewEnd;
+  final AudioItem? preloadAudio;
 
   AudioPlayerState({
     this.currentAudio,
@@ -27,6 +28,7 @@ class AudioPlayerState {
     PlayerState? playerState,
     this.renderPreviewStart = Duration.zero,
     this.renderPreviewEnd = Duration.zero,
+    this.preloadAudio,
   }) : playerState = playerState ?? PlayerState(false, ProcessingState.idle);
 
   AudioPlayerState copyWith({
@@ -39,6 +41,7 @@ class AudioPlayerState {
     PlayerState? playerState,
     Duration? renderPreviewStart,
     Duration? renderPreviewEnd,
+    AudioItem? preloadAudio,
   }) {
     return AudioPlayerState(
       currentAudio: currentAudio ?? this.currentAudio,
@@ -50,6 +53,7 @@ class AudioPlayerState {
       playerState: playerState ?? this.playerState,
       renderPreviewStart: renderPreviewStart ?? this.renderPreviewStart,
       renderPreviewEnd: renderPreviewEnd ?? this.renderPreviewEnd,
+      preloadAudio: preloadAudio ?? this.preloadAudio,
     );
   }
 }
@@ -136,6 +140,7 @@ class AudioPlayerService extends BaseAudioHandler {
     PlayerState? playerState,
     Duration? renderPreviewStart,
     Duration? renderPreviewEnd,
+    AudioItem? preloadAudio,
   }) {
     final newState = _audioStateSubject.value.copyWith(
       currentAudio: currentAudio,
@@ -147,13 +152,22 @@ class AudioPlayerService extends BaseAudioHandler {
       playerState: playerState,
       renderPreviewStart: renderPreviewStart,
       renderPreviewEnd: renderPreviewEnd,
+      preloadAudio: preloadAudio,
     );
     _audioStateSubject.add(newState);
+  }
+
+  // 公共方法：更新预加载音频状态
+  void updatePreloadAudio(AudioItem? preloadAudio) {
+    _updateAudioState(preloadAudio: preloadAudio);
   }
 
   Future<void> loadAudio(AudioItem audio, {Duration? initialPosition}) async {
     try {
       // 先完全停止并重置播放器状态
+      if(currentAudio != audio) {
+        updatePreloadAudio(audio);
+      }
 
       await _stopAndReset();
       _updateAudioState(currentAudio: audio);

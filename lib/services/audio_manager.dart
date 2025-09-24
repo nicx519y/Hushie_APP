@@ -39,6 +39,10 @@ class AudioManager {
         PlayerState(false, ProcessingState.idle),
       );
 
+  // preloadAudio 流，用于推送预加载的音频信息
+  final BehaviorSubject<AudioItem?> _preloadAudioSubject =
+      BehaviorSubject<AudioItem?>.seeded(null);
+
   // 缓存本地状态，用于比对变化
   String? _lastAudioId;
   bool _lastIsPlaying = false;
@@ -173,6 +177,13 @@ class AudioManager {
       if (playingStateChanged || audioChanged) {
         _playerStateSubject.add(audioState.playerState);
         
+      }
+      
+      // 监听 preloadAudio 变化并推送到流
+      final preloadAudio = audioState.preloadAudio;
+      if (_preloadAudioSubject.value != preloadAudio) {
+        _preloadAudioSubject.add(preloadAudio);
+        debugPrint('PreloadAudio 状态更新: ${preloadAudio?.title ?? 'null'}');
       }
       
       // 更新缓存的状态
@@ -316,9 +327,13 @@ class AudioManager {
     debugPrint('AudioManager: AudioService 初始化完成');
 
     // 开启播放历史记录监听（通过AudioManager的状态流）
-    if(await AuthManager.instance.isSignedIn()) {
-      signedInit();
-    } else {
+    try {
+      if(await AuthManager.instance.isSignedIn()) {
+        signedInit();
+      } else {
+        signedOutInit();
+      }
+    } catch (e) {
       signedOutInit();
     }
 
@@ -624,6 +639,11 @@ class AudioManager {
     return _playerStateSubject.stream;
   }
 
+  // 获取 preloadAudio 流
+  Stream<AudioItem?> get preloadAudioStream {
+    return _preloadAudioSubject.stream;
+  }
+
   // 获取当前状态
   bool get isPlaying {
     return _audioService?.currentState.isPlaying ?? false;
@@ -750,6 +770,8 @@ class AudioManager {
 
     // 关闭StreamController
     await _previewOutController.close();
+
+    AudioHistoryManager.instance.stopListening();
 
     _audioService = null;
   }
