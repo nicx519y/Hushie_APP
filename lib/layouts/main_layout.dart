@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../components/bottom_navigation_bar.dart';
+import '../utils/toast_helper.dart';
+import '../utils/toast_messages.dart';
 
 // 全局路由观察者
 final RouteObserver<ModalRoute<void>> globalRouteObserver =
@@ -23,6 +26,7 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   late int _currentIndex;
+  DateTime? _lastBackPressed;
 
   @override
   void initState() {
@@ -46,13 +50,38 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
+  // 处理返回按钮事件
+  bool _onWillPop() {
+    final now = DateTime.now();
+    
+    // 如果是第一次按返回键，或者距离上次按返回键超过2秒
+    if (_lastBackPressed == null || 
+        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+      _lastBackPressed = now;
+      ToastHelper.showInfo(ToastMessages.appWillClose);
+      return false; // 不退出应用
+    }
+    
+    // 如果在2秒内再次按返回键，退出应用
+    SystemNavigator.pop();
+    return true;
+  }
+
 
 
   @override
   Widget build(BuildContext context) {
     debugPrint('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
-    return RepaintBoundary(
-      child: _buildMainContent(),
+    return PopScope(
+      canPop: false, // 禁止默认的返回行为
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          _onWillPop();
+        }
+      },
+      child: RepaintBoundary(
+        child: _buildMainContent(),
+      ),
     );
   }
 

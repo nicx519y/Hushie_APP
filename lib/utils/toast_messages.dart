@@ -60,6 +60,9 @@ class ToastMessages {
   static const String serviceDisconnected = 'Network connection failed, please check network and try again';
   static const String serviceTimeout = 'Request timeout, please try again';
 
+  // ========== App Close Messages ==========
+  static const String appWillClose = 'Press back again to quit the app';
+
   // ========== Logout Related Messages ==========
   static String logoutFailed(String error) => 'Logout failed: $error';
 
