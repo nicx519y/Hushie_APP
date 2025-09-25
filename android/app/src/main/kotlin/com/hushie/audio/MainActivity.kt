@@ -8,6 +8,7 @@ import android.view.WindowManager.LayoutParams
 
 class MainActivity : AudioServiceActivity() {
     private val CHANNEL = "com.hushie.audio/exoplayer_config"
+    private val APP_OPERATIONS_CHANNEL = "com.hushie/app_operations"
     
     override fun onCreate(savedInstanceState: Bundle?) {
         // 立即设置主题为正常主题，跳过启动页
@@ -61,6 +62,7 @@ class MainActivity : AudioServiceActivity() {
         // 注册签名验证插件
         flutterEngine.plugins.add(SignatureVerificationPlugin())
         
+        // ExoPlayer配置通道
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "configureExoPlayerBuffer" -> {
@@ -70,6 +72,20 @@ class MainActivity : AudioServiceActivity() {
                     // 配置 ExoPlayer 缓冲参数
                     configureExoPlayerBuffer(minBufferMs, maxBufferMs)
                     result.success("ExoPlayer buffer configured: min=${minBufferMs}ms, max=${maxBufferMs}ms")
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+        
+        // 应用操作通道 - 处理退到后台等系统级操作
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, APP_OPERATIONS_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "sendToBackground" -> {
+                    // 退到后台（触发系统原生动画）
+                    moveTaskToBack(true) // 参数true表示所有Activity都退到后台
+                    result.success(true)
                 }
                 else -> {
                     result.notImplemented()

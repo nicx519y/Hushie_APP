@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../components/bottom_navigation_bar.dart';
+import '../pages/home_page.dart';
+import '../pages/profile_page.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
+import '../services/app_operations_service.dart';
 
 // 全局路由观察者
 final RouteObserver<ModalRoute<void>> globalRouteObserver =
@@ -25,8 +28,8 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  late int _currentIndex;
-  DateTime? _lastBackPressed;
+  int _currentIndex = 0;
+  DateTime? _lastPressedAt;
 
   @override
   void initState() {
@@ -50,21 +53,42 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
-  // 处理返回按钮事件
-  bool _onWillPop() {
+  /// 处理返回按键事件
+  Future<void> _onWillPop() async {
     final now = DateTime.now();
     
-    // 如果是第一次按返回键，或者距离上次按返回键超过2秒
-    if (_lastBackPressed == null || 
-        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
-      _lastBackPressed = now;
+    // 检查是否在2秒内连续按下返回键
+    if (_lastPressedAt == null || now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
+      // 第一次按下或超过2秒，显示提示并记录时间
+      _lastPressedAt = now;
       ToastHelper.showInfo(ToastMessages.appWillClose);
-      return false; // 不退出应用
+      return;
     }
     
-    // 如果在2秒内再次按返回键，退出应用
-    SystemNavigator.pop();
-    return true;
+    // 第二次按下且在2秒内，使用原生方法退到后台
+    await _exitWithNativeAnimation();
+  }
+
+  /// 使用原生动画退到后台
+  Future<void> _exitWithNativeAnimation() async {
+    debugPrint('🚪 [MAIN_LAYOUT] 触发原生退到后台动画');
+    
+    try {
+      // 调用原生方法将应用退到后台，触发系统原生动画
+      final success = await AppOperationsService.sendToBackground();
+      
+      if (success) {
+        debugPrint('✅ [MAIN_LAYOUT] 成功退到后台');
+      } else {
+        debugPrint('❌ [MAIN_LAYOUT] 退到后台失败，使用系统默认退出');
+        // 如果原生方法失败，回退到系统默认退出
+        SystemNavigator.pop();
+      }
+    } catch (e) {
+      debugPrint('❌ [MAIN_LAYOUT] 退到后台异常: $e');
+      // 发生异常时，回退到系统默认退出
+      SystemNavigator.pop();
+    }
   }
 
 
