@@ -9,6 +9,7 @@ import '../services/audio_manager.dart';
 import '../router/navigation_utils.dart';
 import '../components/subscribe_dialog.dart';
 import '../services/subscribe_privilege_manager.dart';
+import '../services/analytics_service.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -175,6 +176,14 @@ class _SearchPageState extends State<SearchPage> {
       if (searchResults.isNotEmpty) {
         final newItems = searchResults;
 
+        // 记录搜索事件（仅在首次搜索时记录）
+        if (!isLoadMore) {
+          AnalyticsService().logSearch(
+            searchTerm: keyword,
+            resultCount: newItems.length,
+          );
+        }
+
         setState(() {
           if (isLoadMore) {
             _searchResults.addAll(newItems);
@@ -273,6 +282,14 @@ class _SearchPageState extends State<SearchPage> {
     if (_canTapSearchItem) {
       // 保存当前搜索查询到历史
       _saveSearchHistory(_searchController.text);
+      
+      // 记录音频播放事件
+      AnalyticsService().logAudioPlay(
+        audioId: audio.id,
+        audioTitle: audio.title,
+        category: 'search_results',
+      );
+      
       // 播放音频
       _playAudio(audio);
       // 进入播放页面

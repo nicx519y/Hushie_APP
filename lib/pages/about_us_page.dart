@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 import '../components/custom_webview.dart';
+import '../utils/webview_navigator.dart';
+import 'package:flutter/gestures.dart';
 
 class AboutUsPage extends StatelessWidget {
   const AboutUsPage({super.key});
-
+  static const Color linkColor = Color(0xFF2A4EFF);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,11 +31,68 @@ class AboutUsPage extends StatelessWidget {
       body: SafeArea(
         child: Container(
           color: const Color(0xFFF8F8F8),
-          child: CustomWebView(
-            url: ApiConfig.WebviewAboutUsUrl,
-            backgroundColor: const Color(0xFFF8F8F8),
-            loadingBackgroundColor: const Color(0xFFF8F8F8),
-            loadingIndicatorColor: const Color(0xFFF359AA),
+          child: Column(
+            children: [
+              Expanded(
+                child: CustomWebView(
+                  url: ApiConfig.WebviewAboutUsUrl,
+                  backgroundColor: const Color(0xFFF8F8F8),
+                  loadingBackgroundColor: const Color(0xFFF8F8F8),
+                  loadingIndicatorColor: const Color(0xFFF359AA),
+                  fallbackAssetUrl: ApiConfig.WebviewAboutUsFallback, // 添加回退页面
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 38,
+                ),
+                child: RichText(
+                  textAlign: TextAlign.center,
+
+                  text: TextSpan(
+                    style: const TextStyle(
+                      color: Color(0xFF333333),
+                      fontSize: 10,
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: TextStyle(
+                          color: linkColor,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => WebViewNavigator.showPrivacyPolicy(context, clearCache: true),
+                      ),
+                      const TextSpan(
+                        text: ', ',
+                      ),
+                      TextSpan(
+                        text: 'Terms of Use',
+                        style: TextStyle(
+                          color: linkColor,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => WebViewNavigator.showTermsOfUse(context, clearCache: true),
+                      ),
+                      const TextSpan(
+                        text: ' and ',
+                      ),
+                      TextSpan(
+                        text: 'End User License Agreement',
+                        style: TextStyle(
+                          color: linkColor,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => WebViewNavigator.showLicenseAgreement(context, clearCache: true),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

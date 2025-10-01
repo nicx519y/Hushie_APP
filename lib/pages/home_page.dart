@@ -6,6 +6,7 @@ import '../models/audio_item.dart';
 import '../models/tab_item.dart';
 import '../services/audio_manager.dart';
 import '../services/home_tab_list_data_provider.dart';
+import '../services/analytics_service.dart';
 
 import '../router/navigation_utils.dart';
 
@@ -150,12 +151,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _onSearchTap() {
+    // 记录搜索页面访问事件
+    AnalyticsService().logScreenView(screenName: 'search_page');
     NavigationUtils.navigateToSearch(context);
   }
 
   void _onAudioTap(AudioItem item) {
     // 先开始播放音频，然后跳转到播放页面
     debugPrint('点击音频: ${item.title} ${item.id}');
+    
+    // 记录音频播放事件
+    AnalyticsService().logAudioPlay(
+      audioId: item.id,
+      audioTitle: item.title,
+      category: 'home_page',
+    );
+    
     _playAudio(item);
 
     // 使用播放器页面的标准打开方式（包含上滑动画）
@@ -163,7 +174,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _playAudio(AudioItem item) async {
-    try {
+  try {
       // 通过音频管理器播放指定 ID 的音频
       await AudioManager.instance.playAudio(item);
     } catch (e) {

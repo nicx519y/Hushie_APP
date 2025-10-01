@@ -73,7 +73,6 @@ class AudioManager {
   Future<void> _ensureInitialized() async {
     // 如果已经初始化完成，直接返回
     if (_isInitialized && _audioService != null) {
-      debugPrint('AudioService already initialized');
       return;
     }
 

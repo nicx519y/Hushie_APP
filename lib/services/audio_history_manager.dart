@@ -72,18 +72,14 @@ class AudioHistoryManager {
       await _loadCachedHistory();
 
       // 检查用户登录状态
-      final bool isLogin = await AuthManager.instance.isSignedIn();
-      if (!isLogin) {
+      if (!await AuthManager.instance.isSignedIn()) {
         _clearCacheAfterLogout();
-        _isInitialized = true;
-        return;
+      } else {
+        // 刷新服务端数据
+        await _reinitializeAfterLogin();
+        debugPrint('🎵 [HISTORY] 初始化完成，缓存了 ${_historyCache.length} 条历史记录');
       }
-
-      // 刷新服务端数据
-       await _reinitializeAfterLogin();
       _isInitialized = true;
-
-      debugPrint('🎵 [HISTORY] 初始化完成，缓存了 ${_historyCache.length} 条历史记录');
     } catch (e) {
       debugPrint('🎵 [HISTORY] 初始化失败: $e');
       _historyCache = [];

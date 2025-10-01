@@ -7,7 +7,6 @@ import 'package:hushie_app/services/subscribe_privilege_manager.dart';
 import '../models/audio_item.dart';
 import '../services/audio_manager.dart';
 import '../services/audio_service.dart';
-import '../services/api/audio_like_service.dart';
 import '../services/api/audio_detail_service.dart';
 import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
@@ -16,7 +15,9 @@ import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
 import '../services/audio_state_proxy.dart';
+import '../services/analytics_service.dart';
 import 'package:just_audio/just_audio.dart';
+import '../components/swipe_to_close_container.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -154,6 +155,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             // 检查播放状态是否变化
             if (_lastAudioState?.isPlaying != audioState.isPlaying) {
               _isPlaying = audioState.isPlaying;
+              
+              // 记录播放/暂停事件
+              if (_currentAudio != null) {
+                if (audioState.isPlaying) {
+                  AnalyticsService().logAudioPlay(
+                    audioId: _currentAudio!.id,
+                    audioTitle: _currentAudio!.title,
+                    category: 'audio_player',
+                    duration: audioState.duration?.inSeconds,
+                  );
+                } else {
+                  AnalyticsService().logAudioPause(
+                    audioId: _currentAudio!.id,
+                    audioTitle: _currentAudio!.title,
+                    position: audioState.position.inSeconds,
+                  );
+                }
+              }
+              
               needsUpdate = true;
             }
 
@@ -275,6 +295,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       _isLikeRequesting = true; // 设置请求状态
     });
 
+    // 记录点赞事件
+    AnalyticsService().logAudioLike(
+      audioId: _currentAudio!.id,
+      audioTitle: _currentAudio!.title,
+      isLiked: newIsLiked,
+    );
+
     try {
       // 调用API
       await AudioLikesManager.instance.setLike( _currentAudio!, newIsLiked);
@@ -353,6 +380,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
+  void _closePage() {
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   // 移除_createDurationProxy和_onSeek方法，现在由AudioProgressBar内部处理
 
   // 解锁全功能提示点击事件
@@ -392,11 +425,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        // onTap: _toggleControls,
-        child: Stack(
+    return SwipeToCloseContainer(
+      onClose: _closePage,
+      showDragIndicator: false,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
           children: [
             _buildAudioBackground(),
             _buildStatusBar(),
@@ -520,7 +554,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         minimumSize: const Size(40, 40),
       ),
-      onPressed: () => Navigator.pop(context),
+      onPressed: () => _closePage(),
       icon: Transform.translate(
         offset: const Offset(-2.5, 0),
         child: Icon(CustomIcons.arrow_down, color: Colors.white, size: 9),
@@ -801,4 +835,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       ),
     );
   }
+
+  // 构建拖拽指示器
 }

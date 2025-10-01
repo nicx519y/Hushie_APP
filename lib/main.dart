@@ -1,14 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'pages/splash_page.dart';
 import 'config/api_config.dart';
 import 'layouts/main_layout.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   debugPrint('🚀 [MAIN] 应用启动开始');
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('🚀 [MAIN] Flutter绑定初始化完成');
+
+  // 初始化 Firebase
+  try {
+    await Firebase.initializeApp();
+    debugPrint('🔥 [FIREBASE] Firebase初始化完成');
+    
+    // 初始化 Firebase Analytics
+    FirebaseAnalytics.instance;
+    debugPrint('📊 [ANALYTICS] Firebase Analytics初始化完成');
+    
+    // 初始化 Analytics 服务
+    AnalyticsService().initialize();
+    
+    // 记录应用启动事件
+    await AnalyticsService().logAppOpen();
+  } catch (e) {
+    debugPrint('❌ [FIREBASE] Firebase初始化失败: $e');
+  }
 
   // 初始化 just_audio_media_kit 并配置缓冲大小
   JustAudioMediaKit.ensureInitialized();

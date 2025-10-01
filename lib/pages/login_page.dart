@@ -4,7 +4,8 @@ import '../services/auth_manager.dart';
 import '../router/navigation_utils.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
-import '../components/webview_page.dart';
+import '../utils/webview_navigator.dart';
+import '../services/analytics_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -217,13 +218,13 @@ class _LoginPageState extends State<LoginPage> {
                           text: 'By continuing, I agree to Hushie\'s ',
                         ),
                         TextSpan(
-                          text: 'Term of Use',
+                          text: 'Terms of Use',
                           style: const TextStyle(
                             color: linkColor,
                             decoration: TextDecoration.none,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () => _showTermsOfUse(),
+                            ..onTap = () => WebViewNavigator.showTermsOfUse(context, clearCache: true),
                         ),
                         const TextSpan(text: ', '),
                         TextSpan(
@@ -233,7 +234,7 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: TextDecoration.none,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () => _showLicenseAgreement(),
+                            ..onTap = () => WebViewNavigator.showLicenseAgreement(context, clearCache: true),
                         ),
                         const TextSpan(text: ' and '),
                         TextSpan(
@@ -243,7 +244,7 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: TextDecoration.none,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () => _showPrivacyPolicy(),
+                            ..onTap = () => WebViewNavigator.showPrivacyPolicy(context, clearCache: true),
                         ),
                         const TextSpan(text: '.'),
                       ],
@@ -271,6 +272,9 @@ class _LoginPageState extends State<LoginPage> {
       if (result.errNo == 0 && result.data != null) {
         // 登录成功
         ToastHelper.showSuccess(ToastMessages.loginSuccess);
+        
+        // 记录登录事件
+        AnalyticsService().logLogin(loginMethod: 'google');
 
         // 延迟一下让用户看到成功消息，然后关闭登录页面
         await Future.delayed(const Duration(milliseconds: 500));
@@ -280,9 +284,11 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.of(context).pop();
         }
       } else {
-        // 登录失败
-        final errorMessage = _getErrorMessage(result.errNo);
-        ToastHelper.showError(errorMessage);
+        if([-1, 1, 2, 3].contains(result.errNo)){
+          // 登录失败
+          final errorMessage = _getErrorMessage(result.errNo);
+          ToastHelper.showError(errorMessage);
+        }
       }
     } catch (e) {
       // 处理异常
@@ -296,41 +302,6 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
-  }
-
-  void _showTermsOfUse() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const WebViewPage(
-          url: 'assets/html/renew_info.html',
-          title: 'Auto-renew Information',
-        ),
-      ),
-    );
-  }
-
-  void _showLicenseAgreement() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const WebViewPage(
-          url: 'assets/html/end_user_license_greement.html',
-          title: 'End User License Agreement',
-        ),
-      ),
-    ); 
-  }
-
-  void _showPrivacyPolicy() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const WebViewPage(
-          url: 'assets/html/privacy_policy.html',
-          title: 'Privacy Policy',
-        ),
-      ),
-    );
-    // _showSnackBar('Open Privacy Policy page.');
-    // 这里可以导航到隐私政策页面
   }
 
 

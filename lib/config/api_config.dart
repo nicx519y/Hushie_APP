@@ -48,9 +48,25 @@ class ApiConfig {
   static const int nonceLength = 16;
   static const int maxTimestampDrift = 300; // 5分钟时间戳漂移容忍度（秒）
 
-  static const String WebviewAboutUsUrl = 'assets/html/about.html';
-  static const String AccountDeletionAgreement =
-      'assets/html/account_deletion_agreement.html';
+  // WebView页面配置 - 网络优先，本地回退
+  static const String WebviewAboutUsUrl = 'https://af.hushie.ai/html/about.html'; // 网络URL
+  static const String WebviewAboutUsFallback = 'assets/html/about.html'; // 本地回退
+  
+  static const String AccountDeletionAgreement = 'https://af.hushie.ai/html/account_deletion_agreement.html'; // 网络URL
+  static const String AccountDeletionAgreementFallback = 'assets/html/account_deletion_agreement.html'; // 本地回退
+
+  // WebView页面配置 - 网络优先，本地回退
+  static const String TermsOfUseUrl = 'https://af.hushie.ai/html/terms_of_use.html'; // 网络URL
+  static const String TermsOfUseFallback = 'assets/html/terms_of_use.html'; // 本地回退
+  
+  static const String EndUserLicenseAgreementUrl = 'https://af.hushie.ai/html/end_user_license_agreement.html'; // 网络URL
+  static const String EndUserLicenseAgreementFallback = 'assets/html/end_user_license_agreement.html'; // 本地回退
+  
+  static const String PrivacyPolicyUrl = 'https://af.hushie.ai/html/privacy_policy.html'; // 网络URL
+  static const String PrivacyPolicyFallback = 'assets/html/privacy_policy.html'; // 本地回退
+  
+  static const String AutoRenewInfoUrl = 'https://af.hushie.ai/html/renew_info.html'; // 网络URL
+  static const String AutoRenewInfoFallback = 'assets/html/renew_info.html'; // 本地回退
 
   /// 获取应用密钥（安全方式）
   /// 在实际项目中，这里应该实现更安全的密钥获取方式

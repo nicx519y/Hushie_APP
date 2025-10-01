@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "561280927021-7iohfmop7a3ddmg470vske54c6lfdkj1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hushie.audio",
+            "certificate_hash": "708ebdc43697eb3de3f6243c3c12a19be26182b1"
+          }
+        },
+        {
           "client_id": "561280927021-b2139lsqqlj8k41uft743diga3jtqntb.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

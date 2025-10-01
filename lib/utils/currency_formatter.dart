@@ -30,7 +30,16 @@ class CurrencyFormatter {
       default:
         symbol = currency;
     }
-    return '$symbol${price.toStringAsFixed(2)}';
+    
+    // 格式化价格，去除小数点后无效的0
+    String formattedPrice = price.toStringAsFixed(2);
+    if (formattedPrice.endsWith('.00')) {
+      formattedPrice = price.toInt().toString();
+    } else if (formattedPrice.endsWith('0')) {
+      formattedPrice = formattedPrice.substring(0, formattedPrice.length - 1);
+    }
+    
+    return '$symbol$formattedPrice';
   }
 
   /// 获取货币符号

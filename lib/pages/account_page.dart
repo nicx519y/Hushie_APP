@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hushie_app/components/custom_outline_button.dart';
+import 'package:hushie_app/pages/home_page.dart';
 import '../services/auth_manager.dart';
 import '../config/api_config.dart';
 import '../components/custom_webview.dart';
@@ -42,12 +43,11 @@ class _AccountPageState extends State<AccountPage> {
           try {
             await AuthManager.instance.deleteAccount();
 
-            // 账户删除成功后，提示用户并关闭页面
+            // 删除成功，导航回主页面
             ToastHelper.showSuccess(ToastMessages.accountDeleteSuccess);
-
-            if (mounted) {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            }
+            // 简单地返回到根页面
+            Navigator.of(context).pop();
+            Navigator.of(context).pop();
           } catch (e) {
             ToastHelper.showError(ToastMessages.accountDeleteFailed);
           }
@@ -63,7 +63,7 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.white,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -133,6 +133,8 @@ class _AccountPageState extends State<AccountPage> {
                   backgroundColor: const Color(0xFFF5F5F5),
                   loadingBackgroundColor: const Color(0xFFF5F5F5),
                   loadingIndicatorColor: const Color(0xFFF359AA),
+                  fallbackAssetUrl:
+                      ApiConfig.AccountDeletionAgreementFallback, // 添加回退页面
                 ),
               ),
 

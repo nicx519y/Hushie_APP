@@ -71,22 +71,10 @@ class _MainLayoutState extends State<MainLayout> {
 
   /// 使用原生动画退到后台
   Future<void> _exitWithNativeAnimation() async {
-    debugPrint('🚪 [MAIN_LAYOUT] 触发原生退到后台动画');
-    
     try {
-      // 调用原生方法将应用退到后台，触发系统原生动画
-      final success = await AppOperationsService.sendToBackground();
-      
-      if (success) {
-        debugPrint('✅ [MAIN_LAYOUT] 成功退到后台');
-      } else {
-        debugPrint('❌ [MAIN_LAYOUT] 退到后台失败，使用系统默认退出');
-        // 如果原生方法失败，回退到系统默认退出
-        SystemNavigator.pop();
-      }
+      await AppOperationsService.sendToBackground();
     } catch (e) {
-      debugPrint('❌ [MAIN_LAYOUT] 退到后台异常: $e');
-      // 发生异常时，回退到系统默认退出
+      // 如果原生方法失败，使用系统默认退出
       SystemNavigator.pop();
     }
   }

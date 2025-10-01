@@ -27,10 +27,8 @@ class ExoPlayerConfigService {
         'maxBufferMs': maxBufferMs,
       });
       
-      print('ExoPlayer buffer configured: $result');
       return result;
     } on PlatformException catch (e) {
-      print('Failed to configure ExoPlayer buffer: ${e.message}');
       return 'Failed to configure ExoPlayer buffer: ${e.message}';
     }
   }

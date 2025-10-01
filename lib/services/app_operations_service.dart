@@ -15,12 +15,11 @@ class AppOperationsService {
   static Future<bool> sendToBackground() async {
     try {
       final bool result = await _channel.invokeMethod('sendToBackground');
+      // final  bool result = await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
       return result;
     } on PlatformException catch (e) {
-      print('❌ [APP_OPERATIONS] 退到后台失败: ${e.message}');
       return false;
     } catch (e) {
-      print('❌ [APP_OPERATIONS] 未知错误: $e');
       return false;
     }
   }

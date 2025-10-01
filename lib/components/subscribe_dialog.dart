@@ -13,6 +13,7 @@ import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../router/navigation_utils.dart';
 import 'webview_page.dart';
+import '../utils/webview_navigator.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -67,42 +68,6 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
   void _closeDialog() {
     Navigator.of(context, rootNavigator: true).pop();
-  }
-
-  /// 打开自动续费说明页面
-  void _openAutoRenewInfo() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const WebViewPage(
-          url: 'assets/html/renew_info.html',
-          title: 'Auto-renew Information',
-        ),
-      ),
-    );
-  }
-
-  /// 打开隐私政策页面
-  void _openPrivacyPolicy() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const WebViewPage(
-          url: 'assets/html/privacy_policy.html',
-          title: 'Privacy Policy',
-        ),
-      ),
-    );
-  }
-
-  /// 打开使用条款页面
-  void _openTermsOfUse() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const WebViewPage(
-          url: 'assets/html/terms_of_use.html',
-          title: 'Terms of Use',
-        ),
-      ),
-    );
   }
 
   // 打开成功提示框
@@ -428,7 +393,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
               // 自动续费说明
               InkWell(
-                onTap: _openAutoRenewInfo,
+                onTap: () => WebViewNavigator.showAutoRenewInfo(context, clearCache: true), 
                 child: Text(
                   'Auto-renews monthly. Cancel anytime.',
                   style: TextStyle(
@@ -446,7 +411,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   InkWell(
-                    onTap: _openPrivacyPolicy,
+                    onTap: () => WebViewNavigator.showPrivacyPolicy(context, clearCache: true),
                     child: Text(
                       'Privacy Policy',
                       style: TextStyle(
@@ -457,7 +422,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                     ),
                   ),
                   InkWell(
-                    onTap: _openTermsOfUse,
+                    onTap: () => WebViewNavigator.showTermsOfUse(context, clearCache: true),
                     child: Text(
                       'Terms of Use',
                       style: TextStyle(
@@ -596,7 +561,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
             ),
             Expanded(
               child:
-                  (isSelected &&
+                  (/*isSelected &&*/
                       basePlan.isShowDiscount &&
                       getDiscountText() != null)
                   ? Center(

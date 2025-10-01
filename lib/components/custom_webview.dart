@@ -6,6 +6,8 @@ class CustomWebView extends StatefulWidget {
   final Color? backgroundColor;
   final Color? loadingBackgroundColor;
   final Color? loadingIndicatorColor;
+  final bool clearCache;
+  final String? fallbackAssetUrl; // 网络加载失败时的回退本地页面
 
   const CustomWebView({
     super.key,
@@ -13,6 +15,8 @@ class CustomWebView extends StatefulWidget {
     this.backgroundColor = const Color(0xFF000000),
     this.loadingBackgroundColor = const Color(0xFFF5F5F5),
     this.loadingIndicatorColor = const Color(0xFFF359AA),
+    this.clearCache = false,
+    this.fallbackAssetUrl,
   });
 
   @override
@@ -38,12 +42,14 @@ class _CustomWebViewState extends State<CustomWebView> {
     // 只有当URL发生变化时才重新加载
     if (oldWidget.url != widget.url) {
       _currentUrl = widget.url;
-      // 检查是否为本地assets文件
-      if (widget.url.startsWith('assets/')) {
-        _controller.loadFlutterAsset(widget.url);
-      } else {
-        _controller.loadRequest(Uri.parse(widget.url));
+      
+      // 如果需要清除缓存，则在加载新URL前清除缓存
+      if (widget.clearCache) {
+        _controller.clearCache();
+        _controller.clearLocalStorage();
       }
+      
+      _loadUrl(widget.url);
     }
     
     // 更新背景色（如果发生变化）
@@ -75,14 +81,51 @@ class _CustomWebViewState extends State<CustomWebView> {
               });
             }
           },
+          onWebResourceError: (WebResourceError error) {
+            // 处理网络加载错误
+            
+            if (mounted && !_currentUrl!.startsWith('assets/')) {
+              // 检查是否是主页面加载错误（不是子资源错误）
+              bool isMainPageError = error.isForMainFrame ?? true;
+              
+              // 如果是主页面错误且有回退的本地页面，则加载本地页面
+              if (isMainPageError && widget.fallbackAssetUrl != null) {
+                _loadFallbackAsset();
+              }
+            }
+          },
         ),
       );
     
-    // 检查是否为本地assets文件
-    if (_currentUrl!.startsWith('assets/')) {
-      _controller.loadFlutterAsset(_currentUrl!);
+    // 如果需要清除缓存，则清除所有缓存数据
+    if (widget.clearCache) {
+      _controller.clearCache();
+      _controller.clearLocalStorage();
+    }
+    
+    _loadUrl(_currentUrl!);
+  }
+
+  /// 加载URL的统一方法
+  void _loadUrl(String url) {
+    if (url.startsWith('assets/')) {
+      _controller.loadFlutterAsset(url);
     } else {
-      _controller.loadRequest(Uri.parse(_currentUrl!));
+      _controller.loadRequest(Uri.parse(url));
+    }
+  }
+
+  /// 加载回退的本地assets页面
+  void _loadFallbackAsset() {
+    if (widget.fallbackAssetUrl != null) {
+      _currentUrl = widget.fallbackAssetUrl!;
+      _controller.loadFlutterAsset(widget.fallbackAssetUrl!);
+      
+      if (mounted) {
+        setState(() {
+          _webviewIsLoading = true;
+        });
+      }
     }
   }
 

@@ -54,6 +54,7 @@ class _SettingPageState extends State<SettingPage> {
           await AuthManager.instance.signOut();
           if (mounted) {
             Navigator.of(context).pop();
+            ToastHelper.showSuccess(ToastMessages.logoutSuccess);
           }
         },
       );

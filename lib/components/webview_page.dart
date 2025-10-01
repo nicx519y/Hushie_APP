@@ -4,12 +4,16 @@ import 'custom_webview.dart';
 class WebViewPage extends StatelessWidget {
   final String url;
   final String title;
+  final bool clearCache;
+  final String? fallbackAssetUrl;
 
   const WebViewPage({
-    Key? key,
+    super.key,
     required this.url,
     required this.title,
-  }) : super(key: key);
+    this.clearCache = false,
+    this.fallbackAssetUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +32,8 @@ class WebViewPage extends StatelessWidget {
       body: CustomWebView(
         url: url,
         backgroundColor: const Color(0xFFF8F8F8),
+        clearCache: clearCache,
+        fallbackAssetUrl: fallbackAssetUrl,
       ),
     );
   }
