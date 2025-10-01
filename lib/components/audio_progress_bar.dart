@@ -97,11 +97,9 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               _isPreviewMode = !event.hasPremium; // 有权限时不是预览模式，无权限时是预览模式
               _resetAudioStateListener();
             });
-          
           }
         });
   }
-
 
   void _resetAudioStateListener() {
     _unListenerToAudioState();
@@ -131,7 +129,6 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
       }),
     );
 
-
     debugPrint('[progressBar] 初始化预览模式: $_isPreviewMode');
 
     if (_isPreviewMode) {
@@ -147,37 +144,43 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               bool needsUpdate = false;
 
               // 检查当前音频是否变化
-            if (_lastAudioState?.currentAudio?.id !=
-                audioState.currentAudio?.id) {
-              // 音频切换时立即清零所有展现值
-              _renderPosition = Duration.zero;
-              _renderDuration = Duration.zero;
-              _renderBufferedPosition = Duration.zero;
-              _realPosition = Duration.zero;
-              _realDuration = Duration.zero;
-              _dragValue = 0.0;
-              needsUpdate = true;
-            }
+              if (_lastAudioState?.currentAudio?.id !=
+                  audioState.currentAudio?.id) {
+                // 音频切换时立即清零所有展现值
+                _renderPosition = Duration.zero;
+                _renderDuration = Duration.zero;
+                _renderBufferedPosition = Duration.zero;
+                _realPosition = Duration.zero;
+                _realDuration = Duration.zero;
+                _renderPreviewStart = Duration.zero;
+                _renderPreviewEnd = Duration.zero;
+                _dragValue = 0.0;
+                needsUpdate = true;
+              }
 
-              // 检查渲染预览区域是否变化
-              if (_lastAudioState?.renderPreviewStart !=
-                      audioState.renderPreviewStart ||
-                  _lastAudioState?.renderPreviewEnd !=
-                      audioState.renderPreviewEnd) {
+              // 检查duration是否变化（audioState.duration已经过代理处理）
+              if (_renderDuration != audioState.duration) {
+                _renderDuration = audioState.duration;
                 _renderPreviewStart = audioState.renderPreviewStart;
                 _renderPreviewEnd = audioState.renderPreviewEnd;
                 needsUpdate = true;
               }
 
-              // 检查duration是否变化（audioState.duration已经过代理处理）
-              if (_lastAudioState?.duration != audioState.duration) {
-                _renderDuration = audioState.duration;
-                needsUpdate = true;
-              }
+              // 检查渲染预览区域是否变化
+              // if (_lastAudioState?.renderPreviewStart !=
+              //         audioState.renderPreviewStart ||
+              //     _lastAudioState?.renderPreviewEnd !=
+              //         audioState.renderPreviewEnd) {
+              //   _renderPreviewStart = audioState.renderPreviewStart;
+              //   _renderPreviewEnd = audioState.renderPreviewEnd;
+              //   needsUpdate = true;
+              // }
 
               // 检查播放位置是否变化
               if (_lastAudioState?.position != audioState.position) {
-                debugPrint('[progressBar] 渲染位置：${audioState.position} 预览模式: $_isPreviewMode');
+                debugPrint(
+                  '[progressBar] 渲染位置：${audioState.position} 预览模式: $_isPreviewMode',
+                );
                 _renderPosition = audioState.position;
                 if (!_isDragging) {
                   _dragValue = _renderDuration.inMilliseconds > 0
@@ -220,77 +223,82 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
         }),
       );
     } else {
-      _subscriptions.add(_audioManager.audioStateStream.listen((audioState) {
-        if (mounted) {
-          // 如果是第一次接收状态或状态发生变化，才进行处理
-          if (_lastAudioState == null ||
-              _hasStateChanged(_lastAudioState!, audioState)) {
-            bool needsUpdate = false;
+      _subscriptions.add(
+        _audioManager.audioStateStream.listen((audioState) {
+          if (mounted) {
+            // 如果是第一次接收状态或状态发生变化，才进行处理
+            if (_lastAudioState == null ||
+                _hasStateChanged(_lastAudioState!, audioState)) {
+              bool needsUpdate = false;
 
-            // 检查当前音频是否变化
-            if (_lastAudioState?.currentAudio?.id !=
-                audioState.currentAudio?.id) {
-              // 音频切换时立即清零所有展现值
-              _renderPosition = Duration.zero;
-              _renderDuration = Duration.zero;
-              _renderPreviewStart = Duration.zero;
-              _renderPreviewEnd = Duration.zero;
-              _renderBufferedPosition = Duration.zero;
-              _realPosition = Duration.zero;
-              _realDuration = Duration.zero;
-              _dragValue = 0.0;
-              needsUpdate = true;
-            }
-
-            // 非预览模式下不需要预览区域，直接使用真实duration
-            if (_lastAudioState?.duration != audioState.duration) {
-              _renderDuration = audioState.duration ?? Duration.zero;
-              debugPrint('[progressBar] 渲染duration：${_renderDuration.inSeconds}');
-              needsUpdate = true;
-            }
-
-            // 检查播放位置是否变化（使用真实位置）
-            if (_lastAudioState?.position != audioState.position) {
-              _renderPosition = audioState.position ?? Duration.zero;
-              if (!_isDragging) {
-                _dragValue = _renderDuration.inMilliseconds > 0
-                    ? _renderPosition.inMilliseconds /
-                          _renderDuration.inMilliseconds
-                    : 0.0;
+              // 检查当前音频是否变化
+              if (_lastAudioState?.currentAudio?.id !=
+                  audioState.currentAudio?.id) {
+                // 音频切换时立即清零所有展现值
+                _renderPosition = Duration.zero;
+                _renderDuration = Duration.zero;
+                _renderPreviewStart = Duration.zero;
+                _renderPreviewEnd = Duration.zero;
+                _renderBufferedPosition = Duration.zero;
+                _realPosition = Duration.zero;
+                _realDuration = Duration.zero;
+                _dragValue = 0.0;
+                needsUpdate = true;
               }
-              needsUpdate = true;
-            }
 
-            // 检查缓冲位置是否变化（使用真实缓冲位置）
-            if (_lastAudioState?.bufferedPosition !=
-                audioState.bufferedPosition) {
-              _renderBufferedPosition = audioState.bufferedPosition ?? Duration.zero;
-              needsUpdate = true;
-            }
-
-            // 检查播放器状态是否变化
-            if (_lastAudioState?.playerState.processingState !=
-                audioState.playerState.processingState) {
-              final playerState = audioState.playerState;
-              if (playerState != null) {
-                _disabled =
-                    playerState.processingState == ProcessingState.loading;
+              // 非预览模式下不需要预览区域，直接使用真实duration
+              if (_renderDuration != audioState.duration) {
+                _renderDuration = audioState.duration ?? Duration.zero;
+                debugPrint(
+                  '[progressBar] 渲染duration：${_renderDuration.inSeconds}',
+                );
+                needsUpdate = true;
               }
-              needsUpdate = true;
-            }
 
-            // 只有在需要更新时才调用setState
-            if (needsUpdate) {
-              setState(() {
-                // 状态已在上面更新，这里只需要触发重建
-              });
-            }
+              // 检查播放位置是否变化（使用真实位置）
+              if (_lastAudioState?.position != audioState.position) {
+                _renderPosition = audioState.position ?? Duration.zero;
+                if (!_isDragging) {
+                  _dragValue = _renderDuration.inMilliseconds > 0
+                      ? _renderPosition.inMilliseconds /
+                            _renderDuration.inMilliseconds
+                      : 0.0;
+                }
+                needsUpdate = true;
+              }
 
-            // 更新本地状态缓存
-            _lastAudioState = audioState;
+              // 检查缓冲位置是否变化（使用真实缓冲位置）
+              if (_lastAudioState?.bufferedPosition !=
+                  audioState.bufferedPosition) {
+                _renderBufferedPosition =
+                    audioState.bufferedPosition ?? Duration.zero;
+                needsUpdate = true;
+              }
+
+              // 检查播放器状态是否变化
+              if (_lastAudioState?.playerState.processingState !=
+                  audioState.playerState.processingState) {
+                final playerState = audioState.playerState;
+                if (playerState != null) {
+                  _disabled =
+                      playerState.processingState == ProcessingState.loading;
+                }
+                needsUpdate = true;
+              }
+
+              // 只有在需要更新时才调用setState
+              if (needsUpdate) {
+                setState(() {
+                  // 状态已在上面更新，这里只需要触发重建
+                });
+              }
+
+              // 更新本地状态缓存
+              _lastAudioState = audioState;
+            }
           }
-        }
-      }));
+        }),
+      );
     }
   }
 
@@ -355,7 +363,6 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
       progress = _isDragging
           ? _dragValue
           : _renderPosition.inMilliseconds / _renderDuration.inMilliseconds;
-
 
       // debugPrint('AudioProgressBar build, progress: $progress, _renderPosition: $_renderPosition.inSeconds, _renderDuration: $_renderDuration.inSeconds');
 
