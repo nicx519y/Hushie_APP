@@ -147,10 +147,17 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               bool needsUpdate = false;
 
               // 检查当前音频是否变化
-              if (_lastAudioState?.currentAudio?.id !=
-                  audioState.currentAudio?.id) {
-                needsUpdate = true;
-              }
+            if (_lastAudioState?.currentAudio?.id !=
+                audioState.currentAudio?.id) {
+              // 音频切换时立即清零所有展现值
+              _renderPosition = Duration.zero;
+              _renderDuration = Duration.zero;
+              _renderBufferedPosition = Duration.zero;
+              _realPosition = Duration.zero;
+              _realDuration = Duration.zero;
+              _dragValue = 0.0;
+              needsUpdate = true;
+            }
 
               // 检查渲染预览区域是否变化
               if (_lastAudioState?.renderPreviewStart !=
@@ -223,6 +230,15 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             // 检查当前音频是否变化
             if (_lastAudioState?.currentAudio?.id !=
                 audioState.currentAudio?.id) {
+              // 音频切换时立即清零所有展现值
+              _renderPosition = Duration.zero;
+              _renderDuration = Duration.zero;
+              _renderPreviewStart = Duration.zero;
+              _renderPreviewEnd = Duration.zero;
+              _renderBufferedPosition = Duration.zero;
+              _realPosition = Duration.zero;
+              _realDuration = Duration.zero;
+              _dragValue = 0.0;
               needsUpdate = true;
             }
 
@@ -465,22 +481,26 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _formatDuration(_realPosition),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  Text(
-                    _formatDuration(_realDuration), // 显示真实时长
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                  _realDuration > Duration.zero
+                      ? Text(
+                          _formatDuration(_realPosition),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        )
+                      : Container(),
+                  _realDuration > Duration.zero
+                      ? Text(
+                          _formatDuration(_realDuration), // 显示真实时长
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        )
+                      : Container(),
                 ],
               ),
             ),
