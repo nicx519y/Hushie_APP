@@ -121,13 +121,6 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
                     height: widget.size - widget.strokeWidth * 2,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(25),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
                     child: ClipOval(
                       child: widget.coverImageUrl != null
@@ -168,7 +161,10 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
   }
 
   Widget _buildDefaultCover() {
-    return SvgPicture.asset('assets/icons/player_btn_logo.svg', width: widget.size - 27, height: widget.size - 27,);
+    return widget.isPlaying ? Padding(
+      padding: EdgeInsets.all(10),
+      child: SvgPicture.asset('assets/icons/player_btn_logo.svg', width: widget.size - 27, height: widget.size - 27,),
+    ) : SizedBox.shrink();
   }
 }
 
@@ -195,7 +191,7 @@ class _CircularProgressPainter extends CustomPainter {
       ..color = backgroundColor
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.square;
 
     canvas.drawCircle(center, radius, backgroundPaint);
 
@@ -205,7 +201,7 @@ class _CircularProgressPainter extends CustomPainter {
         ..color = progressColor
         ..strokeWidth = strokeWidth
         ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
+        ..strokeCap = StrokeCap.square;
 
       final sweepAngle = 2 * math.pi * progress;
       canvas.drawArc(

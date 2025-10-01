@@ -137,45 +137,37 @@ class _LikesListState extends State<LikesList> {
 
   /// 构建空状态组件
   Widget _buildEmptyWidget() {
-    return Column(
-      children: [
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'No liked content',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-                SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: _isLoading ? null : _refreshLikes,
-                  style: ElevatedButton.styleFrom(
-                    // backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.grey,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+    return RefreshIndicator(
+      onRefresh: _refreshLikes,
+      child: SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 200, // 确保有足够高度触发下拉刷新
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'No liked content',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Pull down to refresh',
+                        style: TextStyle(color: Colors.grey, fontSize: 10),
+                      ),
+                    ],
                   ),
-                child: _isLoading
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text('Refresh'),
                 ),
-              ],
-            ),
+              ),
+              // const SizedBox(height: 180),
+            ],
           ),
         ),
-        const SizedBox(height: 180),
-      ],
+      ),
     );
   }
 

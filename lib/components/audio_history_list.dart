@@ -8,15 +8,11 @@ import '../components/audio_list.dart';
 class AudioHistoryList extends StatefulWidget {
   /// 音频项点击回调
   final void Function(AudioItem) onItemTap;
-  
+
   /// 列表内边距
   final EdgeInsets? padding;
 
-  const AudioHistoryList({
-    super.key,
-    required this.onItemTap,
-    this.padding,
-  });
+  const AudioHistoryList({super.key, required this.onItemTap, this.padding});
 
   @override
   State<AudioHistoryList> createState() => _AudioHistoryListState();
@@ -80,50 +76,37 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
 
   /// 构建空状态组件
   Widget _buildEmptyWidget() {
-    return Column(
-      children: [
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'No listening history',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Your recently played audio will appear here',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: _isLoading ? null : _refreshHistory,
-                  style: ElevatedButton.styleFrom(
-                    // backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.grey,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+    return RefreshIndicator(
+      onRefresh: _refreshHistory,
+      child: SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 200, // 确保有足够高度触发下拉刷新
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'No listening history',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Pull down to refresh',
+                        style: TextStyle(color: Colors.grey, fontSize: 10),
+                      ),
+                    ],
                   ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text('Refresh'),
                 ),
-              ],
-            ),
+              ),
+              // const SizedBox(height: 180),
+            ],
           ),
         ),
-        const SizedBox(height: 180),
-      ],
+      ),
     );
   }
 
@@ -156,7 +139,7 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
       builder: (context, snapshot) {
         // 优先使用 stream 数据，如果没有则使用本地缓存
         final historyList = snapshot.hasData ? snapshot.data! : _currentHistory;
-        
+
         // 如果 stream 有新数据，更新本地缓存
         if (snapshot.hasData && snapshot.data != _currentHistory) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
