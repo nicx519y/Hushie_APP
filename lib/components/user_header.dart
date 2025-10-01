@@ -20,7 +20,9 @@ class UserHeader extends StatefulWidget {
 }
 
 class _UserHeaderState extends State<UserHeader> {
-  bool hasPremium = SubscribePrivilegeManager.instance.getCachedPrivilege()?.hasPremium ?? false;
+  bool hasPremium =
+      SubscribePrivilegeManager.instance.getCachedPrivilege()?.hasPremium ??
+      false;
   StreamSubscription<PrivilegeChangeEvent>? _privilegeSubscription;
 
   @override
@@ -41,18 +43,21 @@ class _UserHeaderState extends State<UserHeader> {
       }
 
       // 订阅权限变化事件
-      _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen(
-        (event) {
-          if (mounted) {
-            setState(() {
-              hasPremium = event.hasPremium;
-            });
-          }
-        },
-        onError: (error) {
-          debugPrint('🏆 [USER_HEADER] 权限变化事件监听异常: $error');
-        },
-      );
+      _privilegeSubscription = SubscribePrivilegeManager
+          .instance
+          .privilegeChanges
+          .listen(
+            (event) {
+              if (mounted) {
+                setState(() {
+                  hasPremium = event.hasPremium;
+                });
+              }
+            },
+            onError: (error) {
+              debugPrint('🏆 [USER_HEADER] 权限变化事件监听异常: $error');
+            },
+          );
     } catch (e) {
       debugPrint('🏆 [USER_HEADER] 初始化权限状态失败: $e');
     }
@@ -64,8 +69,6 @@ class _UserHeaderState extends State<UserHeader> {
     _privilegeSubscription = null;
     super.dispose();
   }
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -87,16 +90,27 @@ class _UserHeaderState extends State<UserHeader> {
         Expanded(
           child: InkWell(
             onTap: widget.isLoggedIn ? null : widget.onLoginTap,
-            child: Text(
-              _getDisplayText(),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-                height: 2,
-                color: (widget.isLoggedIn && hasPremium)
-                    ? const Color(0xFFA16B0D)  // 会员用户 金色
-                    : const Color(0xFF333333),
-              ),
+            child: Row(
+              children: [
+                Text(
+                  _getDisplayText(),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    height: 2,
+                    color: (widget.isLoggedIn && hasPremium)
+                        ? const Color(0xFFA16B0D) // 会员用户 金色
+                        : const Color(0xFF333333),
+                  ),
+                ),
+                if (widget.isLoggedIn && hasPremium) const SizedBox(width: 5),
+                if (widget.isLoggedIn && hasPremium)
+                  Image.asset(
+                    'assets/images/crown_mini.png',
+                    width: 29,
+                    height: 21.5,
+                  ),
+              ],
             ),
           ),
         ),
@@ -105,7 +119,9 @@ class _UserHeaderState extends State<UserHeader> {
   }
 
   String _getDisplayText() {
-    if (widget.isLoggedIn && widget.userName != null && widget.userName!.isNotEmpty) {
+    if (widget.isLoggedIn &&
+        widget.userName != null &&
+        widget.userName!.isNotEmpty) {
       return widget.userName!;
     }
     return 'Sign up / Log in >';

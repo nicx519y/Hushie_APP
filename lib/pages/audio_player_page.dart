@@ -550,7 +550,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       alignment: Alignment.center,
       style: IconButton.styleFrom(
         // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        backgroundColor: const Color(0x66000000),
+        backgroundColor: const Color(0xFF4D4D4D).withAlpha(128),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         minimumSize: const Size(40, 40),
       ),

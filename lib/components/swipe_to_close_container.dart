@@ -59,13 +59,11 @@ class _SwipeToCloseContainerState extends State<SwipeToCloseContainer> {
 
   /// 手势更新处理
   void _onPanUpdate(DragUpdateDetails details) {
-    // 只处理向下的拖拽
-    if (details.delta.dy > 0) {
-      setState(() {
-        _dragOffset += details.delta.dy;
-        _dragOffset = _dragOffset.clamp(0.0, double.infinity);
-      });
-    }
+    setState(() {
+      _dragOffset += details.delta.dy;
+      // 限制拖拽范围：不能向上超过原始位置(0)，向下没有限制
+      _dragOffset = _dragOffset.clamp(0.0, double.infinity);
+    });
   }
 
   /// 手势结束处理

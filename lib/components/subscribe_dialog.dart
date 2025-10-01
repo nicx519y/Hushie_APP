@@ -14,6 +14,7 @@ import '../utils/toast_messages.dart';
 import '../router/navigation_utils.dart';
 import 'webview_page.dart';
 import '../utils/webview_navigator.dart';
+import '../utils/toast_helper.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -100,14 +101,8 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
     // 已经在订阅中，不能重复订阅
     if (_isSelectedPlanSubscribing) {
-      _closeDialog();
-      showNotificationDialog(
-        context,
-        title: 'Notification',
-        message:
-            'Subscribing. Please don\'t repeat.',
-        buttonText: 'Got It',
-      );
+      // _closeDialog();
+      ToastHelper.showInfo(ToastMessages.subscribingPleaseDonRepeat);
       return;
     }
 

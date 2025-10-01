@@ -49,6 +49,7 @@ class ToastMessages {
   static const String subscriptionPending = 'Purchase pending, please check subscription status later';
   static const String subscriptionFailed = 'Purchase failed, please try again';
   static const String subscriptionException = 'An exception occurred during purchase, please try again';
+  static const String subscribingPleaseDonRepeat = 'Subscribing. Please don\'t repeat.';
   
   // ========== Google Play Billing Error Messages ==========
   static const String billingServiceUnavailable = 'Google Play Billing service unavailable, please check device settings';

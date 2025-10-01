@@ -36,6 +36,7 @@ class AudioHistoryManager {
   Duration _lastRecordedPosition = Duration.zero;
   DateTime? _lastProgressRecordTime;
   bool _isRecordingProgress = false; // 防止并发记录进度
+  DateTime? _lastStateSaveTime; // 上次保存本地状态的时间
   
   // 本地状态缓存，用于差异对比
   AudioPlayerState? _lastAudioState;
@@ -44,6 +45,7 @@ class AudioHistoryManager {
   bool _isLoadingHistoryFromServer = false;
 
   static const int progressUpdateIntervalS = 30; // 30秒更新一次
+  static const int stateSaveIntervalS = 10; // 本地状态保存间隔（10秒）
   static const String _historyCacheKey = 'audio_history_cache'; // 本地存储键名
   static const String _currentPlayStateCacheKey = 'current_play_state_cache'; // 当前播放状态缓存键名
 
@@ -214,8 +216,8 @@ class AudioHistoryManager {
       if (needRecord) {
         _checkAndRecordProgress();
       }
-      // 无论登录状态如何，都保存当前播放状态到本地缓存（但不要太频繁）
-      _saveCurrentPlayState();
+      // 检查是否需要保存本地状态（基于时间间隔）
+      _checkAndSaveCurrentPlayState();
     }
   }
 
@@ -286,6 +288,18 @@ class AudioHistoryManager {
     );
     
     _isRecordingProgress = false; // 无论成功失败都要重置标志
+  }
+
+  /// 检查并保存当前播放状态到本地存储（基于时间间隔）
+  void _checkAndSaveCurrentPlayState() {
+    final now = DateTime.now();
+
+    // 如果是第一次保存或者距离上次保存超过间隔时间，则保存
+    if (_lastStateSaveTime == null || 
+        now.difference(_lastStateSaveTime!).inSeconds >= stateSaveIntervalS) {
+      _saveCurrentPlayState();
+      _lastStateSaveTime = now;
+    }
   }
 
   /// 记录播放开始

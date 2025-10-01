@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-
+import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/custom_icons.dart';
 
 class CircularPlayButton extends StatefulWidget {
@@ -94,6 +94,20 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
               ),
             ),
 
+            // 默认背景
+            Container(
+              width: widget.size - widget.strokeWidth * 2,
+              height: widget.size - widget.strokeWidth * 2,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: ClipOval(
+                child: Image.asset('assets/images/playbtn_bg.png'),
+              ),
+            ),
+
+
             // 中间的封面和播放图标区域
             AnimatedBuilder(
               animation: _rotationController,
@@ -154,16 +168,7 @@ class _CircularPlayButtonState extends State<CircularPlayButton>
   }
 
   Widget _buildDefaultCover() {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        // color: Colors.pink,
-        image: DecorationImage(
-          image: AssetImage('assets/images/playbtn_bg.png'),
-          fit: BoxFit.cover,
-        ),
-      ),
-    );
+    return SvgPicture.asset('assets/icons/player_btn_logo.svg', width: widget.size - 27, height: widget.size - 27,);
   }
 }
 

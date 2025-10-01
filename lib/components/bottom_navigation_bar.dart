@@ -59,7 +59,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     debugPrint('Setting up audio listeners...');
     _audioManager.audioStateStream.listen(
       (audioState) {
-        debugPrint('[bottom_navigation_bar] Received audioState: isPlaying=${audioState.isPlaying}, currentAudio=${audioState.currentAudio?.title}');
+        // debugPrint('[bottom_navigation_bar] Received audioState: isPlaying=${audioState.isPlaying}, currentAudio=${audioState.currentAudio?.title}');
         if (mounted) {
           // 直接更新所有状态，确保UI能正确反映当前状态
           setState(() {
@@ -220,7 +220,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   }
 
   Widget _buildPlayButton() {
-    debugPrint('BottomNavigationBar: 构建播放按钮');
+    // debugPrint('BottomNavigationBar: 构建播放按钮');
     // 计算播放进度
     double progress = 0.0;
     if (_totalDuration.inMilliseconds > 0) {

@@ -59,7 +59,7 @@ class _ProfilePageState extends State<ProfilePage>
 
     // 先初始化登录状态渲染，再监听登录状态变化，否则可能会产生状态冲突
     _initializeAuthState().then((_) {
-        // 订阅登录状态变化事件
+      // 订阅登录状态变化事件
       _subscribeToAuthChanges();
       // 订阅音频流变化事件
       _subscribeToAudioChanges();
@@ -70,7 +70,9 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _subscribeToAuthChanges() async {
     _authSubscription?.cancel(); // 取消之前的订阅
 
-    _authSubscription = AuthManager.instance.authStatusChanges.listen((event) async {
+    _authSubscription = AuthManager.instance.authStatusChanges.listen((
+      event,
+    ) async {
       debugPrint('👤 [PROFILE] 收到认证状态变化事件: ${event.status}');
 
       // 根据状态变化刷新数据
@@ -93,8 +95,6 @@ class _ProfilePageState extends State<ProfilePage>
 
     debugPrint('👤 [PROFILE] 已订阅认证状态变化事件');
   }
-
-
 
   /// 订阅音频流变化事件
   void _subscribeToAudioChanges() {
@@ -139,7 +139,7 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       // 先检查认证状态
       final signedIn = await AuthManager.instance.isSignedIn();
-      
+
       if (mounted) {
         setState(() {
           isLoggedIn = signedIn;
@@ -150,13 +150,13 @@ class _ProfilePageState extends State<ProfilePage>
         // 获取用户信息
         final user = await AuthManager.instance.getCurrentUser();
         final displayName = user?.displayName ?? user?.email ?? '';
-        
+
         if (mounted) {
           setState(() {
             userName = displayName;
           });
         }
-        
+
         // 登录状态下加载数据
         await _loadDataAfterLogin();
       } else {
@@ -222,7 +222,7 @@ class _ProfilePageState extends State<ProfilePage>
           userName = '';
         });
       }
-    } 
+    }
   }
 
   /// 刷新用户信息
@@ -230,9 +230,9 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       final user = await AuthManager.instance.getCurrentUser();
       final displayName = user?.displayName ?? user?.email ?? '';
-      
+
       debugPrint('👤 [PROFILE] 刷新用户信息: $displayName');
-      
+
       if (mounted) {
         setState(() {
           userName = displayName;
@@ -336,11 +336,11 @@ class _ProfilePageState extends State<ProfilePage>
                   tabItems: _tabItems,
                   labelStyle: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
                   ),
                   unselectedLabelStyle: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
                   ),
                   onTabChanged: (index) {
                     setState(() {
@@ -399,6 +399,11 @@ class _ProfilePageState extends State<ProfilePage>
           CustomTabBar(
             controller: _tabController,
             tabItems: _tabItems,
+            labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            unselectedLabelStyle: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
             onTabChanged: (index) {
               setState(() {
                 currentTabIndex = index;
