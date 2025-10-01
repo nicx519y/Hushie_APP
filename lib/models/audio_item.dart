@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/foundation.dart';
 import 'image_model.dart';
 
@@ -26,28 +24,46 @@ class AudioItem {
   final Duration? previewStart; // 可预览开始时间点
   final Duration? previewDuration; // 可预览时长
 
-  // 解析duration的静态方法，包含容错处理
+  // 解析duration的静态方法，包含容错处理和数值验证
   static int _parseDurationMs(dynamic duration) {
     try {
       if (duration == null) return 0;
       
+      double seconds = 0;
+      
       // 如果已经是数字类型
       if (duration is num) {
-        return (duration.toDouble() * 1000).round();
+        seconds = duration.toDouble();
       }
-      
       // 如果是字符串，尝试解析
-      if (duration is String) {
+      else if (duration is String) {
         final parsed = double.tryParse(duration);
         if (parsed != null) {
-          return (parsed * 1000).round();
+          seconds = parsed;
+        } else {
+          return 0;
         }
       }
+      // 其他类型直接返回0
+      else {
+        return 0;
+      }
       
-      // 解析失败，返回默认值
-      return 0;
+      // 添加合理性检查：音频时长应在合理范围内
+      // 最小值：0秒，最大值：24小时（86400秒）
+      if (seconds < 0) {
+        debugPrint('警告：检测到负数音频时长: ${seconds}秒，已重置为0');
+        return 0;
+      }
+      
+      if (seconds > 86400) {
+        debugPrint('警告：检测到异常大的音频时长: ${seconds}秒（${(seconds/3600).toStringAsFixed(1)}小时），已重置为0');
+        return 0;
+      }
+      
+      return (seconds * 1000).round();
     } catch (e) {
-      // 捕获任何异常，返回默认值
+      debugPrint('解析音频时长时出错: $e');
       return 0;
     }
   }

@@ -226,6 +226,7 @@ class AudioHistoryManager {
     required String logMessage,
     required String errorMessage,
     bool isFirst = false,
+    Duration? customProgress,
     Function()? onSuccess,
     Function()? onError,
   }) async {
@@ -234,11 +235,14 @@ class AudioHistoryManager {
     try {
       debugPrint(logMessage);
 
+      // 使用自定义进度或默认的当前位置
+      final progressToSubmit = customProgress ?? _lastRecordedPosition;
+
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,
         isFirst: isFirst,
         playDuration: Duration.zero,
-        playProgress: _lastRecordedPosition,
+        playProgress: progressToSubmit,
       );
 
       final bool isLogin = await AuthManager.instance.isSignedIn();
@@ -320,9 +324,25 @@ class AudioHistoryManager {
 
   /// 记录播放停止
   Future<void> _recordPlayStop() async {
+    // 检查当前进度是否大于等于总体进度的98%
+    Duration progressToSubmit = _lastRecordedPosition;
+    
+    if (_currentPlayingAudio?.duration != null) {
+      final totalDuration = _currentPlayingAudio!.duration!;
+      final currentProgress = _lastRecordedPosition;
+      
+      // 如果当前进度大于等于总时长的98%，则将进度重置为0
+      if (totalDuration.inMilliseconds > 0 && 
+          currentProgress.inMilliseconds >= (totalDuration.inMilliseconds * 0.98)) {
+        progressToSubmit = Duration.zero;
+        debugPrint('🎵 [HISTORY] 播放进度已达98%，重置进度为0: ${_formatDuration(currentProgress)} / ${_formatDuration(totalDuration)}');
+      }
+    }
+    
     await _recordPlayProgressHelper(
       logMessage: '🎵 [HISTORY] 记录播放停止: ${_currentPlayingAudio?.title}  id: ${_currentPlayingAudio?.id}',
       errorMessage: '🎵 [HISTORY] 记录播放停止失败',
+      customProgress: progressToSubmit,
       onSuccess: () {
         // 停止播放时清除进度记录时间
         _lastProgressRecordTime = null;

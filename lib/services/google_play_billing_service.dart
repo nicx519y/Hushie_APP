@@ -114,7 +114,7 @@ class GooglePlayBillingService {
       if (productData == null) {
         return PurchaseResultData(
           result: PurchaseResult.error,
-          message: '无法获取商品数据',
+          message: 'Can not get product data',
         );
       }
       
@@ -136,7 +136,7 @@ class GooglePlayBillingService {
       if (targetProduct == null || targetBasePlan == null) {
         return PurchaseResultData(
           result: PurchaseResult.error,
-          message: '未找到对应的产品或基础计划',
+          message: 'Can not find product or base plan',
         );
       }
       
@@ -146,14 +146,14 @@ class GooglePlayBillingService {
       if (response.error != null) {
         return PurchaseResultData(
           result: PurchaseResult.error,
-          message: '查询产品详情失败: ${response.error}',
+          message: 'Can not query product details',
         );
       }
       
       if (response.productDetails.isEmpty) {
         return PurchaseResultData(
           result: PurchaseResult.error,
-          message: '未找到产品详情',
+          message: 'Can not find product details',
         );
       }
       

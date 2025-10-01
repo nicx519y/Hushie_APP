@@ -667,7 +667,19 @@ class AudioManager {
   }
 
   Duration get duration {
-    return _audioService?.currentState.duration ?? Duration.zero;
+    final playerDuration = _audioService?.currentState.duration ?? Duration.zero;
+    final apiDuration = currentAudio?.duration;
+    
+    // 数据一致性检查和日志记录
+    if (playerDuration != Duration.zero && apiDuration != null) {
+      final diffSeconds = (playerDuration.inSeconds - apiDuration.inSeconds).abs();
+      if (diffSeconds > 5) { // 差异超过5秒认为异常
+        debugPrint('[AudioManager] Duration数据不一致 - 播放器:${playerDuration.inSeconds}s, API:${apiDuration.inSeconds}s, 差异:${diffSeconds}s');
+      }
+    }
+    
+    // 优先返回播放器的真实时长
+    return playerDuration;
   }
 
   double get speed {

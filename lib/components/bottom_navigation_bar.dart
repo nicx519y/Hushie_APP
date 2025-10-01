@@ -78,10 +78,25 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
               _currentPosition = audioState.position;
             }
 
-            // 更新总时长
-            final newTotalDuration =
-                audioState.currentAudio?.duration ??
-                audioState.duration;
+            // 数据源统一优化：优先使用音频播放器提供的真实时长
+            // audioState.duration 来自音频播放器，是最准确的时长
+            // audioState.currentAudio?.duration 来自API数据，仅作为初始显示值
+            final playerDuration = audioState.duration;
+            final apiDuration = audioState.currentAudio?.duration;
+            
+            debugPrint('[bottom_navigation_bar] Duration比较: 播放器=${playerDuration?.inSeconds}s, API=${apiDuration?.inSeconds}s');
+            
+            // 优先使用播放器提供的真实时长，如果播放器时长无效则使用API时长作为备选
+            final newTotalDuration = playerDuration ?? apiDuration ?? Duration.zero;
+            
+            // 数据一致性检查：如果两个时长差异过大，记录警告日志
+            if (playerDuration != null && apiDuration != null) {
+              final diffSeconds = (playerDuration.inSeconds - apiDuration.inSeconds).abs();
+              if (diffSeconds > 5) { // 差异超过5秒认为异常
+                debugPrint('警告：播放器时长与API时长差异较大 - 播放器:${playerDuration.inSeconds}s, API:${apiDuration.inSeconds}s, 差异:${diffSeconds}s');
+              }
+            }
+            
             if (_totalDuration != newTotalDuration) {
               _totalDuration = newTotalDuration;
             }
