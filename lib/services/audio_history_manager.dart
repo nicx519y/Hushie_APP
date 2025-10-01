@@ -64,9 +64,6 @@ class AudioHistoryManager {
     try {
       debugPrint('🎵 [HISTORY] 开始初始化音频历史管理器');
 
-      // 初始化本地存储
-      _prefs = await SharedPreferences.getInstance();
-
       // 订阅认证状态变化事件
       _subscribeToAuthChanges();
 
@@ -564,6 +561,7 @@ class AudioHistoryManager {
   Future<void> _saveHistoryToStorage(List<AudioItem> history) async {
     try {
       final historyJson = json.encode(history.map((item) => item.toMap()).toList());
+      _prefs ??= await SharedPreferences.getInstance();
       await _prefs?.setString(_historyCacheKey, historyJson);
       debugPrint('🎵 [HISTORY] 历史记录已保存到本地存储，共${history.length}条');
     } catch (e) {
@@ -574,6 +572,9 @@ class AudioHistoryManager {
   /// 从本地存储加载历史记录
   Future<void> _loadCachedHistory() async {
     try {
+
+      _prefs ??= await SharedPreferences.getInstance();
+
       final historyJson = _prefs?.getString(_historyCacheKey);
       if (historyJson != null && historyJson.isNotEmpty) {
         final List<dynamic> historyData = json.decode(historyJson);
@@ -596,6 +597,9 @@ class AudioHistoryManager {
   /// 清空本地存储
   Future<void> _clearLocalStorage() async {
     try {
+
+      _prefs ??= await SharedPreferences.getInstance();
+
       await _prefs?.remove(_historyCacheKey);
       debugPrint('🎵 [HISTORY] 本地存储已清空');
     } catch (e) {
@@ -605,6 +609,9 @@ class AudioHistoryManager {
 
   /// 保存当前播放状态到本地存储
   Future<void> _saveCurrentPlayState() async {
+
+    debugPrint('🎵 [HISTORY] 开始保存当前播放状态 到本地存储');
+
     if (_currentPlayingAudio == null) {
       // 如果没有当前播放音频，清空缓存
       await _clearCurrentPlayState();
@@ -620,7 +627,10 @@ class AudioHistoryManager {
       };
       
       final playStateJson = json.encode(playState);
+
+      _prefs ??= await SharedPreferences.getInstance();
       await _prefs?.setString(_currentPlayStateCacheKey, playStateJson);
+
       debugPrint('🎵 [HISTORY] 当前播放状态已保存到本地存储: ${_currentPlayingAudio!.title} -> ${_formatDuration(_lastRecordedPosition)}');
     } catch (e) {
       debugPrint('🎵 [HISTORY] 保存当前播放状态到本地存储失败: $e');
@@ -630,11 +640,14 @@ class AudioHistoryManager {
   /// 从本地存储加载当前播放状态
   Future<Map<String, dynamic>?> _loadCurrentPlayState() async {
     try {
+      _prefs ??= await SharedPreferences.getInstance();
       final playStateJson = _prefs?.getString(_currentPlayStateCacheKey);
       if (playStateJson != null && playStateJson.isNotEmpty) {
         final Map<String, dynamic> playState = json.decode(playStateJson);
         debugPrint('🎵 [HISTORY] 从本地存储加载当前播放状态: ${playState['audioItem']?['title']}');
         return playState;
+      } else {
+        debugPrint('🎵 [HISTORY] 本地存储当前播放状态为空');
       }
     } catch (e) {
       debugPrint('🎵 [HISTORY] 从本地存储加载当前播放状态失败: $e');
@@ -645,6 +658,7 @@ class AudioHistoryManager {
   /// 清空当前播放状态缓存
   Future<void> _clearCurrentPlayState() async {
     try {
+      _prefs ??= await SharedPreferences.getInstance();
       await _prefs?.remove(_currentPlayStateCacheKey);
       debugPrint('🎵 [HISTORY] 当前播放状态缓存已清空');
     } catch (e) {

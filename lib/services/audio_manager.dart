@@ -113,6 +113,55 @@ class AudioManager {
     }
   }
 
+  Future<void> preloadLastPlayedAudio() async {
+    await _ensureInitialized();
+    await reloadCurrentPlayStateCache();
+  }
+
+  // 兼容性方法：保持原有的init接口，但改为延迟初始化
+  Future<void> init() async {
+    debugPrint('AudioManager.init() called');
+    
+    // 先初始化音频历史管理器（确保数据库可用）
+    await AudioHistoryManager.instance.initialize();
+    debugPrint('AudioManager: AudioHistoryManager 初始化完成');
+
+    await AudioLikesManager.instance.initialize();
+    debugPrint('AudioManager: AudioLikesManager 初始化完成');
+
+    // 初始化AudioPlaylist
+    await AudioPlaylist.instance.initialize();
+    debugPrint('AudioManager: AudioPlaylist 初始化完成');
+
+    // 获取当前权益状态并设置播放权限
+    await _initializePrivilegeStatus();
+
+    // 监听权益变化事件
+    _setupPrivilegeListener();
+
+    // 监听认证状态变化事件
+    _setupAuthStatusListener();
+
+    // 使用统一的初始化方法，避免重复初始化
+    await _ensureInitialized();
+    debugPrint('AudioManager: AudioService 初始化完成');
+
+    // 开启播放历史记录监听（通过AudioManager的状态流）
+    try {
+      if(await AuthManager.instance.isSignedIn()) {
+        signedInit();
+      } else {
+        signedOutInit();
+      }
+    } catch (e) {
+      signedOutInit();
+    }
+
+    // 不在这里强制初始化AudioService，而是标记为可以初始化
+    // 实际初始化将在第一次使用时进行
+    return;
+  }
+
   // 设置流监听
   void _setupStreamListeners() {
     if (_audioService == null) {
@@ -295,67 +344,25 @@ class AudioManager {
     }
   }
 
-  // 兼容性方法：保持原有的init接口，但改为延迟初始化
-  Future<void> init() async {
-    debugPrint('AudioManager.init() called');
-    
-    // 先初始化音频历史管理器（确保数据库可用）
-    await AudioHistoryManager.instance.initialize();
-    debugPrint('AudioManager: AudioHistoryManager 初始化完成');
-
-    await reloadCurrentPlayStateCache();
-
-    await AudioLikesManager.instance.initialize();
-    debugPrint('AudioManager: AudioLikesManager 初始化完成');
-
-    // 初始化AudioPlaylist
-    await AudioPlaylist.instance.initialize();
-    debugPrint('AudioManager: AudioPlaylist 初始化完成');
-
-    // 获取当前权益状态并设置播放权限
-    await _initializePrivilegeStatus();
-
-    // 监听权益变化事件
-    _setupPrivilegeListener();
-
-    // 监听认证状态变化事件
-    _setupAuthStatusListener();
-
-    // 使用统一的初始化方法，避免重复初始化
-    await _ensureInitialized();
-    debugPrint('AudioManager: AudioService 初始化完成');
-
-    // 开启播放历史记录监听（通过AudioManager的状态流）
-    try {
-      if(await AuthManager.instance.isSignedIn()) {
-        signedInit();
-      } else {
-        signedOutInit();
-      }
-    } catch (e) {
-      signedOutInit();
-    }
-
-    // 不在这里强制初始化AudioService，而是标记为可以初始化
-    // 实际初始化将在第一次使用时进行
-    return;
-  }
+  
 
   // 重新加载当前播放状态缓存
   Future<void> reloadCurrentPlayStateCache() async {
+    debugPrint('[AudioManager]: 重新加载当前播放状态缓存');
     final currentPlayStateCache = await AudioHistoryManager.instance.getCurrentPlayStateCache();
     if (currentPlayStateCache != null) {
       try {
         final audioItemMap = currentPlayStateCache['audioItem'] as Map<String, dynamic>;
         final audioItem = AudioItem.fromMap(audioItemMap);
         final position = Duration(milliseconds: currentPlayStateCache['position'] as int);
-        
-        debugPrint('AudioManager: 从当前播放状态缓存恢复: ${audioItem.title} -> ${position.inMinutes}:${(position.inSeconds % 60).toString().padLeft(2, '0')}');
-        await playAudio(audioItem, autoPlay: false);
+        debugPrint('[AudioManager]: 从当前播放状态缓存恢复: ${audioItem.title} 位置: $position');
+        await playAudio(audioItem, autoPlay: false, initialPosition: position);
         return;
       } catch (e) {
-        debugPrint('AudioManager: 从当前播放状态缓存恢复失败: $e');
+        debugPrint('[AudioManager]: 从当前播放状态缓存恢复失败: $e');
       }
+    } else {
+      debugPrint('[AudioManager]: 当前播放状态缓存为空');
     }
   }
 
@@ -412,7 +419,7 @@ class AudioManager {
   }
 
   // 播放音频
-  Future<void> playAudio(AudioItem audio, {bool? autoPlay = true}) async {
+  Future<void> playAudio(AudioItem audio, {bool? autoPlay = true, Duration? initialPosition} ) async {
     // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
     final currentAudio = this.currentAudio;
     final bool auto = autoPlay ?? true;
@@ -431,13 +438,17 @@ class AudioManager {
     }
 
     // 2. 从历史列表获取新音频的播放进度，作为起始播放进度
-    final position = AudioHistoryManager.instance.getPlaybackPosition(audio.id);
-    // 3. 通过 _transformPosition 过滤 initialPosition 得到正确的 initialPosition
-    final transformedPosition = _transformPosition(position, audio: audio );
 
-    debugPrint('[playAudio]: 音频预览: 开始 ${audio.previewStart}, 长度 ${audio.previewDuration}');
-    debugPrint('[playAudio]: 从历史记录获取的播放位置: $position');
-    debugPrint('[playAudio]: 转换后的播放位置: $transformedPosition');
+    late Duration position;
+
+    if(initialPosition == null || initialPosition <= Duration.zero) {
+      position = AudioHistoryManager.instance.getPlaybackPosition(audio.id);
+    } else {
+      position = initialPosition;
+    }
+    
+    // 3. 通过 _transformPosition 过滤 initialPosition 得到正确的 initialPosition
+    final transformedPosition = _transformPosition(position, audio: audio);
 
     try {
       // await _ensureInitialized();

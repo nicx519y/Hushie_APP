@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'pages/splash_page.dart';
+
 import 'config/api_config.dart';
-import 'layouts/main_layout.dart';
+import 'pages/splash_page.dart';
+import 'services/device_info_service.dart';
 import 'services/analytics_service.dart';
+import 'layouts/main_layout.dart';
 
 void main() async {
   debugPrint('🚀 [MAIN] 应用启动开始');
@@ -36,7 +38,7 @@ void main() async {
   // 设置缓冲大小为 128MB（默认32MB）
   JustAudioMediaKit.bufferSize = 128 * 1024 * 1024;
 
-  // 配置系统UI样式
+  // 配置系统UI样式 - 针对华为EMUI优化
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent, // 透明状态栏
@@ -48,9 +50,30 @@ void main() async {
   );
   debugPrint('🚀 [MAIN] 系统UI样式配置完成');
 
-  // 启用Edge-to-Edge模式
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  debugPrint('🚀 [MAIN] Edge-to-Edge模式启用完成');
+  // 针对华为设备使用更保守的系统UI模式
+  try {
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+    );
+    debugPrint('🚀 [MAIN] 华为兼容的系统UI模式配置完成');
+  } catch (e) {
+    debugPrint('🚀 [MAIN] 系统UI模式配置失败，使用默认模式: $e');
+    // 如果失败，使用最基本的模式
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
+
+  // 华为设备特殊配置
+  _configureHuaweiStatusBar().then((_) {
+    debugPrint('🚀 [MAIN] 华为设备状态栏特殊配置完成');
+  }).catchError((e) {
+    debugPrint('🚀 [MAIN] 华为设备状态栏配置失败: $e');
+  });
+
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+  debugPrint('🚀 [MAIN] 屏幕方向配置完成');
 
   // 初始化 API 配置（同步操作，快速）
   debugPrint('🚀 [MAIN] 开始初始化API配置');
@@ -62,7 +85,36 @@ void main() async {
   // 立即启动应用，服务初始化在启动页中处理
   debugPrint('🚀 [MAIN] 开始运行应用');
   runApp(const MyApp());
-  debugPrint('🚀 [MAIN] 应用运行完成');
+}
+
+/// 为华为设备配置特殊的状态栏样式
+Future<void> _configureHuaweiStatusBar() async {
+  if (await DeviceInfoService.isHuaweiDevice()) {
+    debugPrint('🔧 [DEVICE] 检测到华为设备，应用特殊状态栏配置');
+    
+    try {
+      // 华为设备专用状态栏配置
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+      );
+      
+      // 强制显示系统UI
+      await SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+      );
+      
+      debugPrint('🔧 [DEVICE] 华为设备状态栏配置完成');
+    } catch (e) {
+      debugPrint('🔧 [DEVICE] 华为设备状态栏配置失败: $e');
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {

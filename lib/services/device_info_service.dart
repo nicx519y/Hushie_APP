@@ -111,6 +111,25 @@ class DeviceInfoService {
     return await getDeviceId();
   }
 
+  /// 检测是否为华为设备
+  static Future<bool> isHuaweiDevice() async {
+    if (!Platform.isAndroid) return false;
+    
+    try {
+      AndroidDeviceInfo androidInfo = await _deviceInfoPlugin.androidInfo;
+      String manufacturer = androidInfo.manufacturer.toLowerCase();
+      String brand = androidInfo.brand.toLowerCase();
+      
+      return manufacturer.contains('huawei') || 
+             brand.contains('huawei') || 
+             manufacturer.contains('honor') || 
+             brand.contains('honor');
+    } catch (e) {
+      debugPrint('检测华为设备失败: $e');
+      return false;
+    }
+  }
+
   /// 获取设备信息（带缓存）
   static Future<Map<String, String>> getDeviceInfo() async {
     try {

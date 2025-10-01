@@ -52,12 +52,12 @@ class AudioItem {
       // 添加合理性检查：音频时长应在合理范围内
       // 最小值：0秒，最大值：24小时（86400秒）
       if (seconds < 0) {
-        debugPrint('警告：检测到负数音频时长: ${seconds}秒，已重置为0');
+        // debugPrint('警告：检测到负数音频时长: ${seconds}秒，已重置为0');
         return 0;
       }
       
       if (seconds > 86400) {
-        debugPrint('警告：检测到异常大的音频时长: ${seconds}秒（${(seconds/3600).toStringAsFixed(1)}小时），已重置为0');
+        // debugPrint('警告：检测到异常大的音频时长: ${seconds}秒（${(seconds/3600).toStringAsFixed(1)}小时），已重置为0');
         return 0;
       }
       

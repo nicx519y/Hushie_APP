@@ -27,14 +27,16 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _initializeApp() async {
     debugPrint('🔄 [SPLASH] 开始初始化应用');
 
+    // 然后异步初始化服务，不阻塞UI
+    debugPrint('🔄 [SPLASH] 开始异步初始化服务');
+    _initializeServices();
+
     // 先显示启动页2秒，让用户看到启动画面
     debugPrint('🔄 [SPLASH] 等待2秒显示启动画面');
     await Future.delayed(const Duration(seconds: 2));
     debugPrint('🔄 [SPLASH] 启动画面显示完成');
 
-    // 然后异步初始化服务，不阻塞UI
-    debugPrint('🔄 [SPLASH] 开始异步初始化服务');
-    _initializeServices();
+    
 
     // 延迟跳转，给服务初始化一些时间
     // debugPrint('🔄 [SPLASH] 等待500ms后跳转');
@@ -53,11 +55,20 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeServices() async {
     try {
-      await AuthManager.instance.initialize();
 
-      await SubscribePrivilegeManager.instance.initialize();
+      await AudioManager.instance.preloadLastPlayedAudio(); // 从本地存储中加载上次播放的音频
+
+      debugPrint('🔄 [SPLASH] 预加载上次播放音频完成');
+
+      await AuthManager.instance.initialize();  // 初始化认证服务
+
+      debugPrint('🔄 [SPLASH] AuthManager 初始化完成');
+
+      await SubscribePrivilegeManager.instance.initialize(); // 初始化订阅权益服务
+      debugPrint('🔄 [SPLASH] SubscribePrivilegeManager 初始化完成');
       
-      await AudioManager.instance.init();
+      await AudioManager.instance.init(); // 初始化音频服务
+      debugPrint('🔄 [SPLASH] AudioManager 初始化完成');
 
       debugPrint('🔄 [SPLASH] _initializeServices 服务初始化完成');
       if (mounted) {

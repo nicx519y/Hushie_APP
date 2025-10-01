@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 华为EMUI专用样式配置 -->
+    <style name="HuaweiThemeStyle" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- 华为EMUI强制显示状态栏 -->
+        <item name="android:fitsSystemWindows">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">never</item>
+    </style>
+</resources>
