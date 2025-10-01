@@ -137,9 +137,9 @@ class AudioLikesManager {
       // 更新分页状态
       if (likesList.isNotEmpty) {
         _lastCid = likesList.last.id;
-        _hasMoreData = likesList.length >= _defaultPageSize;
+        // _hasMoreData = likesList.length >= _defaultPageSize; // 客户端默认认为一直有数据
       } else {
-        _hasMoreData = false;
+        // _hasMoreData = false;
       }
 
       debugPrint('🎵 [LIKES] 从服务端拉取到的点赞列表数量: ${likesList.length}');
@@ -152,7 +152,7 @@ class AudioLikesManager {
       // 初始化失败，清空缓存
       _likesCache = [];
       _likesNotifier.value = [];
-      _hasMoreData = false;
+      // _hasMoreData = false;
     } finally {
       _isLoadingLikesFromServer = false;
     }
@@ -213,9 +213,9 @@ class AudioLikesManager {
         // 更新分页状态
         if (likesList.isNotEmpty) {
           _lastCid = likesList.last.id;
-          _hasMoreData = likesList.length >= _defaultPageSize;
+          // _hasMoreData = likesList.length >= _defaultPageSize;
         } else {
-          _hasMoreData = false;
+          // _hasMoreData = false;
         }
 
         await _updateLocalCache(likesList);
@@ -274,7 +274,7 @@ class AudioLikesManager {
 
           // 更新分页状态
           _lastCid = moreData.last.id;
-          _hasMoreData = moreData.length >= _defaultPageSize;
+          // _hasMoreData = moreData.length >= _defaultPageSize;
 
           await _updateLocalCache(updatedCache);
           
@@ -282,7 +282,7 @@ class AudioLikesManager {
 
           return moreData;
         } else {
-          _hasMoreData = false;
+          // _hasMoreData = false;
           debugPrint('🎵 [LIKES] 没有更多数据');
 
           return [];

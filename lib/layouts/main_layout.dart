@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../components/bottom_navigation_bar.dart';
-import '../pages/home_page.dart';
-import '../pages/profile_page.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../services/app_operations_service.dart';
@@ -86,9 +84,9 @@ class _MainLayoutState extends State<MainLayout> {
     debugPrint('🏗️ [MAIN_LAYOUT] MainLayout构建开始');
     return PopScope(
       canPop: false, // 禁止默认的返回行为
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          _onWillPop();
+          await _onWillPop();
         }
       },
       child: RepaintBoundary(

@@ -312,6 +312,7 @@ class _SearchPageState extends State<SearchPage> {
 
   // 实时搜索文本变化监听
   void _onSearchTextChanged() {
+    if(_lastRenderedQuery == _searchController.text) return;
     // 如果当前不在搜索状态，则立即设置为搜索状态
     setState(() {
       _isSearching = true;

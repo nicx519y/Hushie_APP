@@ -142,7 +142,7 @@ class _LikesListState extends State<LikesList> {
       child: SingleChildScrollView(
         physics: AlwaysScrollableScrollPhysics(),
         child: SizedBox(
-          height: MediaQuery.of(context).size.height - 200, // 确保有足够高度触发下拉刷新
+          height: 350, // 设置固定高度确保能触发下拉刷
           child: Column(
             children: [
               Expanded(

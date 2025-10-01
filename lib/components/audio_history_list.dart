@@ -81,7 +81,7 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
       child: SingleChildScrollView(
         physics: AlwaysScrollableScrollPhysics(),
         child: SizedBox(
-          height: MediaQuery.of(context).size.height - 200, // 确保有足够高度触发下拉刷新
+          height: 350, // 确保有足够高度触发下拉刷新
           child: Column(
             children: [
               Expanded(
