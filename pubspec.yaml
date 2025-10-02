@@ -75,6 +75,9 @@ dependencies:
   # 设备信息
   device_info_plus: ^10.1.0
   
+  # 网络连接状态检测
+  connectivity_plus: ^6.0.5
+  
   # 安全存储
   flutter_secure_storage: ^9.0.0
   

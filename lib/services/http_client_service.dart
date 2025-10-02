@@ -57,6 +57,27 @@ class HttpClientService {
         final response = await request();
         lastResponse = response;
         
+        // 401 统一处理：先尝试刷新Token并重发一次
+        if (response.statusCode == 401) {
+          debugPrint('🔐 [HTTP] 检测到401未授权，尝试刷新Token后重发');
+          try {
+            final refreshed = await AuthManager.instance.refreshToken();
+            if (refreshed) {
+              debugPrint('🔐 [HTTP] 刷新成功，重发请求');
+              final retryResponse = await request();
+              return retryResponse;
+            } else {
+              debugPrint('🔐 [HTTP] 刷新失败，提示登录过期');
+              _showErrorToast(ToastMessages.authExpired);
+              return response; // 返回原响应，避免无限循环
+            }
+          } catch (e) {
+            debugPrint('🔐 [HTTP] 刷新流程异常: $e');
+            _showErrorToast(ToastMessages.authExpired);
+            return response;
+          }
+        }
+
         // 检查是否需要重试
         if (_shouldRetry(response.statusCode, attempt)) {
           debugPrint('⚠️ [RETRY] $requestType 请求失败，状态码: ${response.statusCode}，准备重试...');

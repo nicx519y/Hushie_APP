@@ -7,6 +7,9 @@ import '../services/audio_manager.dart';
 import '../router/navigation_utils.dart';
 import '../services/subscribe_privilege_manager.dart';
 import '../services/auth_manager.dart';
+import '../services/network_healthy_manager.dart';
+
+
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -57,11 +60,12 @@ class _SplashPageState extends State<SplashPage> {
     try {
 
       await AudioManager.instance.preloadLastPlayedAudio(); // 从本地存储中加载上次播放的音频
-
       debugPrint('🔄 [SPLASH] 预加载上次播放音频完成');
 
-      await AuthManager.instance.initialize();  // 初始化认证服务
+      await NetworkHealthyManager.instance.initialize();
+      debugPrint('🔄 [SPLASH] NetworkHealthyManager 初始化完成');
 
+      await AuthManager.instance.initialize();  // 初始化认证服务
       debugPrint('🔄 [SPLASH] AuthManager 初始化完成');
 
       await SubscribePrivilegeManager.instance.initialize(); // 初始化订阅权益服务

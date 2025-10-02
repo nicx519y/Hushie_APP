@@ -32,6 +32,11 @@ class ToastMessages {
   static const String networkRequestFailed = 'error occurred';
   static const String httpRetryExhausted = 'error occurred';
 
+  // ========== General App Network & Auth Messages ==========
+  static const String networkUnavailable = 'Network unavailable. Please try again later.';
+  static const String networkCheckFailed = 'Network check failed. Please try again later.';
+  static const String authExpired = 'Authentication expired, please log in again.';
+
   // ========== Login Related Messages ==========
   static const String loginSuccess = 'Log in successfully!';
   static const String loginFailed = 'Log in failed.';

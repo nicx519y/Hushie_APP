@@ -4,6 +4,9 @@ import '../models/api_response.dart';
 import 'api/google_auth_service.dart';
 import 'secure_storage_service.dart';
 import 'package:flutter/foundation.dart';
+import 'network_healthy_manager.dart';
+import '../utils/toast_helper.dart';
+import '../utils/toast_messages.dart';
 
 /// 认证状态枚举
 enum AuthStatus {
@@ -51,6 +54,24 @@ class AuthManager {
 
   /// 获取当前认证状态
   AuthStatus get currentAuthStatus => _currentStatus;
+
+  /// 在认证相关操作前进行网络健康检查
+  /// 网络不健康或检测异常时，提示用户并阻止后续登录/刷新流程，避免误清除登录态
+  Future<bool> _ensureNetworkHealthy({String action = ''}) async {
+    try {
+      final status = await NetworkHealthyManager.instance.checkNetworkHealth();
+      if (status == NetworkHealthStatus.healthy) {
+        return true;
+      }
+      ToastHelper.showError(ToastMessages.networkUnavailable);
+      debugPrint('🔐 [AUTH] 网络不健康（$status） - 跳过$action');
+      return false;
+    } catch (e) {
+      ToastHelper.showError(ToastMessages.networkCheckFailed);
+      debugPrint('🔐 [AUTH] 网络检测异常 - 跳过$action: $e');
+      return false;
+    }
+  }
 
   /// 通知认证状态变化
   void _notifyAuthStatusChange(
@@ -167,6 +188,10 @@ class AuthManager {
   /// 执行Google登录流程
   Future<ApiResponse<GoogleAuthResponse>> signInWithGoogle() async {
     try {
+      // 网络健康预检：网络不可用时不进行登录流程，避免误判登录失败为未认证
+      if (!await _ensureNetworkHealthy(action: '登录')) {
+        return ApiResponse.error(errNo: -1);
+      }
       // 第一步：获取Google认证信息（授权码或idToken）
       final googleAuthResult = await GoogleAuthService.googleSignIn();
 
@@ -320,10 +345,9 @@ class AuthManager {
         final refreshSuccess = await _refreshTokenIfNeeded(force: true);
         
         if (!refreshSuccess) {
-          debugPrint('🔐 [AUTH] Token刷新失败，退出登录态');
-          // 刷新失败，清除本地数据并退出登录态
-          await clearAllAuthData();
-          return false;
+          debugPrint('🔐 [AUTH] Token刷新失败，保留现有登录态，稍后重试');
+          // 软失败：保留现有态，不立即清除，交由定时器或下次请求重试
+          return true;
         }
         
         debugPrint('🔐 [AUTH] Token刷新成功');
@@ -380,8 +404,21 @@ class AuthManager {
       return true; // 不需要刷新
     }
 
-    // 创建新的刷新Future
-    _refreshFuture = _performTokenRefresh();
+    // 创建新的刷新Future（加入短期退避重试）
+    _refreshFuture = () async {
+      // 首次尝试
+      bool ok = await _performTokenRefresh();
+      if (ok) return true;
+      // 若失败，不清除本地（除服务器判定无效的情况在 _performTokenRefresh 中处理），进行两次退避重试
+      for (int i = 1; i <= 2; i++) {
+        final delayMs = 1000 * i;
+        debugPrint('🔄 [AUTH] 刷新失败，${delayMs}ms后重试 第${i}次');
+        await Future.delayed(Duration(milliseconds: delayMs));
+        ok = await _performTokenRefresh();
+        if (ok) return true;
+      }
+      return false;
+    }();
     
     try {
       final result = await _refreshFuture!;
@@ -397,6 +434,11 @@ class AuthManager {
     debugPrint('🔐 [AUTH] 开始刷新Token...');
     debugPrint('🔐 [AUTH] 当前RefreshToken长度: ${_currentToken?.refreshToken.length ?? 0}');
     
+    // 网络健康预检：网络不可用时跳过刷新且不清除本地凭证，避免误登出
+    if (!await _ensureNetworkHealthy(action: 'Token刷新')) {
+      return false;
+    }
+
     try {
       debugPrint('🔐 [AUTH] 调用GoogleAuthService.refreshAccessToken...');
       final result = await GoogleAuthService.refreshAccessToken(
@@ -437,13 +479,17 @@ class AuthManager {
       } else {
         debugPrint('🔐 [AUTH] Token刷新失败: errNo=${result.errNo}');
         debugPrint('🔐 [AUTH] 响应数据为空: ${result.data == null}');
-        // 服务器明确返回错误时，清除Token并进入非登录态
-        debugPrint('🔐 [AUTH] 服务器返回错误，清除Token并进入非登录态');
-        await _clearTokenFromSecureStorage();
-        _currentToken = null;
-        // 通知Token失效
-        _notifyAuthStatusChange(AuthStatus.unauthenticated);
-        return false;
+        // 分类处理：-1 网络/异常 -> 保留现态；其它错误视为服务器判定无效 -> 清理并登出
+        if (result.errNo == -1) {
+          debugPrint('🔐 [AUTH] 刷新失败（网络/异常），保留现有登录态');
+          return false;
+        } else {
+          debugPrint('🔐 [AUTH] 服务器判定RefreshToken无效，清除Token并进入非登录态');
+          await _clearTokenFromSecureStorage();
+          _currentToken = null;
+          _notifyAuthStatusChange(AuthStatus.unauthenticated);
+          return false;
+        }
       }
     } catch (e) {
       debugPrint('🔐 [AUTH] Token刷新异常: $e');
@@ -455,11 +501,8 @@ class AuthManager {
         return false;
       }
       
-      // 对于其他异常（如网络错误、解析错误等），也清除Token并退出登录态
-      debugPrint('🔐 [AUTH] 刷新Token发生严重异常，清除Token并进入非登录态');
-      await _clearTokenFromSecureStorage();
-      _currentToken = null;
-      _notifyAuthStatusChange(AuthStatus.unauthenticated);
+      // 其他异常（网络错误等）保留现态，避免误登出
+      debugPrint('🔐 [AUTH] 刷新发生网络/未知异常，保留现态');
       return false;
     }
   }
