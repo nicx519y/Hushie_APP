@@ -8,7 +8,6 @@ import 'config/api_config.dart';
 import 'pages/app_root.dart';
 import 'services/device_info_service.dart';
 import 'services/analytics_service.dart';
-import 'layouts/main_layout.dart';
 
 void main() async {
   debugPrint('🚀 [MAIN] 应用启动开始');
