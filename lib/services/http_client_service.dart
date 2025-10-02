@@ -10,6 +10,8 @@ import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import 'package:flutter/foundation.dart';
 import '../services/analytics_service.dart';
+import 'performance_service.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 
 
 
@@ -56,6 +58,12 @@ class HttpClientService {
     while (attempt <= _maxRetries) {
       try {
         debugPrint('🔄 [RETRY] $requestType 请求尝试 ${attempt + 1}/${_maxRetries + 1}: $uri');
+        // 启动 HttpMetric（按尝试次序记录）
+        final httpMethod = _mapHttpMethod(requestType);
+        final metric = await PerformanceService().startHttpMetric(uri, httpMethod);
+        metric?.putAttribute('attempt', '${attempt + 1}');
+        metric?.putAttribute('path', uri.path);
+        metric?.putAttribute('host', uri.host);
         
         final response = await request();
         lastResponse = response;
@@ -77,16 +85,34 @@ class HttpClientService {
             final refreshed = await AuthManager.instance.refreshToken();
             if (refreshed) {
               debugPrint('🔐 [HTTP] 刷新成功，重发请求');
+              await PerformanceService().stopHttpMetric(
+                metric,
+                responseCode: response.statusCode,
+                responsePayloadSize: response.bodyBytes.length,
+                contentType: response.headers['content-type'],
+              );
               final retryResponse = await request();
               return retryResponse;
             } else {
               debugPrint('🔐 [HTTP] 刷新失败，提示登录过期');
               _showErrorToast(ToastMessages.authExpired);
+              await PerformanceService().stopHttpMetric(
+                metric,
+                responseCode: response.statusCode,
+                responsePayloadSize: response.bodyBytes.length,
+                contentType: response.headers['content-type'],
+              );
               return response; // 返回原响应，避免无限循环
             }
           } catch (e) {
             debugPrint('🔐 [HTTP] 刷新流程异常: $e');
             _showErrorToast(ToastMessages.authExpired);
+            await PerformanceService().stopHttpMetric(
+              metric,
+              responseCode: response.statusCode,
+              responsePayloadSize: response.bodyBytes.length,
+              contentType: response.headers['content-type'],
+            );
             return response;
           }
         }
@@ -94,6 +120,12 @@ class HttpClientService {
         // 检查是否需要重试
         if (_shouldRetry(response.statusCode, attempt)) {
           debugPrint('⚠️ [RETRY] $requestType 请求失败，状态码: ${response.statusCode}，准备重试...');
+          await PerformanceService().stopHttpMetric(
+            metric,
+            responseCode: response.statusCode,
+            responsePayloadSize: response.bodyBytes.length,
+            contentType: response.headers['content-type'],
+          );
           attempt++;
           if (attempt <= _maxRetries) {
             await Future.delayed(_retryDelay);
@@ -112,6 +144,12 @@ class HttpClientService {
         }
         
         debugPrint('✅ [RETRY] $requestType 请求成功，状态码: ${response.statusCode}');
+        await PerformanceService().stopHttpMetric(
+          metric,
+          responseCode: response.statusCode,
+          responsePayloadSize: response.bodyBytes.length,
+          contentType: response.headers['content-type'],
+        );
         return response;
         
       } catch (e) {
@@ -151,6 +189,27 @@ class HttpClientService {
       final errorMessage = ToastMessages.httpRetryExhausted;
       _showErrorToast(errorMessage);
       throw Exception(errorMessage);
+    }
+  }
+
+  /// 将字符串方法映射到 Firebase HttpMethod
+  static HttpMethod _mapHttpMethod(String requestType) {
+    switch (requestType.toUpperCase()) {
+      case 'GET':
+        return HttpMethod.Get;
+      case 'POST':
+      case 'POST_JSON':
+        return HttpMethod.Post;
+      case 'PUT':
+      case 'PUT_JSON':
+        return HttpMethod.Put;
+      case 'DELETE':
+        return HttpMethod.Delete;
+      case 'PATCH':
+      case 'PATCH_JSON':
+        return HttpMethod.Patch;
+      default:
+        return HttpMethod.Get;
     }
   }
 

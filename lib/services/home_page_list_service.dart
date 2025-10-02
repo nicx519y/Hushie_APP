@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_item.dart';
 import 'api/audio_list_service.dart';
 import 'package:flutter/foundation.dart';
+import 'performance_service.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 
 /// 首页列表数据管理服务
 ///
@@ -88,10 +90,16 @@ class HomePageListService {
     bool forceRefresh = false,
   }) async {
     _ensureInitialized();
-
+    Trace? trace;
+    final startMs = DateTime.now().millisecondsSinceEpoch;
     try {
+      trace = await PerformanceService().startTrace('home_list_load');
       // 获取当前tab的lastCid
       final lastCid = getTabLastCid(tabId);
+      trace?.putAttribute('tab_id', tabId);
+      if (lastCid != null) trace?.putAttribute('last_cid', lastCid);
+      trace?.putAttribute('count', '$_maxItemsPerTab');
+      trace?.putAttribute('force_refresh', forceRefresh ? 'true' : 'false');
 
       // 调用API获取数据
       final newItems = await AudioListService.getAudioList(
@@ -103,14 +111,22 @@ class HomePageListService {
       if (newItems.isNotEmpty) {
         // 不使用缓存，每次都返回新数据
         debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: ${newItems.last.id}');
+        final elapsed = DateTime.now().millisecondsSinceEpoch - startMs;
+        trace?.setMetric('elapsed_ms', elapsed);
+        trace?.setMetric('item_count', newItems.length);
         return newItems;
       } else {
         debugPrint('Tab $tabId 没有更多数据');
+        final elapsed = DateTime.now().millisecondsSinceEpoch - startMs;
+        trace?.setMetric('elapsed_ms', elapsed);
+        trace?.setMetric('item_count', 0);
         return [];
       }
     } catch (error) {
       debugPrint('Tab $tabId 获取数据失败: $error');
       rethrow;
+    } finally {
+      await PerformanceService().stopTrace(trace);
     }
   }
 
@@ -124,10 +140,17 @@ class HomePageListService {
     List<AudioItem> currentData,
   ) async {
     _ensureInitialized();
-
+    Trace? trace;
+    final startMs = DateTime.now().millisecondsSinceEpoch;
     try {
+      trace = await PerformanceService().startTrace('home_list_load');
+      trace?.putAttribute('tab_id', tabId);
+      trace?.putAttribute('has_current_data', currentData.isNotEmpty ? 'true' : 'false');
+      trace?.putAttribute('current_data_count', '${currentData.length}');
       // 获取当前tab的lastCid，传递当前数据
       final lastCid = getTabLastCid(tabId, currentData: currentData);
+      if (lastCid != null) trace?.putAttribute('last_cid', lastCid);
+      trace?.putAttribute('count', '$_maxItemsPerTab');
 
       // 调用API获取数据
       final newItems = await AudioListService.getAudioList(
@@ -138,14 +161,22 @@ class HomePageListService {
 
       if (newItems.isNotEmpty) {
         debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: ${newItems.last.id}');
+        final elapsed = DateTime.now().millisecondsSinceEpoch - startMs;
+        trace?.setMetric('elapsed_ms', elapsed);
+        trace?.setMetric('item_count', newItems.length);
         return newItems;
       } else {
         debugPrint('Tab $tabId 没有更多数据');
+        final elapsed = DateTime.now().millisecondsSinceEpoch - startMs;
+        trace?.setMetric('elapsed_ms', elapsed);
+        trace?.setMetric('item_count', 0);
         return [];
       }
     } catch (error) {
       debugPrint('Tab $tabId 获取数据失败: $error');
       rethrow;
+    } finally {
+      await PerformanceService().stopTrace(trace);
     }
   }
 

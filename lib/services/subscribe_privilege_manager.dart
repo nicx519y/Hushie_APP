@@ -5,6 +5,7 @@ import '../models/product_model.dart';
 import 'auth_manager.dart';
 import 'api/user_privilege_service.dart';
 import 'api/product_service.dart';
+import 'performance_service.dart';
 
 /// 用户权益变化事件
 class PrivilegeChangeEvent {
@@ -160,6 +161,30 @@ class SubscribePrivilegeManager {
 
       debugPrint('🏆 [PRIVILEGE_SERVICE] 商品数据加载完成');
       debugPrint('🏆 [PRIVILEGE_SERVICE] 商品数量: ${_cachedProductData?.products.length}');
+
+      // 尝试设置 currency 全局属性（用于地区推断的辅助）
+      try {
+        final products = productData.products;
+        String? currency;
+        if (products.isNotEmpty) {
+          final firstProduct = products.first;
+          if (firstProduct.basePlans.isNotEmpty) {
+            final basePlan = firstProduct.basePlans.first;
+            // 优先使用可用的 offer 的货币，其次使用基础计划的货币
+            Offer? availableOffer;
+            try {
+              availableOffer = basePlan.offers.firstWhere((o) => o.isAvailable);
+            } catch (_) {}
+            currency = availableOffer?.currency ??
+                (basePlan.offers.isNotEmpty ? basePlan.offers.first.currency : basePlan.currency);
+          }
+        }
+        if (currency != null && currency.isNotEmpty) {
+          PerformanceService().setGlobalAttribute('currency', currency);
+        }
+      } catch (e) {
+        debugPrint('🏆 [PRIVILEGE_SERVICE] 设置 currency 属性失败: $e');
+      }
     } catch (e) {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 加载商品数据失败: $e');
       // 加载失败时不清理现有缓存，保持旧数据可用
@@ -197,6 +222,21 @@ class SubscribePrivilegeManager {
 
       debugPrint('🏆 [PRIVILEGE_SERVICE] 用户权限数据加载完成');
       debugPrint('🏆 [PRIVILEGE_SERVICE] 权限状态: hasPremium=${_cachedPrivilege?.hasPremium}');
+
+      // 根据权限状态更新 plan_tier 全局属性
+      try {
+        String planTier;
+        if (!(privilege.hasPremium)) {
+          planTier = 'free';
+        } else if (privilege.isValidPremium) {
+          planTier = 'premium';
+        } else {
+          planTier = 'expired';
+        }
+        PerformanceService().setGlobalAttribute('plan_tier', planTier);
+      } catch (e) {
+        debugPrint('🏆 [PRIVILEGE_SERVICE] 设置 plan_tier 属性失败: $e');
+      }
       
       // 检查权限状态是否发生变化
       final currentHasPremium = _cachedPrivilege?.hasPremium ?? false;
@@ -277,6 +317,11 @@ class SubscribePrivilegeManager {
       debugPrint('🏆 [PRIVILEGE_SERVICE] 权限状态发生变化: true -> false (用户登出)');
       _notifyPrivilegeChange(null);
     }
+
+    // 登出时重置 plan_tier 到 free
+    try {
+      PerformanceService().setGlobalAttribute('plan_tier', 'free');
+    } catch (_) {}
   }
 
   /// 清理缓存数据

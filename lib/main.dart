@@ -9,6 +9,7 @@ import 'pages/app_root.dart';
 import 'services/device_info_service.dart';
 import 'services/analytics_service.dart';
 import 'services/crashlytics_service.dart';
+import 'services/performance_service.dart';
 
 void main() async {
   debugPrint('🚀 [MAIN] 应用启动开始');
@@ -29,6 +30,9 @@ void main() async {
     
     // 初始化 Crashlytics 服务（尽早设置全局错误捕获）
     await CrashlyticsService().initialize();
+
+    // 初始化 Firebase Performance（性能监控）
+    await PerformanceService().initialize();
     
     // 记录应用启动事件
     await AnalyticsService().logAppOpen();
