@@ -157,7 +157,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: const AppRoot(),
-      navigatorObservers: [globalRouteObserver],
+      navigatorObservers: [AnalyticsService().observer],
       debugShowCheckedModeBanner: false,
     );
   }

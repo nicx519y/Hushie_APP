@@ -9,6 +9,9 @@ import 'app_signature_service.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import 'package:flutter/foundation.dart';
+import '../services/analytics_service.dart';
+
+
 
 /// HTTP客户端服务
 class HttpClientService {
@@ -60,6 +63,16 @@ class HttpClientService {
         // 401 统一处理：先尝试刷新Token并重发一次
         if (response.statusCode == 401) {
           debugPrint('🔐 [HTTP] 检测到401未授权，尝试刷新Token后重发');
+
+          // 记录401事件
+          await AnalyticsService().logCustomEvent(
+            eventName: 'StatusCode_401',
+            parameters: {
+              'uri': uri.toString(),
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            },
+          );
+
           try {
             final refreshed = await AuthManager.instance.refreshToken();
             if (refreshed) {

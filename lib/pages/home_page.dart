@@ -151,8 +151,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _onSearchTap() {
-    // 记录搜索页面访问事件
-    AnalyticsService().logScreenView(screenName: 'search_page');
     NavigationUtils.navigateToSearch(context);
   }
 

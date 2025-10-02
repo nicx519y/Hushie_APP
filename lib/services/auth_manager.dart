@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'network_healthy_manager.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
+import 'analytics_service.dart';
 
 /// 认证状态枚举
 enum AuthStatus {
@@ -63,10 +64,29 @@ class AuthManager {
       if (status == NetworkHealthStatus.healthy) {
         return true;
       }
+
+      // 记录网络不健康事件
+      await AnalyticsService().logCustomEvent(
+        eventName: 'Network_Unhealthy',
+        parameters: {
+          'status': status.description,
+          'action': action,
+        },
+      );
+
       ToastHelper.showError(ToastMessages.networkUnavailable);
       debugPrint('🔐 [AUTH] 网络不健康（$status） - 跳过$action');
       return false;
     } catch (e) {
+      // 记录网络检测异常事件
+      await AnalyticsService().logCustomEvent(
+        eventName: 'Network_Check_Failed',
+        parameters: {
+          'action': action,
+          'error': e.toString(),
+        },
+      );
+
       ToastHelper.showError(ToastMessages.networkCheckFailed);
       debugPrint('🔐 [AUTH] 网络检测异常 - 跳过$action: $e');
       return false;
@@ -82,7 +102,7 @@ class AuthManager {
       _currentStatus = status;
       final event = AuthStatusChangeEvent(status: status, user: user);
       _authStatusController.add(event);
-      debugPrint('🔐 [AUTH] 认证状态变化: ${event}');
+      debugPrint('🔐 [AUTH] 认证状态变化: $event');
     }
   }
 
@@ -111,7 +131,7 @@ class AuthManager {
       }
       
       _isInitialized = true;
-      debugPrint('🔐 [AUTH] AuthManager初始化完成: ${_currentStatus}');
+      debugPrint('🔐 [AUTH] AuthManager初始化完成: $_currentStatus');
     } catch (e) {
       debugPrint('🔐 [AUTH] 初始化AuthManager失败: $e');
       // 初始化失败时，如果有Token就保持认证状态，否则设为未认证
@@ -197,6 +217,17 @@ class AuthManager {
 
       if (googleAuthResult.errNo != 0 || googleAuthResult.data == null) {
         debugPrint('Google登录失败: googleAuthResult.errNo: ${googleAuthResult.errNo}');
+        
+        // 记录Google登录失败事件
+        await AnalyticsService().logCustomEvent(
+          eventName: 'auth_google_login_failed',
+          parameters: {
+            'failure_reason': 'google_auth_failed',
+            'error_code': 'GOOGLE_AUTH_ERROR',
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          },
+        );
+        
         _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return googleAuthResult;
       }
@@ -210,6 +241,18 @@ class AuthManager {
 
       if (tokenResult.errNo != 0 || tokenResult.data == null) {
         debugPrint('Google登录失败: tokenResult.errNo: ${tokenResult.errNo}');
+        
+        // 记录Token获取失败事件
+        await AnalyticsService().logCustomEvent(
+          eventName: 'auth_login_failed',
+          parameters: {
+            'failure_reason': 'token_exchange_failed',
+            'error_code': tokenResult.errNo,
+            'user_email': googleAuth.email,
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          },
+        );
+        
         _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return ApiResponse.error(errNo: tokenResult.errNo);
       }
@@ -231,6 +274,17 @@ class AuthManager {
       return googleAuthResult;
     } catch (e) {
       debugPrint('Google登录流程失败: $e');
+      
+      // 记录登录流程异常事件
+      await AnalyticsService().logCustomEvent(
+        eventName: 'auth_login_failed',
+        parameters: {
+          'failure_reason': 'login_process_exception',
+          'error_message': e.toString(),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      
       // 通知登录失败
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
 
@@ -243,6 +297,17 @@ class AuthManager {
   /// 登出
   Future<void> signOut() async {
     try {
+      // 记录用户登出事件
+      final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
+      await AnalyticsService().logCustomEvent(
+        eventName: 'auth_logout',
+        parameters: {
+          'user_name': userName,
+          'logout_reason': 'user_initiated',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      
       // 停止定时器
       _refreshTimer?.cancel();
       
@@ -262,6 +327,19 @@ class AuthManager {
 
     } catch (e) {
       debugPrint('登出失败，但是强行登出: $e');
+      
+      // 记录登出失败但强制登出的事件
+      final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
+      await AnalyticsService().logCustomEvent(
+        eventName: 'auth_logout',
+        parameters: {
+          'user_name': userName,
+          'logout_reason': 'forced_logout_on_error',
+          'error_message': e.toString(),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      
       // 即使服务器登出失败，也要清除本地数据
       await SecureStorageService.clearAll();
 
@@ -278,6 +356,17 @@ class AuthManager {
   /// 删除账户
   Future<void> deleteAccount() async {
     try {
+      // 记录用户删除账户事件
+      final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
+      await AnalyticsService().logCustomEvent(
+        eventName: 'auth_account_deleted',
+        parameters: {
+          'user_name': userName,
+          'deletion_reason': 'user_initiated',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      
       // 停止定时器
       _refreshTimer?.cancel();
       
@@ -296,6 +385,19 @@ class AuthManager {
       _refreshTimer?.cancel();
     } catch (e) {
       debugPrint('删除账户失败，但是强行清除本地数据: $e');
+      
+      // 记录删除账户失败但强制清除数据的事件
+      final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
+      await AnalyticsService().logCustomEvent(
+        eventName: 'auth_account_deleted',
+        parameters: {
+          'user_name': userName,
+          'deletion_reason': 'forced_deletion_on_error',
+          'error_message': e.toString(),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      
       // 即使服务器删除失败，也要清除本地数据
       await SecureStorageService.clearAll();
 
@@ -357,6 +459,19 @@ class AuthManager {
       return true;
     } catch (e) {
       debugPrint('🔐 [AUTH] isSignedIn异常: $e');
+      
+      // 记录因异常导致的登录态丢失
+      final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
+      await AnalyticsService().logCustomEvent(
+        eventName: 'auth_login_lost',
+        parameters: {
+          'user_name': userName,
+          'loss_reason': 'exception_in_is_signed_in',
+          'error_message': e.toString(),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      
       // 发生异常时，为了安全起见，退出登录态
       await clearAllAuthData();
       return false;
@@ -412,7 +527,7 @@ class AuthManager {
       // 若失败，不清除本地（除服务器判定无效的情况在 _performTokenRefresh 中处理），进行两次退避重试
       for (int i = 1; i <= 2; i++) {
         final delayMs = 1000 * i;
-        debugPrint('🔄 [AUTH] 刷新失败，${delayMs}ms后重试 第${i}次');
+        debugPrint('🔄 [AUTH] 刷新失败，${delayMs}ms后重试 第$i次');
         await Future.delayed(Duration(milliseconds: delayMs));
         ok = await _performTokenRefresh();
         if (ok) return true;
@@ -485,6 +600,19 @@ class AuthManager {
           return false;
         } else {
           debugPrint('🔐 [AUTH] 服务器判定RefreshToken无效，清除Token并进入非登录态');
+          
+          // 记录因RefreshToken无效导致的登录态丢失
+          final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
+          await AnalyticsService().logCustomEvent(
+            eventName: 'auth_login_lost',
+            parameters: {
+              'user_name': userName,
+              'loss_reason': 'refresh_token_invalid',
+              'server_error_code': result.errNo,
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            },
+          );
+          
           await _clearTokenFromSecureStorage();
           _currentToken = null;
           _notifyAuthStatusChange(AuthStatus.unauthenticated);
