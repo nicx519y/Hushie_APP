@@ -40,8 +40,8 @@ class ExoPlayerConfigService {
   /// - 最大缓冲：60秒（平衡性能和内存使用）
   static Future<String?> configureOptimalBuffer() async {
     return await configureBuffer(
-      minBufferMs: 5000, // 5秒最小缓冲
-      maxBufferMs: 60000, // 60秒最大缓冲
+      minBufferMs: 2000, // 2秒最小缓冲
+      maxBufferMs: 600000, // 600秒最大缓冲
     );
   }
   
@@ -52,20 +52,20 @@ class ExoPlayerConfigService {
   /// - 最大缓冲：300秒（5分钟）
   static Future<String?> configureLargeBuffer() async {
     return await configureBuffer(
-      minBufferMs: 10000, // 10秒最小缓冲
-      maxBufferMs: 300000, // 300秒最大缓冲（5分钟）
+      minBufferMs: 6000, // 6秒最小缓冲
+      maxBufferMs: 600000, // 600秒最大缓冲（10分钟）
     );
   }
   
   /// 配置低延迟缓冲（适用于实时音频）
   /// 
   /// 针对低延迟需求的缓冲参数：
-  /// - 最小缓冲：5秒
-  /// - 最大缓冲：15秒
+  /// - 最小缓冲：1秒
+  /// - 最大缓冲：600秒
   static Future<String?> configureLowLatencyBuffer() async {
     return await configureBuffer(
-      minBufferMs: 5000,  // 5秒最小缓冲
-      maxBufferMs: 15000, // 15秒最大缓冲
+      minBufferMs: 1000,  // 1秒最小缓冲
+      maxBufferMs: 600000, // 600秒最大缓冲（10分钟）
     );
   }
   

@@ -110,15 +110,15 @@ class SlideUpContainer extends StatelessWidget {
             image: backgroundImage != null
                 ? DecorationImage(
                     image: AssetImage(backgroundImage!),
-                    fit: BoxFit.none,
-                    alignment: backgroundImageAlignment ?? Alignment.center,
+                    fit: BoxFit.fitWidth,
+                    alignment: backgroundImageAlignment ?? Alignment.topCenter,
                   )
                 : null,
             color: backgroundColor ?? Colors.white,
             borderRadius: borderRadius ??
                 const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
+                  topLeft: Radius.circular(26),
+                  topRight: Radius.circular(26),
                 ),
           ),
           child: child,

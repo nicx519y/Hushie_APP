@@ -209,7 +209,7 @@ class AudioManager {
       }
 
       // 检查播放是否完成并自动播放下一首
-      if(positionChanged && audioState.playerState.playing && position >= audioState.duration * 0.98) {
+      if(positionChanged && audioState.playerState.playing && position >= audioState.duration * 0.995) {
         _checkPlaybackCompletion();
       }
       // debugPrint('[checkWillOutPreview] 播放列表管理完成');

@@ -10,27 +10,27 @@ class ToastMessages {
     401: 'Authentication failed, please log in again',
     403: 'Access denied, insufficient permissions',
     404: 'Requested resource not found',
-    408: 'error occurred',
-    429: 'error occurred',
-    500: 'error occurred',
-    502: 'error occurred',
-    503: 'error occurred',
-    504: 'error occurred',
+    408: 'An error has occurred. Please refresh the page.',
+    429: 'An error has occurred. Please refresh the page.',
+    500: 'An error has occurred. Please refresh the page.',
+    502: 'An error has occurred. Please refresh the page.',
+    503: 'An error has occurred. Please refresh the page.',
+    504: 'An error has occurred. Please refresh the page.',
   };
 
   // ========== Network Exception Error Messages ==========
   static const Map<String, String> networkExceptionMessages = {
-    'TimeoutException': 'error occurred',
-    'SocketException': 'error occurred',
-    'HandshakeException': 'error occurred',
-    'Connection': 'error occurred',
-    'FormatException': 'error occurred',
-    'HttpException': 'error occurred',
+    'TimeoutException': 'An error has occurred. Please refresh the page.',
+    'SocketException': 'An error has occurred. Please refresh the page.',
+    'HandshakeException': 'An error has occurred. Please refresh the page.',
+    'Connection': 'An error has occurred. Please refresh the page.',
+    'FormatException': 'An error has occurred. Please refresh the page.',
+    'HttpException': 'An error has occurred. Please refresh the page.',
   };
 
   // ========== General Network Error Messages ==========
-  static const String networkRequestFailed = 'error occurred';
-  static const String httpRetryExhausted = 'error occurred';
+  static const String networkRequestFailed = 'An error has occurred. Please refresh the page.';
+  static const String httpRetryExhausted = 'An error has occurred. Please refresh the page.';
 
   // ========== General App Network & Auth Messages ==========
   static const String networkUnavailable = 'Network unavailable. Please try again later.';
@@ -76,7 +76,7 @@ class ToastMessages {
   // ========== Get HTTP Status Code Message ==========
   static String getHttpStatusMessage(int statusCode) {
     // return httpStatusMessages[statusCode] ?? 'Network request failed (Status code: $statusCode)';
-    return 'error occurred';
+    return 'An error has occurred. Please refresh the page.';
   }
 
   // ========== Get Google Play Billing Error Message ==========

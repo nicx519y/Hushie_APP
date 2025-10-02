@@ -168,7 +168,7 @@ class _AudioListState extends State<AudioList> {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('Load more', style: TextStyle(color: Colors.grey)),
+            : const SizedBox.shrink(),
       ),
     );
   }

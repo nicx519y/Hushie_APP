@@ -15,6 +15,7 @@ class NetworkHealthyManager {
 
   final Connectivity _connectivity = Connectivity();
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isInitialized = false;
   
   // 网络状态流控制器
   final StreamController<NetworkHealthStatus> _networkStatusController = 
@@ -28,9 +29,15 @@ class NetworkHealthyManager {
   
   /// 获取当前网络健康状态
   NetworkHealthStatus get currentStatus => _currentStatus;
+  /// 是否已初始化
+  bool get isInitialized => _isInitialized;
 
   /// 初始化网络健康管理器
   Future<void> initialize() async {
+    if (_isInitialized) {
+      return;
+    }
+    _isInitialized = true;
     // 检查初始网络状态
     await _checkNetworkHealth();
     
@@ -125,6 +132,7 @@ class NetworkHealthyManager {
   void dispose() {
     _connectivitySubscription?.cancel();
     _networkStatusController.close();
+    _isInitialized = false;
   }
 }
 

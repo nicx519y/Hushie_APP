@@ -4,6 +4,8 @@ import 'package:rxdart/rxdart.dart';
 import '../models/audio_item.dart';
 import 'package:flutter/foundation.dart';
 import 'exoplayer_config_service.dart';
+import 'network_healthy_manager.dart';
+import 'dart:async';
 
 // 音频状态数据类
 class AudioPlayerState {
@@ -92,6 +94,9 @@ class AudioPlayerService extends BaseAudioHandler {
   void _init() {
     // 配置 Android ExoPlayer 缓冲参数
     _configureExoPlayerBuffer();
+
+    // 根据网络健康状态驱动缓冲策略选择
+    _setupDynamicBufferStrategy();
     
     // 监听播放状态变化
     _audioPlayer.playingStream.listen((playing) {
@@ -402,9 +407,73 @@ class AudioPlayerService extends BaseAudioHandler {
     }
   }
 
+  // 动态缓冲策略：根据网络健康状态选择缓冲配置
+  StreamSubscription<NetworkHealthStatus>? _networkStatusSubscription;
+  NetworkHealthStatus _lastAppliedNetworkStatus = NetworkHealthStatus.unknown;
+
+  void _setupDynamicBufferStrategy() {
+    // 懒初始化网络健康管理器，避免在应用入口增加启动耗时
+    // 若已初始化则内部会直接返回（在管理器中实现幂等保护）
+    NetworkHealthyManager.instance.initialize();
+
+    // 主动检查一次网络状态并应用策略
+    NetworkHealthyManager.instance.checkNetworkHealth().then((status) {
+      _applyBufferStrategyForStatus(status);
+    });
+
+    // 订阅网络状态变化，适时调整缓冲策略
+    _networkStatusSubscription = NetworkHealthyManager.instance.networkStatusStream.listen((status) {
+      _applyBufferStrategyForStatus(status);
+    });
+  }
+
+  Future<void> _applyBufferStrategyForStatus(NetworkHealthStatus status) async {
+    // 避免重复应用同一状态导致的过度配置
+    if (_lastAppliedNetworkStatus == status) {
+      return;
+    }
+
+    _lastAppliedNetworkStatus = status;
+
+    try {
+      switch (status) {
+        case NetworkHealthStatus.healthy:
+          if (kDebugMode) {
+            debugPrint('📶 [AUDIO] 网络健康，应用推荐缓冲（1s/600s）');
+          }
+          await ExoPlayerConfigService.configureLowLatencyBuffer();
+          break;
+        case NetworkHealthStatus.serverUnhealthy:
+          if (kDebugMode) {
+            debugPrint('📶 [AUDIO] 服务器不健康，应用大缓冲（6s/600s）');
+          }
+          await ExoPlayerConfigService.configureLargeBuffer();
+          break;
+        case NetworkHealthStatus.noConnection:
+          if (kDebugMode) {
+            debugPrint('📶 [AUDIO] 无网络连接，保持当前配置，不做调整');
+          }
+          // 无网络时不调整缓冲，避免误操作
+          break;
+        case NetworkHealthStatus.error:
+        case NetworkHealthStatus.unknown:
+          if (kDebugMode) {
+            debugPrint('📶 [AUDIO] 网络状态未知/错误，应用推荐缓冲作为回退');
+          }
+          await ExoPlayerConfigService.configureOptimalBuffer();
+          break;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('📶 [AUDIO] 应用缓冲策略失败: $e');
+      }
+    }
+  }
+
   // 清理资源
   Future<void> dispose() async {
     await _audioPlayer.dispose();
     await _audioStateSubject.close();
+    await _networkStatusSubscription?.cancel();
   }
 }

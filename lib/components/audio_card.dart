@@ -161,7 +161,7 @@ class AudioCard extends StatelessWidget {
                       children: item.tags!.map((tag) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD8D8D8),
+                          color: const Color(0xFFE9EAEB),
                           borderRadius: BorderRadius.circular(0),
                         ),
                         child: Text(

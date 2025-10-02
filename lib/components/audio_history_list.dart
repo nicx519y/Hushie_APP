@@ -90,7 +90,7 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'No listening history',
+                        'No History yet.',
                         style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                       SizedBox(height: 8),

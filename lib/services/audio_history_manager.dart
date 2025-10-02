@@ -328,11 +328,11 @@ class AudioHistoryManager {
       final totalDuration = _currentPlayingAudio!.duration!;
       final currentProgress = _lastRecordedPosition;
       
-      // 如果当前进度大于等于总时长的98%，则将进度重置为0
+      // 如果当前进度大于等于总时长的99.5%，则将进度重置为0
       if (totalDuration.inMilliseconds > 0 && 
-          currentProgress.inMilliseconds >= (totalDuration.inMilliseconds * 0.98)) {
+          currentProgress.inMilliseconds >= (totalDuration.inMilliseconds * 0.995)) {
         progressToSubmit = Duration.zero;
-        debugPrint('🎵 [HISTORY] 播放进度已达98%，重置进度为0: ${_formatDuration(currentProgress)} / ${_formatDuration(totalDuration)}');
+        debugPrint('🎵 [HISTORY] 播放进度已达99.5%，重置进度为0: ${_formatDuration(currentProgress)} / ${_formatDuration(totalDuration)}');
       }
     }
     

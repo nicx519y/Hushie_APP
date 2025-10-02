@@ -132,7 +132,7 @@ class _LikesListState extends State<LikesList> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'No liked content',
+                        'No Like yet.',
                         style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                       SizedBox(height: 8),

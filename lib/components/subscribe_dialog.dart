@@ -12,9 +12,7 @@ import '../services/subscribe_privilege_manager.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../router/navigation_utils.dart';
-import 'webview_page.dart';
 import '../utils/webview_navigator.dart';
-import '../utils/toast_helper.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -254,8 +252,8 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
     if (_isLoading || _product == null) {
       return SlideUpContainer(
         maxHeight: MediaQuery.of(context).size.height * 0.5,
-        backgroundImage: 'assets/images/dailog_bg.png',
-        backgroundImageAlignment: Alignment(0.2, 0.55),
+        backgroundImage: 'assets/images/products_bg.png',
+        backgroundImageAlignment: Alignment.topCenter,
         padding: EdgeInsets.only(
           top: 16,
           bottom: MediaQuery.of(context).padding.bottom + 36,
@@ -268,8 +266,8 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
     return SlideUpContainer(
       maxHeight: MediaQuery.of(context).size.height * 0.9,
-      backgroundImage: 'assets/images/dailog_bg.png',
-      backgroundImageAlignment: Alignment(0.2, 0.55), // 控制背景图坐标位置
+      backgroundImage: 'assets/images/products_bg.png',
+      backgroundImageAlignment: Alignment.topCenter,
       padding: EdgeInsets.only(
         top: 16,
         bottom: MediaQuery.of(context).padding.bottom + 36,

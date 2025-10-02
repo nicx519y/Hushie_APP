@@ -37,11 +37,11 @@ class NotificationDialog extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(26),
           image: const DecorationImage(
-            image: AssetImage('assets/images/dailog_bg.png'),
-            fit: BoxFit.none,
-            alignment: Alignment(0.2, 0.1),
+            image: AssetImage('assets/images/products_bg.png'),
+            fit: BoxFit.fitWidth,
+            alignment: Alignment.topCenter,
           ),
         ),
         child: Column(
