@@ -321,18 +321,28 @@ class AudioPlayerService extends BaseAudioHandler {
 
     playbackState.add(
       PlaybackState(
+        // 通知栏显示的控制按钮列表
         controls: [
+          // 根据播放状态动态显示播放或暂停按钮
           if (playing) MediaControl.pause else MediaControl.play,
-          MediaControl.stop,
+          // MediaControl.stop, // 停止按钮（已注释）
         ],
+        // 支持的系统操作集合
         systemActions: {
+          // 允许用户拖拽进度条来跳转播放位置
           MediaAction.seek,
         },
-        androidCompactActionIndices: const [0, 1],
+        // Android 紧凑通知栏模式下显示的按钮索引（第0和第1个按钮）
+        androidCompactActionIndices: const [0],
+        // 当前音频处理状态（空闲、加载中、缓冲中、就绪、完成）
         processingState: processingState,
+        // 当前是否正在播放
         playing: playing,
+        // 当前播放位置，用于通知栏进度条显示
         updatePosition: _audioPlayer.position,
+        // 当前缓冲位置，用于显示缓冲进度
         bufferedPosition: _audioPlayer.bufferedPosition,
+        // 当前播放速度（1.0为正常速度）
         speed: _audioPlayer.speed,
       ),
     );

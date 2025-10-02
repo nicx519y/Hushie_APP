@@ -90,12 +90,18 @@ class AudioManager {
     try {
       _audioService = await AudioService.init(
         builder: () => AudioPlayerService(),
-        config: const AudioServiceConfig(
+        config: const AudioServiceConfig( // 音频服务配置
+          // Android 通知渠道 ID，用于系统识别和管理通知
           androidNotificationChannelId: 'com.hushie.audio',
+          // Android 通知渠道名称，用户在系统设置中看到的名称
           androidNotificationChannelName: 'Hushie.AI',
+          // 设置为 true 时，音频播放时通知会持续显示（前台服务）
           androidNotificationOngoing: true,
+          // 暂停时是否停止前台服务，true 表示暂停时停止前台服务
           androidStopForegroundOnPause: true,
+          // 通知栏显示的图标资源路径
           androidNotificationIcon: 'drawable/ic_notification_stat',
+          // 是否预加载音频封面图片，提升用户体验
           preloadArtwork: true,
         ),
       );
