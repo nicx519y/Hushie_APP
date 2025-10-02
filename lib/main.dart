@@ -80,7 +80,7 @@ void main() async {
   ApiConfig.initialize(
     debugMode: true, // 在开发环境启用调试模式
   );
-  debugPrint('�� [MAIN] API配置初始化完成');
+  debugPrint('🚀 [MAIN] API配置初始化完成');
 
   // 立即启动应用，服务初始化在启动页中处理
   debugPrint('🚀 [MAIN] 开始运行应用');

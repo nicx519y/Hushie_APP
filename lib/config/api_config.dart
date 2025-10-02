@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiConfig {
   // API 基础配置
   static const String baseUrl = 'https://api.hushie.ai/api/v1';
+  static const String healthCheckUrl = 'https://api.hushie.ai/health';
   static const Duration defaultTimeout = Duration(seconds: 10);
 
   // 分页配置
@@ -150,6 +151,7 @@ class ApiConfig {
 
 /// API 端点常量
 class ApiEndpoints {
+
   // 音频相关接口
   static const String audioList = '/audio/list';
   static const String audioSearch = '/audio/search';

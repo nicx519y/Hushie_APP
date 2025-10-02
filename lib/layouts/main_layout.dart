@@ -98,7 +98,6 @@ class _MainLayoutState extends State<MainLayout> {
   Widget _buildMainContent() {
     return Scaffold(
         backgroundColor: Colors.white,
-        // 移除extendBodyBehindAppBar，避免状态栏被遮挡
         // extendBodyBehindAppBar: true, // 让body延伸到状态栏后面
 
         body: Stack(
