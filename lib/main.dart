@@ -8,6 +8,7 @@ import 'config/api_config.dart';
 import 'pages/app_root.dart';
 import 'services/device_info_service.dart';
 import 'services/analytics_service.dart';
+import 'services/crashlytics_service.dart';
 
 void main() async {
   debugPrint('🚀 [MAIN] 应用启动开始');
@@ -18,13 +19,16 @@ void main() async {
   try {
     await Firebase.initializeApp();
     debugPrint('🔥 [FIREBASE] Firebase初始化完成');
-    
+
     // 初始化 Firebase Analytics
     FirebaseAnalytics.instance;
     debugPrint('📊 [ANALYTICS] Firebase Analytics初始化完成');
     
     // 初始化 Analytics 服务
     AnalyticsService().initialize();
+    
+    // 初始化 Crashlytics 服务（尽早设置全局错误捕获）
+    await CrashlyticsService().initialize();
     
     // 记录应用启动事件
     await AnalyticsService().logAppOpen();

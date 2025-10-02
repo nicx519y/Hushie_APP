@@ -767,10 +767,14 @@ class AudioManager {
     if (status == AuthStatus.authenticated) {
       // 登录时开始监听播放历史
       signedInit();
+      // 登录时暂停播放
+      pause();
       debugPrint('AudioManager: 已登录，开始监听播放历史');
     } else {
       // 登出时停止监听播放历史
       signedOutInit();
+      // 暂停播放
+      pause();
       debugPrint('AudioManager: 已登出，停止监听播放历史');
     }
   }

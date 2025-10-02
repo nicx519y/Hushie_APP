@@ -5,6 +5,7 @@ import '../models/audio_item.dart';
 import 'package:flutter/foundation.dart';
 import 'exoplayer_config_service.dart';
 import 'network_healthy_manager.dart';
+import 'analytics_service.dart';
 import 'dart:async';
 
 // 音频状态数据类
@@ -71,6 +72,11 @@ class AudioPlayerService extends BaseAudioHandler {
   // 公开的统一状态流
   Stream<AudioPlayerState> get audioStateStream => _audioStateSubject.stream;
 
+  // Analytics: 加载到可播放耗时统计
+  int? _loadStartMs;
+  String? _loadAudioId;
+  int? _lastLoadInitialPositionMs;
+  bool _loadReported = false;
 
 
   // 当前状态的getter
@@ -126,6 +132,9 @@ class AudioPlayerService extends BaseAudioHandler {
     // 监听播放完成
     _audioPlayer.playerStateStream.listen((state) {
       _updateAudioState(playerState: state);
+      if (state.processingState == ProcessingState.ready) {
+        _reportLoadToReadyLatencyIfNeeded();
+      }
     });
 
     // 监听缓冲位置变化
@@ -223,6 +232,11 @@ class AudioPlayerService extends BaseAudioHandler {
 
       // 加载音频文件，使用 setAudioSource 的 initialPosition 参数
       final audioSource = AudioSource.uri(Uri.parse(audioUrl));
+      // 记录加载开始时间（用于统计从加载到可播放的耗时）
+      _loadStartMs = DateTime.now().millisecondsSinceEpoch;
+      _loadAudioId = audio.id;
+      _lastLoadInitialPositionMs = initialPosition?.inMilliseconds;
+      _loadReported = false;
       if (initialPosition != null) {
         await _audioPlayer.setAudioSource(audioSource, initialPosition: initialPosition);
         debugPrint('音频加载完成，初始位置: ${initialPosition.inSeconds}秒');
@@ -257,6 +271,32 @@ class AudioPlayerService extends BaseAudioHandler {
     } catch (e) {
       debugPrint('播放音频时出错: $e');
       await stop();
+    }
+  }
+
+  // Analytics: 上报从开始加载到可播放的耗时
+  void _reportLoadToReadyLatencyIfNeeded() async {
+    try {
+      final audio = currentAudio;
+      if (audio == null) return;
+      if (_loadReported) return;
+      if (_loadAudioId != audio.id) return;
+      if (_loadStartMs == null) return;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final elapsedMs = nowMs - _loadStartMs!;
+      await AnalyticsService().logCustomEvent(
+        eventName: 'audio_ready_latency',
+        parameters: {
+          'audio_id': audio.id,
+          'audio_title': audio.title,
+          'elapsed_ms': elapsedMs,
+          if (_lastLoadInitialPositionMs != null) 'initial_position_ms': _lastLoadInitialPositionMs!,
+        },
+      );
+      _loadReported = true;
+      debugPrint('📊 [ANALYTICS] 音频加载到可播放耗时: ${elapsedMs}ms (${audio.title})');
+    } catch (e) {
+      debugPrint('📊 [ANALYTICS] 记录音频加载耗时失败: $e');
     }
   }
 

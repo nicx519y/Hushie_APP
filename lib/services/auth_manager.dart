@@ -8,6 +8,7 @@ import 'network_healthy_manager.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import 'analytics_service.dart';
+import 'crashlytics_service.dart';
 
 /// 认证状态枚举
 enum AuthStatus {
@@ -269,6 +270,14 @@ class AuthManager {
       // 通知登录状态变化
       _notifyAuthStatusChange(AuthStatus.authenticated, user: googleAuth);
 
+      // 关联Crashlytics用户标识与登录状态
+      try {
+        await CrashlyticsService().setUserId(googleAuth.userId);
+        await CrashlyticsService().setCustomKey('logged_in', true);
+      } catch (e) {
+        debugPrint('💥 [CRASHLYTICS] 设置用户ID失败: $e');
+      }
+
       _startTokenRefreshTimer();
 
       return googleAuthResult;
@@ -323,6 +332,14 @@ class AuthManager {
       // 通知登出状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
 
+      // 清除Crashlytics用户标识并标记未登录
+      try {
+        await CrashlyticsService().setUserId('guest');
+        await CrashlyticsService().setCustomKey('logged_in', false);
+      } catch (e) {
+        debugPrint('💥 [CRASHLYTICS] 清除用户ID失败: $e');
+      }
+
       _refreshTimer?.cancel();
 
     } catch (e) {
@@ -348,6 +365,14 @@ class AuthManager {
 
       // 通知登出状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
+
+      // 清除Crashlytics用户标识并标记未登录
+      try {
+        await CrashlyticsService().setUserId('guest');
+        await CrashlyticsService().setCustomKey('logged_in', false);
+      } catch (e) {
+        debugPrint('💥 [CRASHLYTICS] 清除用户ID失败: $e');
+      }
 
       _refreshTimer?.cancel();
     }
@@ -382,6 +407,14 @@ class AuthManager {
       // 通知账户删除状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
 
+      // 清除Crashlytics用户标识并标记未登录
+      try {
+        await CrashlyticsService().setUserId('guest');
+        await CrashlyticsService().setCustomKey('logged_in', false);
+      } catch (e) {
+        debugPrint('💥 [CRASHLYTICS] 清除用户ID失败: $e');
+      }
+
       _refreshTimer?.cancel();
     } catch (e) {
       debugPrint('删除账户失败，但是强行清除本地数据: $e');
@@ -406,6 +439,14 @@ class AuthManager {
 
       // 通知账户删除状态变化
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
+
+      // 清除Crashlytics用户标识并标记未登录
+      try {
+        await CrashlyticsService().setUserId('guest');
+        await CrashlyticsService().setCustomKey('logged_in', false);
+      } catch (e) {
+        debugPrint('💥 [CRASHLYTICS] 清除用户ID失败: $e');
+      }
 
       _refreshTimer?.cancel();
       rethrow; // 重新抛出异常，让调用者处理
