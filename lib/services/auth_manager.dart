@@ -189,7 +189,7 @@ class AuthManager {
   Future<ApiResponse<GoogleAuthResponse>> signInWithGoogle() async {
     try {
       // 网络健康预检：网络不可用时不进行登录流程，避免误判登录失败为未认证
-      if (!await _ensureNetworkHealthy(action: '登录')) {
+      if (!await _ensureNetworkHealthy(action: 'login')) {
         return ApiResponse.error(errNo: -1);
       }
       // 第一步：获取Google认证信息（授权码或idToken）
@@ -435,7 +435,7 @@ class AuthManager {
     debugPrint('🔐 [AUTH] 当前RefreshToken长度: ${_currentToken?.refreshToken.length ?? 0}');
     
     // 网络健康预检：网络不可用时跳过刷新且不清除本地凭证，避免误登出
-    if (!await _ensureNetworkHealthy(action: 'Token刷新')) {
+    if (!await _ensureNetworkHealthy(action: 'Token refresh')) {
       return false;
     }
 

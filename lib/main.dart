@@ -5,7 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 
 import 'config/api_config.dart';
-import 'pages/splash_page.dart';
+import 'pages/app_root.dart';
 import 'services/device_info_service.dart';
 import 'services/analytics_service.dart';
 import 'layouts/main_layout.dart';
@@ -156,7 +156,7 @@ class MyApp extends StatelessWidget {
           splashRadius: 30, // 点击波纹效果半径
         ),
       ),
-      home: const SplashPage(),
+      home: const AppRoot(),
       navigatorObservers: [globalRouteObserver],
       debugShowCheckedModeBanner: false,
     );

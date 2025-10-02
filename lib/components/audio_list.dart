@@ -112,10 +112,18 @@ class _AudioListState extends State<AudioList> {
           );
     }
 
+    // 当启用下拉刷新时，确保使用 AlwaysScrollableScrollPhysics
+    ScrollPhysics? effectivePhysics = widget.physics;
+    if (widget.enableRefresh && widget.onRefresh != null) {
+      effectivePhysics = widget.physics != null 
+          ? AlwaysScrollableScrollPhysics(parent: widget.physics)
+          : const AlwaysScrollableScrollPhysics();
+    }
+
     Widget listView = ListView.separated(
         controller: _scrollController,
         padding: widget.padding,
-        physics: widget.physics,
+        physics: effectivePhysics,
         shrinkWrap: widget.shrinkWrap,
         itemCount: widget.audios.length + (widget.hasMoreData ? 1 : 0),
         itemBuilder: (context, index) {

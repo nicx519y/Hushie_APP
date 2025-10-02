@@ -84,7 +84,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             final playerDuration = audioState.duration;
             final apiDuration = audioState.currentAudio?.duration;
             
-            debugPrint('[bottom_navigation_bar] Duration比较: 播放器=${playerDuration?.inSeconds}s, API=${apiDuration?.inSeconds}s');
+            // debugPrint('[bottom_navigation_bar] Duration比较: 播放器=${playerDuration?.inSeconds}s, API=${apiDuration?.inSeconds}s');
             
             // 优先使用播放器提供的真实时长，如果播放器时长无效则使用API时长作为备选
             final newTotalDuration = playerDuration ?? apiDuration ?? Duration.zero;

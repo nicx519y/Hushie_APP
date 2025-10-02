@@ -46,25 +46,6 @@ class _LikesListState extends State<LikesList> {
       (likedAudios) {
         debugPrint('🎵 [LIKES_LIST] 收到点赞数据变更事件，共 ${likedAudios.length} 条');
         
-        // ValueListenableBuilder 会自动响应 likesNotifier 的变化进行 UI 更新
-        // 这里可以添加额外的 UI 反馈，比如：
-        
-        // 1. 显示提示消息（可选）
-        // if (mounted) {
-        //   ScaffoldMessenger.of(context).showSnackBar(
-        //     SnackBar(
-        //       content: Text('点赞列表已更新'),
-        //       duration: Duration(milliseconds: 500),
-        //     ),
-        //   );
-        // }
-        
-        // 2. 触发额外的状态更新（如果需要）
-        // if (mounted) {
-        //   setState(() {
-        //     // 可以在这里更新其他状态变量
-        //   });
-        // }
       },
       onError: (error) {
         debugPrint('🎵 [LIKES_LIST] 点赞数据事件流错误: $error');
