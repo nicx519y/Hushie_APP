@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_item.dart';
 import '../services/api/user_history_service.dart';
 import 'auth_manager.dart';
-import 'audio_manager.dart';
+// 移除对 AudioManager 的依赖，避免循环依赖
 import 'audio_service.dart'; // 需要AudioPlayerState类型定义
 
 /// 音频播放历史管理器
@@ -27,8 +27,8 @@ class AudioHistoryManager {
   final StreamController<List<AudioItem>> _historyStreamController =
       StreamController<List<AudioItem>>.broadcast();
 
-  // 音频播放监听相关 - 通过AudioManager订阅
-  StreamSubscription<AudioPlayerState>? _audioStateSubscription;
+  // 记录控制标志：是否需要上报历史（由 AudioManager 驱动）
+  bool _needRecord = false;
 
   // 播放记录相关状态
   AudioItem? _currentPlayingAudio;
@@ -87,55 +87,43 @@ class AudioHistoryManager {
     }
   }
 
-  /// 开始监听音频播放状态（通过AudioManager）
+  /// 启用历史记录更新（由 AudioManager 驱动回调）
   void startListening({bool needRecord = false}) {
-    _startPlaybackListening(needRecord: needRecord);
+    _needRecord = needRecord;
+    debugPrint('🎵 [HISTORY] 启用历史记录更新（由AudioManager驱动），needRecord: $needRecord');
   }
 
   void stopListening() {
-    _stopPlaybackListening();
-  }
-
-  /// 开始监听播放状态变化
-  void _startPlaybackListening({bool needRecord = false}) {
-    // 取消之前的监听
-    _stopPlaybackListening();
-
-    debugPrint('🎵 [HISTORY] 开始监听音频播放状态变化（通过AudioManager）');
-
-    // 监听AudioManager的统一音频状态流
-    _audioStateSubscription = AudioManager.instance.audioStateStream.listen((audioState) {
-      // 如果是第一次接收状态或状态发生变化，才进行处理
-      if (_lastAudioState == null || _hasStateChanged(_lastAudioState!, audioState)) {
-        // 检查当前音频是否变化
-        if (_lastAudioState?.currentAudio?.id != audioState.currentAudio?.id) {
-          _onCurrentAudioChanged(audioState.currentAudio, needRecord: needRecord);
-        }
-        
-        // 检查播放状态是否变化
-        if (_lastAudioState?.isPlaying != audioState.isPlaying) {
-          _onPlayingStateChanged(audioState.isPlaying, needRecord: needRecord);
-        }
-        
-        // 检查播放位置是否变化（避免频繁的位置更新）
-        if (_lastAudioState?.position != audioState.position) {
-          _onPositionChanged(audioState.position, needRecord: needRecord);
-        }
-        
-        // 更新本地状态缓存
-        _lastAudioState = audioState;
-      }
-    });
-  }
-
-  /// 停止监听播放状态变化
-  void _stopPlaybackListening() {
-    _audioStateSubscription?.cancel();
-    _audioStateSubscription = null;
+    _needRecord = false;
     _lastAudioState = null; // 清空状态缓存
-
-    debugPrint('🎵 [HISTORY] 已停止监听音频播放状态变化');
+    debugPrint('🎵 [HISTORY] 停用历史记录更新（由AudioManager驱动）');
   }
+
+  /// 由 AudioManager 在其状态流回调中调用，传入统一的音频状态
+  void handleAudioState(AudioPlayerState audioState) {
+    // 如果是第一次接收状态或状态发生变化，才进行处理
+    if (_lastAudioState == null || _hasStateChanged(_lastAudioState!, audioState)) {
+      // 检查当前音频是否变化
+      if (_lastAudioState?.currentAudio?.id != audioState.currentAudio?.id) {
+        _onCurrentAudioChanged(audioState.currentAudio, needRecord: _needRecord);
+      }
+
+      // 检查播放状态是否变化
+      if (_lastAudioState?.isPlaying != audioState.isPlaying) {
+        _onPlayingStateChanged(audioState.isPlaying, needRecord: _needRecord);
+      }
+
+      // 检查播放位置是否变化（避免频繁的位置更新）
+      if (_lastAudioState?.position != audioState.position) {
+        _onPositionChanged(audioState.position, needRecord: _needRecord);
+      }
+
+      // 更新本地状态缓存
+      _lastAudioState = audioState;
+    }
+  }
+
+  // 移除内部订阅逻辑，依赖 AudioManager 回调驱动
   
   /// 检查音频状态是否发生实质性变化
   bool _hasStateChanged(AudioPlayerState oldState, AudioPlayerState newState) {
@@ -474,12 +462,12 @@ class AudioHistoryManager {
   /// 获取当前播放记录状态
   Map<String, dynamic> getPlaybackRecordStatus() {
     return {
-      'isListening': _audioStateSubscription != null,
+      'isListening': _needRecord,
       'currentPlayingAudio': _currentPlayingAudio?.toMap(),
       'isCurrentlyPlaying': _isCurrentlyPlaying,
       'lastRecordedPosition': _lastRecordedPosition.inMilliseconds,
       'lastProgressRecordTime': _lastProgressRecordTime?.toIso8601String(),
-      'recordingMethod': 'audioManager_stream_based',
+      'recordingMethod': 'audioManager_callback_based',
     };
   }
 
@@ -680,8 +668,9 @@ class AudioHistoryManager {
 
   /// 清理资源
   Future<void> dispose() async {
-    // 停止播放监听
-    _stopPlaybackListening();
+    // 停止历史记录更新
+    _needRecord = false;
+    _lastAudioState = null;
 
     // 取消认证状态订阅
     _authSubscription?.cancel();

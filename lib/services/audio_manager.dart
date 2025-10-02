@@ -246,6 +246,13 @@ class AudioManager {
       if(positionChanged) {
         _lastPosition = position;
       }
+
+      // 将统一音频状态回调到历史管理器，避免其内部订阅导致的循环依赖
+      try {
+        AudioHistoryManager.instance.handleAudioState(audioState);
+      } catch (e) {
+        debugPrint('AudioHistoryManager 处理音频状态失败: $e');
+      }
     });
   }
 
