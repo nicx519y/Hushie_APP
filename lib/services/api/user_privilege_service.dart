@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../models/user_privilege_model.dart';
 import '../../models/api_response.dart';
@@ -16,6 +17,16 @@ class UserPrivilegeService {
   UserPrivilege? _cachedPrivilege;
   DateTime? _lastFetchTime;
   static const Duration _cacheExpiration = Duration(minutes: 5); // 缓存5分钟
+
+  // 权限变更通知器（可重放最近一次值）
+  final ValueNotifier<UserPrivilege?> _privilegeNotifier =
+      ValueNotifier<UserPrivilege?>(null);
+  ValueListenable<UserPrivilege?> get privilegeNotifier => _privilegeNotifier;
+
+  // 权限变更事件流（广播，不重放）
+  final StreamController<UserPrivilege?> _privilegeChangesController =
+      StreamController<UserPrivilege?>.broadcast();
+  Stream<UserPrivilege?> get privilegeChanges => _privilegeChangesController.stream;
 
   /// 检查用户权限
   /// 
@@ -57,6 +68,11 @@ class UserPrivilegeService {
         // 更新缓存
         _cachedPrivilege = privilege;
         _lastFetchTime = DateTime.now();
+        try {
+          // 推送权限变更事件并更新通知器
+          _privilegeNotifier.value = privilege;
+          _privilegeChangesController.add(privilege);
+        } catch (_) {}
         
         return privilege;
       } else {
@@ -135,6 +151,11 @@ class UserPrivilegeService {
     _cachedPrivilege = null;
     _lastFetchTime = null;
     debugPrint('👑 [USER_PRIVILEGE_SERVICE] 已清除权限缓存');
+    // 推送权限清空事件
+    try {
+      _privilegeNotifier.value = null;
+      _privilegeChangesController.add(null);
+    } catch (_) {}
   }
   
   /// 检查缓存是否有效

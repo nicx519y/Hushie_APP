@@ -24,8 +24,9 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
 
   @override
   void initState() {
-    super.initState();
-    _initializeHistory();
+    _initializeHistory().then((_) {
+      super.initState();
+    });
   }
 
   /// 初始化历史记录数据
@@ -37,19 +38,15 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
     try {
       // 先获取当前缓存的历史记录数据
       final historyList = await AudioHistoryManager.instance.getAudioHistory();
-      if (mounted) {
-        setState(() {
-          _currentHistory = historyList;
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _currentHistory = historyList;
+        _isLoading = false;
+      });
     } catch (e) {
       debugPrint('🎵 [AUDIO_HISTORY_LIST] 初始化历史记录数据失败: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -122,41 +119,26 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
 
   @override
   Widget build(BuildContext context) {
-    // 显示加载状态（仅在初始加载且列表为空时）
-    if (_isLoading && _currentHistory.isEmpty) {
-      return _buildLoadingWidget();
-    }
-
-    // 显示空状态
-    if (_currentHistory.isEmpty) {
-      return _buildEmptyWidget();
-    }
-
-    // 显示历史记录列表，使用 StreamBuilder 监听更新
-    return StreamBuilder<List<AudioItem>>(
-      stream: AudioHistoryManager.instance.historyStream,
-      initialData: _currentHistory,
-      builder: (context, snapshot) {
-        // 优先使用 stream 数据，如果没有则使用本地缓存
-        final historyList = snapshot.hasData ? snapshot.data! : _currentHistory;
-
-        // 如果 stream 有新数据，更新本地缓存
-        if (snapshot.hasData && snapshot.data != _currentHistory) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _currentHistory = snapshot.data!;
-              });
-            }
-          });
+    // 使用 ValueListenableBuilder 监听可重放的数据源，避免错过最新值
+    return ValueListenableBuilder<List<AudioItem>>(
+      valueListenable: AudioHistoryManager.instance.historyNotifier,
+      builder: (context, historyList, _) {
+        // 显示加载状态（仅在初始加载且列表为空时）
+        if (_isLoading && historyList.isEmpty) {
+          return _buildLoadingWidget();
         }
 
+        // 显示空状态
+        if (historyList.isEmpty) {
+          return _buildEmptyWidget();
+        }
+
+        // 显示历史记录列表
         return AudioList(
           audios: historyList,
           padding: widget.padding ?? const EdgeInsets.only(bottom: 120),
-          emptyWidget: _buildEmptyWidget(),
           onRefresh: _refreshHistory,
-          hasMoreData: false, // 历史记录通常不需要分页加载
+          hasMoreData: false,
           onItemTap: widget.onItemTap,
         );
       },

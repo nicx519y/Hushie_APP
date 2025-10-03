@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_item.dart';
 import '../services/api/user_history_service.dart';
+import '../services/api/user_privilege_service.dart';
+import '../models/user_privilege_model.dart';
 import 'auth_manager.dart';
 // 移除对 AudioManager 的依赖，避免循环依赖
 import 'audio_service.dart'; // 需要AudioPlayerState类型定义
@@ -17,6 +19,7 @@ class AudioHistoryManager {
   List<AudioItem> _historyCache = []; // 本地内存缓存
   bool _isInitialized = false;
   StreamSubscription<AuthStatusChangeEvent>? _authSubscription;
+  StreamSubscription<UserPrivilege?>? _privilegeSubscription;
   SharedPreferences? _prefs; // 本地存储实例
 
   // ValueNotifier 用于状态变更通知
@@ -66,6 +69,8 @@ class AudioHistoryManager {
 
       // 订阅认证状态变化事件
       _subscribeToAuthChanges();
+      // 订阅权限变更事件（影响历史数据可见性）
+      _subscribeToPrivilegeChanges();
 
       // 先从本地存储加载缓存（无论是否登录都加载）
       await _loadCachedHistory();
@@ -375,6 +380,24 @@ class AudioHistoryManager {
     debugPrint('🎵 [HISTORY] 已订阅认证状态变化事件');
   }
 
+  /// 订阅权限变更事件
+  void _subscribeToPrivilegeChanges() {
+    _privilegeSubscription?.cancel();
+    _privilegeSubscription = UserPrivilegeService.instance.privilegeChanges.listen(
+      (privilege) async {
+        debugPrint('🎵 [HISTORY] 收到权限变更事件，重新请求历史数据');
+        // 仅在登录状态下刷新服务端历史数据
+        if (await AuthManager.instance.isSignedIn()) {
+          await _reinitializeAfterLogin();
+        }
+      },
+      onError: (error) {
+        debugPrint('🎵 [HISTORY] 权限变更事件流错误: $error');
+      },
+    );
+    debugPrint('🎵 [HISTORY] 已订阅权限变更事件');
+  }
+
   /// 登录后重新初始化
   Future<void> _reinitializeAfterLogin() async {
     // 防止重复请求
@@ -444,6 +467,7 @@ class AudioHistoryManager {
           debugPrint('🎵 [HISTORY] 从服务端拉取历史数据');
           final historyList = await UserHistoryService.getUserHistoryList();
           await _updateLocalCache(historyList);
+          _isLoadingHistoryFromServer = false;
           return _historyCache;
         } finally {
           _isLoadingHistoryFromServer = false;
@@ -675,6 +699,9 @@ class AudioHistoryManager {
     // 取消认证状态订阅
     _authSubscription?.cancel();
     _authSubscription = null;
+    // 取消权限变更订阅
+    _privilegeSubscription?.cancel();
+    _privilegeSubscription = null;
 
     // 清空缓存和通知器
     _historyCache.clear();

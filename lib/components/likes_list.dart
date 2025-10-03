@@ -164,46 +164,24 @@ class _LikesListState extends State<LikesList> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🎵 [LIKES_LIST] build 方法被调用');
-    
-    // 显示加载状态（仅在初始加载且列表为空时）
-    if (_isLoading && AudioLikesManager.instance.likesNotifier.value.isEmpty) {
-      debugPrint('🎵 [LIKES_LIST] 显示加载状态');
-      return _buildLoadingWidget();
-    }
-
-    // 显示空状态
-    if (AudioLikesManager.instance.likesNotifier.value.isEmpty) {
-      debugPrint('🎵 [LIKES_LIST] 显示空状态');
-      return _buildEmptyWidget();
-    }
-
-    // 显示点赞列表，使用 StreamBuilder 监听更新
-    return StreamBuilder<List<AudioItem>>(
-      stream: AudioLikesManager.instance.likesStream,
-      initialData: AudioLikesManager.instance.likesNotifier.value,
-      builder: (context, snapshot) {
-        debugPrint('🎵 [LIKES_LIST] StreamBuilder 重建，音频数量: ${snapshot.data?.length ?? 0}');
-        
-        // 优先使用 stream 数据，如果没有则使用当前缓存
-        final likedAudios = snapshot.hasData ? snapshot.data! : AudioLikesManager.instance.likesNotifier.value;
-        
+    // 使用 ValueListenableBuilder 监听可重放的数据源，避免错过最新值
+    return ValueListenableBuilder<List<AudioItem>>(
+      valueListenable: AudioLikesManager.instance.likesNotifier,
+      builder: (context, likedAudios, _) {
         // 显示加载状态（仅在初始加载且列表为空时）
         if (_isLoading && likedAudios.isEmpty) {
-          debugPrint('🎵 [LIKES_LIST] 显示加载状态');
           return _buildLoadingWidget();
         }
 
         // 显示空状态
         if (likedAudios.isEmpty) {
-          debugPrint('🎵 [LIKES_LIST] 显示空状态');
           return _buildEmptyWidget();
         }
 
         // 显示点赞列表
-        debugPrint('🎵 [LIKES_LIST] 显示点赞列表，音频数量: ${likedAudios.length}');
         return AudioList(
-          key: ValueKey('likes_list_${likedAudios.length}_${likedAudios.map((e) => e.id).join('_')}'),
+          key: ValueKey(
+              'likes_list_${likedAudios.length}_${likedAudios.map((e) => e.id).join('_')}'),
           audios: likedAudios,
           padding: widget.padding ?? const EdgeInsets.only(bottom: 120),
           emptyWidget: _buildEmptyWidget(),
