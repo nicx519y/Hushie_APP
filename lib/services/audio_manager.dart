@@ -258,14 +258,15 @@ class AudioManager {
 
   // 检查是否超出预览区间
   bool _checkWillOutPreview(Duration position) {
-    if (currentAudio == null ||
+    final audio = currentAudio;
+    if (audio == null ||
         !isPlaying ||
         !_isPreviewMode) {
       return false;
     }
 
-    final previewStart = currentAudio!.previewStart ?? Duration.zero;
-    final previewDuration = currentAudio!.previewDuration ?? Duration.zero;
+    final previewStart = audio.previewStart ?? Duration.zero;
+    final previewDuration = audio.previewDuration ?? Duration.zero;
     final hasPreview =
         previewStart >= Duration.zero && previewDuration > Duration.zero;
 
@@ -288,10 +289,13 @@ class AudioManager {
 
     if(audio != null) {
       currentAudio = audio;
-    } else if(this.currentAudio != null) {
-      currentAudio = this.currentAudio!;
     } else {
-      return position;
+      final audioRef = this.currentAudio;
+      if (audioRef != null) {
+        currentAudio = audioRef;
+      } else {
+        return position;
+      }
     }
 
     final previewStart = currentAudio.previewStart;
@@ -504,11 +508,11 @@ class AudioManager {
     }
     
     // 如果没有当前音频，返回false
-    if (currentAudio == null) {
+    final audio = currentAudio;
+    if (audio == null) {
       return false;
     }
     
-    final audio = currentAudio!;
     final currentPosition = position;
     final previewStart = audio.previewStart ?? Duration.zero;
     final previewDuration = audio.previewDuration ?? Duration.zero;

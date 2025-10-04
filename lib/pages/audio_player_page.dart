@@ -109,7 +109,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         _isAudioLoading = true;
         _isLikeButtonVisible = false; // 初始化时隐藏点赞按钮
         // 获取音频详情并更新点赞状态
-        _fetchAudioDetailAndUpdateLikeState(widget.initialAudio!.id);
+        final initialAudio = widget.initialAudio;
+        if (initialAudio != null) {
+          _fetchAudioDetailAndUpdateLikeState(initialAudio.id);
+        }
       });
       
     }
@@ -148,7 +151,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               
               // 获取音频详情并更新点赞状态
               if (_currentAudio != null) {
-                _fetchAudioDetailAndUpdateLikeState(_currentAudio!.id);
+                final audioId = _currentAudio?.id;
+                if (audioId != null) {
+                  _fetchAudioDetailAndUpdateLikeState(audioId);
+                }
               }
             }
 
@@ -158,19 +164,22 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               
               // 记录播放/暂停事件
               if (_currentAudio != null) {
-                if (audioState.isPlaying) {
-                  AnalyticsService().logAudioPlay(
-                    audioId: _currentAudio!.id,
-                    audioTitle: _currentAudio!.title,
-                    category: 'audio_player',
-                    duration: audioState.duration?.inSeconds,
-                  );
-                } else {
-                  AnalyticsService().logAudioPause(
-                    audioId: _currentAudio!.id,
-                    audioTitle: _currentAudio!.title,
-                    position: audioState.position.inSeconds,
-                  );
+                final audio = _currentAudio;
+                if (audio != null) {
+                  if (audioState.isPlaying) {
+                    AnalyticsService().logAudioPlay(
+                      audioId: audio.id,
+                      audioTitle: audio.title,
+                      category: 'audio_player',
+                      duration: audioState.duration?.inSeconds,
+                    );
+                  } else {
+                    AnalyticsService().logAudioPause(
+                      audioId: audio.id,
+                      audioTitle: audio.title,
+                      position: audioState.position.inSeconds,
+                    );
+                  }
                 }
               }
               
@@ -249,7 +258,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         // 如果没有当前音频信息，无法播放
         if (_currentAudio == null) return;
         // 创建音频模型并播放
-        _audioManager.playAudio(_currentAudio!);
+        final audioToPlay = _currentAudio;
+        if (audioToPlay != null) {
+          _audioManager.playAudio(audioToPlay);
+        }
       } else {
         // 如果是同一首音频，直接恢复播放
         if (!_audioManager.isOutOfPreview) {
@@ -280,8 +292,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     // 如果正在请求中，直接返回
     if (_isLikeRequesting) return;
 
-    // 如果当前音频为空，直接返回
-    if (_currentAudio == null) return;
+    // 捕获当前音频引用，避免在异步期间发生变化导致空断言崩溃
+    final audio = _currentAudio;
+    if (audio == null) return;
 
     // 先立即更新本地状态
     final newIsLiked = !_localIsLiked;
@@ -297,14 +310,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     // 记录点赞事件
     AnalyticsService().logAudioLike(
-      audioId: _currentAudio!.id,
-      audioTitle: _currentAudio!.title,
+      audioId: audio.id,
+      audioTitle: audio.title,
       isLiked: newIsLiked,
     );
 
     try {
       // 调用API
-      await AudioLikesManager.instance.setLike( _currentAudio!, newIsLiked);
+      await AudioLikesManager.instance.setLike(audio, newIsLiked);
 
       // 请求成功，不需要再更改本地状态，保持当前状态
     } catch (e) {
@@ -312,9 +325,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       debugPrint('点赞操作异常: $e');
     } finally {
       // 重置请求状态
-      setState(() {
-        _isLikeRequesting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLikeRequesting = false;
+        });
+      }
     }
   }
 

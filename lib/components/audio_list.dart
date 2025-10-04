@@ -86,13 +86,14 @@ class _AudioListState extends State<AudioList> {
   }
 
   void _onScroll() {
-    if (widget.onLoadMore != null &&
+    final onLoadMore = widget.onLoadMore;
+    if (onLoadMore != null &&
         widget.hasMoreData &&
         !widget.isLoadingMore &&
         _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200) {
       // 当滚动到距离底部200像素时触发加载更多
-      widget.onLoadMore!();
+      onLoadMore();
     }
   }
 
@@ -145,18 +146,21 @@ class _AudioListState extends State<AudioList> {
 
     // 根据enableRefresh参数决定是否包装RefreshIndicator
     if (widget.enableRefresh && widget.onRefresh != null) {
-      return RefreshIndicator(
-        onRefresh: widget.onRefresh!,
-        child: listView,
-      );
-    } else {
-      return listView;
+      final onRefresh = widget.onRefresh;
+      if (onRefresh != null) {
+        return RefreshIndicator(
+          onRefresh: onRefresh,
+          child: listView,
+        );
+      }
     }
+    return listView;
   }
 
   Widget _buildLoadMoreIndicator() {
-    if (widget.loadingMoreWidget != null) {
-      return widget.loadingMoreWidget!;
+    final loadingMoreWidget = widget.loadingMoreWidget;
+    if (loadingMoreWidget != null) {
+      return loadingMoreWidget;
     }
 
     return Container(
@@ -212,8 +216,9 @@ class _AudioListState extends State<AudioList> {
   }
 
   Widget _buildAudioItem(AudioItem audio) {
+    final onItemTap = widget.onItemTap;
     return InkWell(
-      onTap: widget.onItemTap != null ? () => widget.onItemTap!(audio) : null,
+      onTap: onItemTap != null ? () => onItemTap(audio) : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

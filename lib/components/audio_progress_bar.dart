@@ -135,13 +135,16 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
       // 使用代理后的音频状态流，自动处理duration过滤
       final durationProxy = AudioStateProxy.createDurationFilter();
       _proxyStream = _audioManager.audioStateStream.proxy(durationProxy);
-      _subscriptions.add(
-        _proxyStream!.listen((audioState) {
-          if (mounted) {
-            // 如果是第一次接收状态或状态发生变化，才进行处理
-            if (_lastAudioState == null ||
-                _hasStateChanged(_lastAudioState!, audioState)) {
-              bool needsUpdate = false;
+      final proxyStream = _proxyStream;
+      if (proxyStream != null) {
+        _subscriptions.add(
+          proxyStream.listen((audioState) {
+            if (mounted) {
+              // 如果是第一次接收状态或状态发生变化，才进行处理
+              final lastState = _lastAudioState;
+              if (lastState == null ||
+                  _hasStateChanged(lastState, audioState)) {
+                bool needsUpdate = false;
 
               // 检查当前音频是否变化
               if (_lastAudioState?.currentAudio?.id !=
@@ -218,17 +221,19 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
 
               // 更新本地状态缓存
               _lastAudioState = audioState;
+              }
             }
-          }
-        }),
-      );
+          }),
+        );
+      }
     } else {
       _subscriptions.add(
         _audioManager.audioStateStream.listen((audioState) {
           if (mounted) {
             // 如果是第一次接收状态或状态发生变化，才进行处理
-            if (_lastAudioState == null ||
-                _hasStateChanged(_lastAudioState!, audioState)) {
+            final lastState = _lastAudioState;
+            if (lastState == null ||
+                _hasStateChanged(lastState, audioState)) {
               bool needsUpdate = false;
 
               // 检查当前音频是否变化
@@ -432,8 +437,9 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                           if (_isPreviewMode &&
                               (value < previewStart || value > previewEnd)) {
                             // 预览模式下，检查是否需要触发解锁回调
-                            if (widget.onOutPreview != null) {
-                              widget.onOutPreview!();
+                            final onOutPreview = widget.onOutPreview;
+                            if (onOutPreview != null) {
+                              onOutPreview();
                             }
                           }
 
@@ -451,13 +457,15 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
 
                           // 使用代理流的方法将渲染值转换为真实位置进行seek
                           Duration position;
+                          final proxyStream = _proxyStream;
+                          final lastState = _lastAudioState;
                           if (_isPreviewMode &&
-                              _proxyStream != null &&
-                              _lastAudioState != null &&
+                              proxyStream != null &&
+                              lastState != null &&
                               _realDuration > Duration.zero) {
-                            position = _proxyStream!.renderValueToRealPosition(
+                            position = proxyStream.renderValueToRealPosition(
                               realValue,
-                              _lastAudioState!,
+                              lastState,
                               _realDuration,
                             );
                             // debugPrint('[progressBar] 转换后真实位置: $position');

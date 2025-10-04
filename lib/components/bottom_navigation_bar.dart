@@ -128,8 +128,9 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   static const Color inactiveColor = Color(0xFF999999);
 
   void _onPlayButtonTap() async {
-    if (widget.onPlayButtonTap != null) {
-      widget.onPlayButtonTap!();
+    final onPlayButtonTap = widget.onPlayButtonTap;
+    if (onPlayButtonTap != null) {
+      onPlayButtonTap();
     } else {
       if (_isPlaying) {
         NavigationUtils.navigateToAudioPlayer(context);
@@ -247,12 +248,16 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     String? coverImageUrl;
     try {
       // 优先使用 preloadAudio 的封面
-      if (_preloadAudio?.cover != null) {
-        final bestResolution = _preloadAudio!.cover.getBestResolution(60.0);
+      final preloadAudio = _preloadAudio;
+      if (preloadAudio?.cover != null) {
+        final bestResolution = preloadAudio!.cover.getBestResolution(60.0);
         coverImageUrl = bestResolution.url;
-      } else if (_currentAudio?.cover != null) {
-        final bestResolution = _currentAudio!.cover.getBestResolution(60.0);
-        coverImageUrl = bestResolution.url;
+      } else {
+        final currentAudio = _currentAudio;
+        if (currentAudio?.cover != null) {
+          final bestResolution = currentAudio!.cover.getBestResolution(60.0);
+          coverImageUrl = bestResolution.url;
+        }
       }
     } catch (e) {
       debugPrint('获取封面图片失败: $e');

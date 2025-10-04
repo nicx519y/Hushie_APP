@@ -17,8 +17,9 @@ class NotificationDialog extends StatelessWidget {
   });
 
   void _handleConfirm(BuildContext context) {
+    final onConfirm = this.onConfirm;
     if (onConfirm != null) {
-      onConfirm!();
+      onConfirm();
     }
     Navigator.of(context).pop();
   }

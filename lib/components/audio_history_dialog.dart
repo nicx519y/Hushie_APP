@@ -26,8 +26,9 @@ class _AudioHistoryDialogState extends State<AudioHistoryDialog> {
     DialogStateManager.instance.closeDialog(DialogStateManager.historyList);
     
     // 在组件销毁时调用 onClose 回调
-    if (widget.onClose != null) {
-      widget.onClose!();
+    final onClose = widget.onClose;
+    if (onClose != null) {
+      onClose();
     }
     super.dispose();
   }
@@ -82,8 +83,9 @@ class _AudioHistoryDialogState extends State<AudioHistoryDialog> {
           Expanded(
             child: AudioHistoryList(
               onItemTap: (audio) {
-                if (widget.onItemTap != null) {
-                  widget.onItemTap!(audio);
+                final onItemTap = widget.onItemTap;
+                if (onItemTap != null) {
+                  onItemTap(audio);
                   _closeDialog();
                 }
               },
