@@ -72,6 +72,6 @@ flutter {
 }
 
 dependencies {
-    // Google Play Billing Library
-    implementation("com.android.billingclient:billing:6.0.1")
+    // Google Play Billing Library - 升级到最新版本以修复 PendingIntent 问题
+    implementation("com.android.billingclient:billing:7.1.1")
 }

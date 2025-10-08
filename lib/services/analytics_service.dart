@@ -203,6 +203,45 @@ class AnalyticsService {
     }
   }
 
+  /// 记录认证相关事件
+  Future<void> logAuthEvent({
+    required String event,
+    Map<String, Object?>? parameters,
+    Object? error,
+  }) async {
+    try {
+      // 构建事件参数
+      final eventParams = <String, Object>{};
+      
+      // 添加基础参数
+      if (parameters != null) {
+        for (final entry in parameters.entries) {
+          if (entry.value != null) {
+            eventParams[entry.key] = entry.value!;
+          }
+        }
+      }
+      
+      // 如果有错误，添加错误信息
+      if (error != null) {
+        eventParams['error'] = error.toString();
+        eventParams['has_error'] = true;
+      } else {
+        eventParams['has_error'] = false;
+      }
+      
+      // 记录自定义认证事件
+      await _analytics.logEvent(
+        name: 'auth_$event',
+        parameters: eventParams,
+      );
+      
+      debugPrint('📊 [ANALYTICS] 认证事件: $event');
+    } catch (e) {
+      debugPrint('❌ [ANALYTICS] 认证事件记录失败: $e');
+    }
+  }
+
   /// 记录自定义事件
   Future<void> logCustomEvent({
     required String eventName,

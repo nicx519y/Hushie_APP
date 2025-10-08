@@ -4,6 +4,8 @@ import '../../models/api_response.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io';
 
 /// Google认证服务
 class GoogleAuthService {
@@ -51,13 +53,20 @@ class GoogleAuthService {
         await _googleSignIn.signOut();
       }
 
-      // 执行Google登录
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // 预热/静默尝试以减少设备兼容性问题
+      try {
+        await _googleSignIn.signInSilently();
+      } catch (_) {}
+
+      // 执行Google登录（增加超时防护）
+      final GoogleSignInAccount? googleUser = await _googleSignIn
+          .signIn()
+          .timeout(const Duration(seconds: 20), onTimeout: () => null);
 
       if (googleUser == null) {
-        // 用户取消登录
         debugPrint('google 登录失败. googleUser is null.');
-        return ApiResponse.error(errNo: -2);
+        // 优先视为用户取消，其次可能是超时/服务不可用
+        return ApiResponse.error(errNo: 1);
       }
       debugPrint('Google用户信息: ${googleUser}');
 
@@ -99,8 +108,34 @@ class GoogleAuthService {
       debugPrint('Google登录成功: ${googleAuthResponse}');
 
       return ApiResponse.success(data: googleAuthResponse, errNo: 0);
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Google登录失败: $e');
+      final String em = e.toString();
+
+      // 设备与系统版本检测（用于OnePlus/Android 11问题归类）
+      bool isOnePlus = false;
+      bool isAndroid11Plus = false;
+      if (Platform.isAndroid) {
+        try {
+          final androidInfo = await DeviceInfoPlugin().androidInfo;
+          isOnePlus = (androidInfo.manufacturer.toLowerCase().contains('oneplus'));
+          isAndroid11Plus = (androidInfo.version.sdkInt >= 30);
+          debugPrint('Google登录失败设备信息: manufacturer=${androidInfo.manufacturer}, model=${androidInfo.model}, sdkInt=${androidInfo.version.sdkInt}');
+        } catch (_) {}
+      }
+
+      // 针对SignInHubActivity NPE/Google服务不可用的分类处理
+      final bool hubActivityCrash = em.contains('SignInHubActivity') || em.contains('NullPointerException');
+      if (hubActivityCrash || isOnePlus || isAndroid11Plus) {
+        // 统一按Google服务不可用处理，映射至UI提示
+        return ApiResponse.error(errNo: 3);
+      }
+
+      // 网络相关错误（尽力匹配常见信息）
+      if (em.toLowerCase().contains('network') || em.toLowerCase().contains('timeout')) {
+        return ApiResponse.error(errNo: 2);
+      }
+
       return ApiResponse.error(errNo: -1);
     }
   }

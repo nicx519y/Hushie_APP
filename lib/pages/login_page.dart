@@ -285,9 +285,18 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         if([-1, 1, 2, 3].contains(result.errNo)){
-          // 登录失败
+          // 登录失败 - 添加调试日志
           final errorMessage = _getErrorMessage(result.errNo);
-          ToastHelper.showError(errorMessage);
+          debugPrint('🔐 [LOGIN] 准备显示错误toast: errNo=${result.errNo}, message=$errorMessage');
+          debugPrint('🔐 [LOGIN] 当前路由状态: isCurrent=${ModalRoute.of(context)?.isCurrent}, isLoginPageOpen=${NavigationUtils.isLoginPageOpen}');
+          
+          // 延迟显示toast，确保用户已回到应用
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              debugPrint('🔐 [LOGIN] 延迟后显示toast: $errorMessage');
+              ToastHelper.showError(errorMessage);
+            }
+          });
         }
       }
     } catch (e) {
@@ -311,7 +320,7 @@ class _LoginPageState extends State<LoginPage> {
       case -1:
         return 'Login failed, retry please.';
       case 1:
-        return 'User cancelled login.';
+        return 'User cancelled login or timeout.';
       case 2:
         return 'Network connection failed.';
       case 3:

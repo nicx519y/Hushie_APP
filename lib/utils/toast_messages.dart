@@ -56,6 +56,13 @@ class ToastMessages {
   static const String subscriptionException = 'An exception occurred during purchase, please try again';
   static const String subscribingPleaseDonRepeat = 'Subscribing. Please don\'t repeat.';
   
+  // ========== Billing Device-Specific Error Code Messages ==========
+  static const Map<String, String> billingDeviceErrorMessages = {
+    '1000': subscriptionFailed, // Generic purchase error
+    '1001': 'OnePlus device billing issue detected. Please try again later.',
+    '1002': 'Android 11 PendingIntent compatibility issue. Please try again later.',
+  };
+  
   // ========== Google Play Billing Error Messages ==========
   static const String billingServiceUnavailable = 'Google Play Billing service unavailable, please check device settings';
   static const String productConfigError = 'Product configuration error, unable to purchase';
@@ -99,6 +106,11 @@ class ToastMessages {
     
     // 默认返回开发者错误信息
     return developerError;
+  }
+
+  // ========== Get Billing Device Error Message by Code ==========
+  static String getBillingDeviceErrorMessage(String code) {
+    return billingDeviceErrorMessages[code] ?? subscriptionFailed;
   }
     
      // ========== Get Network Exception Message ==========

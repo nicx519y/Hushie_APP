@@ -57,33 +57,6 @@ class AuthManager {
   /// 获取当前认证状态
   AuthStatus get currentAuthStatus => _currentStatus;
 
-  /// 使用 Crashlytics 统一记录认证相关事件
-  Future<void> _crashLogAuthEvent(
-    String event,
-    Map<String, Object?> parameters, {
-    Object? error,
-  }) async {
-    try {
-      await CrashlyticsService().setCustomKey('auth_event', event);
-      for (final entry in parameters.entries) {
-        final key = 'auth_${entry.key}';
-        final value = entry.value ?? '';
-        await CrashlyticsService().setCustomKey(key, value);
-      }
-      await CrashlyticsService().log('AUTH [$event] ${json.encode(parameters)}');
-      if (error != null) {
-        await CrashlyticsService().recordError(
-          error,
-          StackTrace.current,
-          fatal: false,
-          reason: event,
-        );
-      }
-    } catch (e) {
-      debugPrint('💥 [CRASHLYTICS] 记录认证事件失败: $e');
-    }
-  }
-
   /// 在认证相关操作前进行网络健康检查
   /// 网络不健康或检测异常时，提示用户并阻止后续登录/刷新流程，避免误清除登录态
   Future<bool> _ensureNetworkHealthy({String action = ''}) async {
@@ -270,10 +243,10 @@ class AuthManager {
       if (tokenResult.errNo != 0 || tokenResult.data == null) {
         debugPrint('Google登录失败: tokenResult.errNo: ${tokenResult.errNo}');
         
-        // 使用 Crashlytics 记录 Token 获取失败（统一方式）
-        await _crashLogAuthEvent(
-          'auth_login_failed',
-          {
+        // 使用 Analytics 记录 Token 获取失败
+        await AnalyticsService().logAuthEvent(
+          event: 'login_failed',
+          parameters: {
             'reason': 'token_exchange_failed',
             'error_code': tokenResult.errNo,
             'user_email': googleAuth.email,
@@ -311,10 +284,10 @@ class AuthManager {
     } catch (e) {
       debugPrint('Google登录流程失败: $e');
       
-      // 使用 Crashlytics 记录登录流程异常（统一方式）
-      await _crashLogAuthEvent(
-        'auth_login_failed',
-        {
+      // 使用 Analytics 记录登录流程异常
+      await AnalyticsService().logAuthEvent(
+        event: 'login_failed',
+        parameters: {
           'reason': 'login_process_exception',
           'error_message': e.toString(),
           'timestamp': DateTime.now().millisecondsSinceEpoch,
@@ -336,9 +309,9 @@ class AuthManager {
     try {
       // 记录用户登出事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await _crashLogAuthEvent(
-        'auth_logout',
-        {
+      await AnalyticsService().logAuthEvent(
+        event: 'logout',
+        parameters: {
           'user_name': userName,
           'logout_reason': 'user_initiated',
           'timestamp': DateTime.now().millisecondsSinceEpoch,
@@ -375,9 +348,9 @@ class AuthManager {
       
       // 记录登出失败但强制登出的事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await _crashLogAuthEvent(
-        'auth_logout',
-        {
+      await AnalyticsService().logAuthEvent(
+        event: 'logout',
+        parameters: {
           'user_name': userName,
           'logout_reason': 'forced_logout_on_error',
           'error_message': e.toString(),
@@ -412,9 +385,9 @@ class AuthManager {
     try {
       // 记录用户删除账户事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await _crashLogAuthEvent(
-        'auth_account_deleted',
-        {
+      await AnalyticsService().logAuthEvent(
+        event: 'account_deleted',
+        parameters: {
           'user_name': userName,
           'deletion_reason': 'user_initiated',
           'timestamp': DateTime.now().millisecondsSinceEpoch,
@@ -450,9 +423,9 @@ class AuthManager {
       
       // 记录删除账户失败但强制清除数据的事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await _crashLogAuthEvent(
-        'auth_account_deleted',
-        {
+      await AnalyticsService().logAuthEvent(
+        event: 'account_deleted',
+        parameters: {
           'user_name': userName,
           'deletion_reason': 'forced_deletion_on_error',
           'error_message': e.toString(),
@@ -533,9 +506,9 @@ class AuthManager {
       
       // 记录因异常导致的登录态丢失
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await _crashLogAuthEvent(
-        'auth_login_lost',
-        {
+      await AnalyticsService().logAuthEvent(
+        event: 'login_lost',
+        parameters: {
           'user_name': userName,
           'loss_reason': 'exception_in_is_signed_in',
           'error_message': e.toString(),
@@ -673,11 +646,11 @@ class AuthManager {
         } else {
           debugPrint('🔐 [AUTH] 服务器判定RefreshToken无效，清除Token并进入非登录态');
           
-          // 记录因RefreshToken无效导致的登录态丢失（Crashlytics）
+          // 记录因RefreshToken无效导致的登录态丢失
           final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-          await _crashLogAuthEvent(
-            'auth_login_lost',
-            {
+          await AnalyticsService().logAuthEvent(
+            event: 'login_lost',
+            parameters: {
               'user_name': userName,
               'loss_reason': 'refresh_token_invalid',
               'server_error_code': result.errNo,
