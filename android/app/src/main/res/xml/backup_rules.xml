@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- 恢复设备ID：仅包含 DeviceIdManager 使用的 SharedPreferences 文件 -->
+    <include domain="sharedpref" path="persistent_device_id.xml" />
+
+    <!-- 其它数据不参与备份，避免不必要的恢复 -->
+    <!-- <exclude domain="database" path="" /> -->
+</full-backup-content>

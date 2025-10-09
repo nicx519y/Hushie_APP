@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:hushie_app/models/highlight_model.dart';
 import 'image_model.dart';
 
 class AudioItem {
@@ -23,6 +24,9 @@ class AudioItem {
   // 预览相关字段
   final Duration? previewStart; // 可预览开始时间点
   final Duration? previewDuration; // 可预览时长
+
+  // 高亮
+  HighlightModel? highlight; // 高亮信息  
 
   // 解析duration的静态方法，包含容错处理和数值验证
   static int _parseDurationMs(dynamic duration) {
@@ -93,6 +97,7 @@ class AudioItem {
     this.isLiked = false, // 是否点赞
     this.playDuration, // 播放时长
     this.playProgress, // 播放进度
+    this.highlight, // 高亮信息
   });
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
@@ -124,6 +129,7 @@ class AudioItem {
       isLiked: map['is_liked'] ?? false,
       playDuration: map['play_duration_ms'] != null ? Duration(milliseconds: map['play_duration_ms']) : null,
       playProgress: map['play_progress_ms'] != null ? Duration(milliseconds: map['play_progress_ms']) : null,
+      highlight: map['highlight'] != null ? HighlightModel.fromMap(map['highlight']) : null,
     );
   }
 
@@ -150,6 +156,7 @@ class AudioItem {
       'last_play_at_s': lastPlayedAt != null ? (lastPlayedAt!.millisecondsSinceEpoch / 1000) : 0,
       'play_duration_ms': playDuration?.inMilliseconds,
       'play_progress_ms': playProgress?.inMilliseconds,
+      'highlight': highlight, // 高亮信息
     };
   }
 
@@ -175,6 +182,7 @@ class AudioItem {
     int? lastPlayedAtS,
     Duration? playDuration,
     Duration? playProgress,
+    Map<String, List<String>>? highlight, // 高亮信息
   }) {
     return AudioItem(
       id: id ?? this.id,
@@ -196,6 +204,7 @@ class AudioItem {
       isLiked: isLiked ?? this.isLiked,
       playDuration: playDuration ?? this.playDuration,
       playProgress: playProgress ?? this.playProgress,
+      highlight: highlight != null ? HighlightModel.fromMap(highlight) : this.highlight, // 高亮信息
     );
   }
 

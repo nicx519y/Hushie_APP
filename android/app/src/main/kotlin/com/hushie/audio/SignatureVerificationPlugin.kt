@@ -1,6 +1,8 @@
 package com.hushie.audio
 
 import android.content.Context
+import android.provider.Settings
+import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -35,6 +37,27 @@ class SignatureVerificationPlugin : FlutterPlugin, MethodCallHandler {
     
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
+            "getAndroidId" -> {
+                try {
+                    val androidId = Settings.Secure.getString(
+                        context.contentResolver,
+                        Settings.Secure.ANDROID_ID
+                    )
+                    Log.d("SignaturePlugin", "ANDROID_ID: $androidId")
+                    result.success(androidId)
+                } catch (e: Exception) {
+                    Log.e("SignaturePlugin", "获取ANDROID_ID失败: ${e.message}", e)
+                    result.error("ANDROID_ID_ERROR", "获取ANDROID_ID失败: ${e.message}", e.toString())
+                }
+            }
+            "getPersistentDeviceId" -> {
+                try {
+                    val id = DeviceIdManager.getOrCreateDeviceId(context)
+                    result.success(id)
+                } catch (e: Exception) {
+                    result.error("DEVICE_ID_ERROR", "获取设备ID失败: ${e.message}", e.toString())
+                }
+            }
             "verifySignature" -> {
                 try {
                     val isValid = signatureService.verifyAppSignature()
