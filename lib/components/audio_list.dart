@@ -49,6 +49,9 @@ class _AudioListState extends State<AudioList> {
   final ScrollController _scrollController = ScrollController();
   String _activeId = '';
   StreamSubscription<AudioPlayerState>? _audioStateSubscription;
+  static const Color _highlightColor = Color(0xFFFF2050);
+  static const Color _baseTitleColor = Color(0xFF333333);
+  static const Color _baseTagColor = Color(0xFF666666);
 
   @override
   void initState() {
@@ -183,36 +186,87 @@ class _AudioListState extends State<AudioList> {
     if (isActive) {
       return Row(
         children: [
-          Icon(CustomIcons.playing, color: Color(0xFFFF2050), size: 14),
+          Icon(CustomIcons.playing, color: _highlightColor, size: 14),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
+            child: _buildHighlightedText(
               audio.title,
-              style: const TextStyle(
+              audio.highlight?.title ?? const [],
+              TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 height: 1.5,
-                color: Color(0xFFFF2050),
+                color: _highlightColor,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       );
     } else {
-      return Text(
+      return _buildHighlightedText(
         audio.title,
-        style: const TextStyle(
+        audio.highlight?.title ?? const [],
+        TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           height: 1.5,
-          color: Color(0xFF333333),
+          color: _baseTitleColor,
         ),
         maxLines: 1,
+      );
+    }
+  }
+
+  Widget _buildHighlightedText(
+    String text,
+    List<String> highlights,
+    TextStyle baseStyle, {
+    int maxLines = 1,
+  }) {
+    if (text.isEmpty || highlights.isEmpty) {
+      return Text(
+        text,
+        style: baseStyle,
+        maxLines: maxLines,
         overflow: TextOverflow.ellipsis,
       );
     }
+
+    final lower = text.toLowerCase();
+    int pos = 0;
+    final List<TextSpan> spans = [];
+    while (pos < text.length) {
+      int nextStart = -1;
+      String? matched;
+      for (final term in highlights) {
+        if (term.isEmpty) continue;
+        final s = lower.indexOf(term.toLowerCase(), pos);
+        if (s != -1 && (nextStart == -1 || s < nextStart)) {
+          nextStart = s;
+          matched = term;
+        }
+      }
+      if (nextStart == -1 || matched == null) {
+        spans.add(TextSpan(text: text.substring(pos)));
+        break;
+      }
+      if (nextStart > pos) {
+        spans.add(TextSpan(text: text.substring(pos, nextStart)));
+      }
+      final end = nextStart + matched.length;
+      spans.add(TextSpan(
+        text: text.substring(nextStart, end),
+        style: TextStyle(color: _highlightColor),
+      ));
+      pos = end;
+    }
+
+    return Text.rich(
+      TextSpan(style: baseStyle, children: spans),
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+    );
   }
 
   Widget _buildAudioItem(AudioItem audio) {
@@ -241,16 +295,16 @@ class _AudioListState extends State<AudioList> {
                 _buildItemTitle(audio),
 
                 const SizedBox(height: 8),
-                // 描述
-                Text(
+                // tags
+                _buildHighlightedText(
                   audio.tags?.join(', ') ?? '',
-                  style: const TextStyle(
+                  audio.highlight?.tags ?? const [],
+                  TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF666666),
+                    color: _baseTagColor,
                     height: 1.2,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 13),
                 // 视频统计信息
