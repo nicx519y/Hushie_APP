@@ -7,6 +7,7 @@ import '../services/audio_manager.dart';
 import '../services/subscribe_privilege_manager.dart';
 import '../services/auth_manager.dart';
 import '../services/network_healthy_manager.dart';
+import '../services/api/tracking_service.dart';
 
 /// 应用根组件 - 包含 MainApp 和 Splash 浮层
 class AppRoot extends StatefulWidget {
@@ -16,15 +17,25 @@ class AppRoot extends StatefulWidget {
   State<AppRoot> createState() => _AppRootState();
 }
 
-class _AppRootState extends State<AppRoot> with TickerProviderStateMixin {
+class _AppRootState extends State<AppRoot> with TickerProviderStateMixin, WidgetsBindingObserver {
   bool _isInitialized = false;
   bool servicesInitialized = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  // 冷启动与前台恢复打点控制
+  bool _startupAppOpenSent = false;
+  bool _shouldSendOnResume = false;
 
   @override
   void initState() {
     super.initState();
+    // 添加应用生命周期观察者，用于前台时打点
+    WidgetsBinding.instance.addObserver(this);
+    
+    // 冷启动立即发送 app_open（避免依赖生命周期首个回调不稳定）
+    TrackingService.track(actionType: 'app_open');
+    _startupAppOpenSent = true;
+    _shouldSendOnResume = false; // 直到进入后台后才在下次恢复时再次发送
     
     // 初始化动画控制器
     _fadeController = AnimationController(
@@ -46,7 +57,25 @@ class _AppRootState extends State<AppRoot> with TickerProviderStateMixin {
   @override
   void dispose() {
     _fadeController.dispose();
+    // 释放生命周期观察者
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // App回到前台，发送 app_open 打点（避免冷启动重复）
+      if (_shouldSendOnResume || !_startupAppOpenSent) {
+        TrackingService.track(actionType: 'app_open');
+        debugPrint('📊 [TRACKING] App resumed -> app_open sent');
+        _startupAppOpenSent = true;
+        _shouldSendOnResume = false;
+      }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // 进入后台或非活动态，允许下次恢复时打点
+      _shouldSendOnResume = true;
+    }
   }
 
   Future<void> _initializeApp() async {

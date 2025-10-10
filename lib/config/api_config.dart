@@ -183,4 +183,7 @@ class ApiEndpoints {
 
   // 订阅相关接口
   static const String subscribeCreate = '/subscriptions';
+
+  // 追踪打点接口
+  static const String tracking = '/tracking';
 }
