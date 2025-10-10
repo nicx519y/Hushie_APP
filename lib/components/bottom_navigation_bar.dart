@@ -90,12 +90,12 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             final newTotalDuration = playerDuration ?? apiDuration ?? Duration.zero;
             
             // 数据一致性检查：如果两个时长差异过大，记录警告日志
-            if (playerDuration != null && apiDuration != null) {
-              final diffSeconds = (playerDuration.inSeconds - apiDuration.inSeconds).abs();
-              if (diffSeconds > 5) { // 差异超过5秒认为异常
-                debugPrint('警告：播放器时长与API时长差异较大 - 播放器:${playerDuration.inSeconds}s, API:${apiDuration.inSeconds}s, 差异:${diffSeconds}s');
-              }
-            }
+            // if (playerDuration != null && apiDuration != null) {
+            //   final diffSeconds = (playerDuration.inSeconds - apiDuration.inSeconds).abs();
+            //   if (diffSeconds > 5) { // 差异超过5秒认为异常
+            //     debugPrint('警告：播放器时长与API时长差异较大 - 播放器:${playerDuration.inSeconds}s, API:${apiDuration.inSeconds}s, 差异:${diffSeconds}s');
+            //   }
+            // }
             
             if (_totalDuration != newTotalDuration) {
               _totalDuration = newTotalDuration;

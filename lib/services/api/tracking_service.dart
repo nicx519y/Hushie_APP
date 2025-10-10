@@ -16,7 +16,7 @@ class TrackingService {
   /// - extraData: 可选，额外数据（JSON 对象）
   static Future<ApiResponse<TrackingResponse>> track({
     required String actionType,
-    int? audioId,
+    String? audioId,
     Map<String, dynamic>? extraData,
   }) async {
     return _postTracking(
@@ -29,7 +29,7 @@ class TrackingService {
   /// 真实接口 - 提交追踪打点
   static Future<ApiResponse<TrackingResponse>> _postTracking({
     required String actionType,
-    int? audioId,
+    String? audioId,
     Map<String, dynamic>? extraData,
   }) async {
     try {

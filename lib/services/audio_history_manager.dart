@@ -7,7 +7,7 @@ import '../services/api/user_history_service.dart';
 import '../services/api/user_privilege_service.dart';
 import '../models/user_privilege_model.dart';
 import 'auth_manager.dart';
-import '../services/api/tracking_service.dart';
+
 // 移除对 AudioManager 的依赖，避免循环依赖
 import 'audio_service.dart'; // 需要AudioPlayerState类型定义
 
@@ -228,26 +228,6 @@ class AudioHistoryManager {
 
       // 使用自定义进度或默认的当前位置
       final progressToSubmit = customProgress ?? _lastRecordedPosition;
-
-      // 发送播放打点（audio_play），将相关数据放入 extraData
-      try {
-        TrackingService
-            .track(
-              actionType: 'audio_play',
-              extraData: {
-                'audio_id': _currentPlayingAudio!.id,
-                'play_progress_ms': progressToSubmit.inMilliseconds,
-                'is_first': isFirst,
-              },
-            )
-            .then((resp) {
-          debugPrint('📍 [TRACKING] audio_play sent, errNo=${resp.errNo}');
-        }).catchError((e) {
-          debugPrint('📍 [TRACKING] audio_play error: $e');
-        });
-      } catch (e) {
-        debugPrint('📍 [TRACKING] audio_play dispatch failed: $e');
-      }
 
       final updatedHistory = await UserHistoryService.submitPlayProgress(
         audioId: _currentPlayingAudio!.id,

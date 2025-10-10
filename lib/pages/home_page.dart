@@ -97,6 +97,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     debugPrint('Syncing PageView to tab: $tabIndex'); // 调试信息
 
+    // 记录 Tab 点击事件
+    if (tabIndex >= 0 && tabIndex < _tabItems.length) {
+      final tabName = _tabItems[tabIndex].label;
+      AnalyticsService().logCustomEvent(
+        eventName: 'tab_tap',
+        parameters: {
+          'tab_name': tabName,
+        },
+      );
+    }
+
     _isUpdatingFromTab = true;
 
     setState(() {
@@ -157,12 +168,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _onAudioTap(AudioItem item) {
     // 先开始播放音频，然后跳转到播放页面
     debugPrint('点击音频: ${item.title} ${item.id}');
-    
-    // 记录音频播放事件
-    AnalyticsService().logAudioPlay(
-      audioId: item.id,
-      audioTitle: item.title,
-      category: 'home_page',
+  
+    // 记录首页音频点击事件
+    final currentTabName = (_currentTabIndex >= 0 && _currentTabIndex < _tabItems.length)
+        ? _tabItems[_currentTabIndex].label
+        : 'for_you';
+    AnalyticsService().logCustomEvent(
+      eventName: 'homepage_audio_tap',
+      parameters: {
+        'current_tab_name': currentTabName,
+        'audio_id': item.id,
+      },
     );
     
     _playAudio(item);

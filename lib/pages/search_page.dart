@@ -279,16 +279,16 @@ class _SearchPageState extends State<SearchPage> {
 
   // 点击搜索结果项
   void _onSearchItemTap(AudioItem audio) {
+    // 记录搜索结果列表点击事件
+    AnalyticsService().logCustomEvent(
+      eventName: 'search_result_audio_tap',
+      parameters: {
+        'audio_id': audio.id,
+      },
+    );
     if (_canTapSearchItem) {
       // 保存当前搜索查询到历史
       _saveSearchHistory(_searchController.text);
-      
-      // 记录音频播放事件
-      AnalyticsService().logAudioPlay(
-        audioId: audio.id,
-        audioTitle: audio.title,
-        category: 'search_results',
-      );
       
       // 播放音频
       _playAudio(audio);

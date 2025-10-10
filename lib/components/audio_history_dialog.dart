@@ -4,6 +4,7 @@ import '../models/audio_item.dart';
 import 'audio_history_list.dart';
 import '../services/dialog_state_manager.dart';
 import 'slide_up_overlay.dart';
+import '../services/analytics_service.dart';
 
 class AudioHistoryDialog extends StatefulWidget {
   final void Function(AudioItem)? onItemTap;
@@ -83,6 +84,13 @@ class _AudioHistoryDialogState extends State<AudioHistoryDialog> {
           Expanded(
             child: AudioHistoryList(
               onItemTap: (audio) {
+                // 记录历史弹窗内的音频点击事件
+                AnalyticsService().logCustomEvent(
+                  eventName: 'player_histroy_audio_tap',
+                  parameters: {
+                    'audio_id': audio.id,
+                  },
+                );
                 final onItemTap = widget.onItemTap;
                 if (onItemTap != null) {
                   onItemTap(audio);

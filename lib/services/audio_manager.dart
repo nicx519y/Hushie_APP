@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:hushie_app/services/api/tracking_service.dart';
 import 'package:hushie_app/services/auth_manager.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:audio_service/audio_service.dart';
@@ -440,6 +441,15 @@ class AudioManager {
     // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
     final currentAudio = this.currentAudio;
     final bool auto = autoPlay ?? true;
+
+    // 记录音频播放事件
+    if(audio.id.isNotEmpty && auto == true) {
+      try {
+        TrackingService.track(actionType: 'audio_play', audioId: audio.id);
+      } catch (e) {
+        debugPrint('追踪播放事件失败: $e');
+      }
+    }
 
     if (currentAudio != null && currentAudio.id == audio.id) {
       debugPrint('相同音频正在播放，跳过: ${audio.title} (ID: ${audio.id})');

@@ -13,6 +13,7 @@ import '../router/navigation_utils.dart';
 import 'dart:async';
 import 'package:hushie_app/services/audio_manager.dart';
 import '../services/audio_service.dart';
+import '../services/analytics_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -249,7 +250,28 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  void _onAudioListItemTap(AudioItem audio) async {
+ 
+
+  void _onHistoryListItemTap(AudioItem audio) async {
+    // 记录个人页历史列表点击事件
+    AnalyticsService().logCustomEvent(
+      eventName: 'me_history_audio_tap',
+      parameters: {
+        'audio_id': audio.id,
+      },
+    );
+    AudioManager.instance.playAudio(audio);
+    NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
+  }
+
+  void _onLikesListItemTap(AudioItem audio) async {
+    // 记录个人页喜欢列表点击事件
+    AnalyticsService().logCustomEvent(
+      eventName: 'me_likes_audio_tap',
+      parameters: {
+        'audio_id': audio.id,
+      },
+    );
     AudioManager.instance.playAudio(audio);
     NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
   }
@@ -365,7 +387,7 @@ class _ProfilePageState extends State<ProfilePage>
                   _KeepAliveWrapper(
                     child: AudioHistoryList(
                       key: const PageStorageKey('history_list'),
-                      onItemTap: _onAudioListItemTap,
+                      onItemTap: _onHistoryListItemTap,
                       padding: const EdgeInsets.only(bottom: 120),
                     ),
                   ),
@@ -373,7 +395,7 @@ class _ProfilePageState extends State<ProfilePage>
                   _KeepAliveWrapper(
                     child: LikesList(
                       key: const PageStorageKey('likes_list'),
-                      onItemTap: _onAudioListItemTap,
+                      onItemTap: _onLikesListItemTap,
                       padding: const EdgeInsets.only(bottom: 120),
                     ),
                   ),
