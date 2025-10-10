@@ -9,6 +9,7 @@ import 'analytics_service.dart';
 import 'performance_service.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'dart:async';
+import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
 
 // 音频状态数据类
 class AudioPlayerState {
@@ -65,6 +66,10 @@ class AudioPlayerState {
 
 class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _audioPlayer = AudioPlayer();
+
+  // 配置：是否使用预埋音频（assets/audios/）
+  static const bool _useEmbeddedAudios = true;
+  static const String _embeddedAudiosDir = 'assets/audios';
 
   // 统一的音频状态流
   final BehaviorSubject<AudioPlayerState> _audioStateSubject = BehaviorSubject<AudioPlayerState>.seeded(
@@ -233,8 +238,8 @@ class AudioPlayerService extends BaseAudioHandler {
 
       mediaItem.add(mediaItemData);
 
-      // 加载音频文件，使用 setAudioSource 的 initialPosition 参数
-      final audioSource = AudioSource.uri(Uri.parse(audioUrl));
+      // 选择音频来源：预埋资产优先（同名文件），否则使用网络URL
+      final audioSource = await _resolveAudioSource(audioUrl);
       // 记录加载开始时间（用于统计从加载到可播放的耗时）
       _loadStartMs = DateTime.now().millisecondsSinceEpoch;
       _loadAudioId = audio.id;
@@ -257,6 +262,53 @@ class AudioPlayerService extends BaseAudioHandler {
     } catch (e) {
       debugPrint('装载音频时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
+    }
+  }
+
+  // 解析并选择音频源：若启用预埋音频，则尝试匹配 assets/audios/ 同名文件
+  Future<AudioSource> _resolveAudioSource(String audioUrl) async {
+    if (_useEmbeddedAudios) {
+      final filename = _extractFilename(audioUrl);
+      if (filename != null && filename.isNotEmpty) {
+        final assetPath = '$_embeddedAudiosDir/$filename';
+        final exists = await _assetExists(assetPath);
+        if (exists) {
+          debugPrint('使用预埋音频: $assetPath');
+          return AudioSource.asset(assetPath);
+        } else {
+          debugPrint('未找到预埋音频，使用网络URL: $audioUrl');
+        }
+      } else {
+        debugPrint('无法解析文件名，使用网络URL: $audioUrl');
+      }
+    }
+    // 默认使用网络URL
+    return AudioSource.uri(Uri.parse(audioUrl));
+  }
+
+  // 从URL中提取文件名（最后一个path segment）
+  String? _extractFilename(String url) {
+    try {
+      final uri = Uri.parse(url);
+      if (uri.pathSegments.isNotEmpty) {
+        return uri.pathSegments.last;
+      }
+      // 兜底：简单字符串分割
+      final parts = url.split('/');
+      return parts.isNotEmpty ? parts.last : null;
+    } catch (_) {
+      final parts = url.split('/');
+      return parts.isNotEmpty ? parts.last : null;
+    }
+  }
+
+  // 判断资产是否存在
+  Future<bool> _assetExists(String assetPath) async {
+    try {
+      await rootBundle.load(assetPath);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

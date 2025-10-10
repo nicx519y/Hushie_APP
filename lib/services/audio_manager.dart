@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:hushie_app/services/api/tracking_service.dart';
 import 'package:hushie_app/services/auth_manager.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_item.dart';
 import '../models/audio_duration_info.dart';
 import 'audio_service.dart';
@@ -381,6 +384,40 @@ class AudioManager {
       }
     } else {
       debugPrint('[AudioManager]: 当前播放状态缓存为空');
+    }
+
+    // Fallback: 当当前播放状态缓存为空或解析失败时，使用默认音频列表的第一条
+    try {
+      final jsonStr = await rootBundle.loadString('assets/configs/default_audio_list.json');
+      final List<dynamic> data = json.decode(jsonStr) as List<dynamic>;
+      if (data.isNotEmpty) {
+        final first = data.first;
+        if (first is Map) {
+          final audioItem = AudioItem.fromMap(Map<String, dynamic>.from(first as Map));
+          debugPrint('[AudioManager]: 使用默认音频作为当前播放状态: ${audioItem.title}');
+
+          // 持久化为 current_play_state_cache，方便下次直接恢复
+          try {
+            final playState = {
+              'audioItem': audioItem.toMap(),
+              'position': 0,
+              'isPlaying': false,
+              'timestamp': DateTime.now().toIso8601String(),
+            };
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('current_play_state_cache', json.encode(playState));
+          } catch (e) {
+            debugPrint('[AudioManager]: 写入默认当前播放状态缓存失败: $e');
+          }
+
+          await playAudio(audioItem, autoPlay: false, initialPosition: Duration.zero);
+          return;
+        }
+      } else {
+        debugPrint('[AudioManager]: 默认音频列表为空，无法恢复');
+      }
+    } catch (e) {
+      debugPrint('[AudioManager]: 读取默认音频列表失败: $e');
     }
   }
 

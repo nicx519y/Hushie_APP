@@ -31,10 +31,15 @@ class HomeTabListDataProvider {
   
   // 首页列表数据管理服务
   final HomePageListService _listService = HomePageListService();
-  
+
   // 初始化状态
   bool _isInitialized = false;
   bool _isInitializing = false;
+
+  // Tabs更新通知（供UI订阅）
+  final StreamController<List<TabItemModel>> _tabsStreamController =
+      StreamController<List<TabItemModel>>.broadcast();
+  Stream<List<TabItemModel>> get tabsStream => _tabsStreamController.stream;
 
   /// 初始化数据提供者
   Future<void> initialize() async {
@@ -54,13 +59,38 @@ class HomeTabListDataProvider {
       // 尝试从本地存储加载缓存数据
       await _loadCachedData();
       
-      // 如果没有缓存数据，从API获取
+      // 启动策略：
+      // 1) 若本地缓存为空，先用第一个 for_you tab 和预埋数据渲染，再后台拉取服务器tabs并合并（仅填充空tab数据）
+      // 2) 若本地缓存存在，直接返回缓存，再后台拉取服务器tabs并合并（仅填充空tab数据）
       if (_cachedTabs.isEmpty) {
-        debugPrint('🏠 [DATA_PROVIDER] 没有缓存数据，从API获取');
-        await _fetchAndCacheInitialData();
+        debugPrint('🏠 [DATA_PROVIDER] 没有缓存数据，先使用 for_you 预埋数据渲染');
+        // 从列表服务获取预埋数据
+        var seedItems = _listService.getTabData('for_you');
+        if (seedItems.isEmpty) {
+          // 兜底确保预埋数据写入
+          await _listService.preloadTabData('for_you');
+          seedItems = _listService.getTabData('for_you');
+        }
+        // 设置一个仅包含 for_you 的临时tabs用于首屏渲染
+        _cachedTabs = [
+          const TabItemModel(id: 'for_you', label: 'For You', items: []),
+        ];
+        _cachedTabLists['for_you'] = seedItems;
+        debugPrint('🏠 [DATA_PROVIDER] 首屏渲染使用预埋数据: ${seedItems.length} 条');
+
+        // 先写入本地缓存，确保预埋数据被持久化
+        await _cacheTabsData(_cachedTabs);
+        await _cacheTabListData('for_you', seedItems);
+
+        // 通知UI：首屏tabs更新
+        _tabsStreamController.add(List.from(_cachedTabs));
+
+        // 后台拉取并合并服务器tabs
+        _updateTabsInBackground();
       } else {
         debugPrint('🏠 [DATA_PROVIDER] 使用缓存数据，后台更新');
-        // 有缓存数据时，后台更新tabs数据
+        // 通知UI：使用缓存的tabs
+        _tabsStreamController.add(List.from(_cachedTabs));
         _updateTabsInBackground();
       }
       
@@ -117,8 +147,13 @@ class HomeTabListDataProvider {
       // 缓存tabs数据
       await _cacheTabsData(tabs);
       
-      // 如果API返回了items数据，也进行缓存
+      // 如果API返回了items数据，仅填充“空的tab数据”，不覆盖已有缓存
       for (final tab in tabs) {
+        final existing = _cachedTabLists[tab.id] ?? [];
+        if (existing.isNotEmpty) {
+          debugPrint('🏠 [DATA_PROVIDER] 保留已有tab ${tab.id} 的${existing.length}条数据，不覆盖');
+          continue;
+        }
         if (tab.items.isNotEmpty) {
           _cachedTabLists[tab.id] = tab.items;
           await _cacheTabListData(tab.id, tab.items);
@@ -137,29 +172,33 @@ class HomeTabListDataProvider {
     try {
       final latestTabs = await HomeTabsService.getHomeTabs();
       
-      // 对比新旧tabs，保留已有数据的tab列表
-      final Map<String, List<AudioItem>> preservedLists = {};
-      
+      // 合并规则：替换tabs；每个tab下如果已有数据（非空），不覆盖；仅覆盖空的tab数据
+      final Map<String, List<AudioItem>> mergedLists = {};
       for (final newTab in latestTabs) {
-        // 如果新tab在旧tabs中存在且有缓存数据，保留缓存数据
-        if (_cachedTabLists.containsKey(newTab.id)) {
-          preservedLists[newTab.id] = _cachedTabLists[newTab.id]!;
+        final existing = _cachedTabLists[newTab.id] ?? [];
+        if (existing.isNotEmpty) {
+          mergedLists[newTab.id] = existing;
         } else if (newTab.items.isNotEmpty) {
-          // 全新的tab，使用API返回的数据
-          preservedLists[newTab.id] = newTab.items;
+          mergedLists[newTab.id] = newTab.items;
           await _cacheTabListData(newTab.id, newTab.items);
+        } else {
+          mergedLists[newTab.id] = [];
         }
       }
-      
-      // 更新内存缓存
+
+      // 替换tabs并更新列表缓存
       _cachedTabs = latestTabs;
-      _cachedTabLists.clear();
-      _cachedTabLists.addAll(preservedLists);
+      _cachedTabLists
+        ..clear()
+        ..addAll(mergedLists);
       
       // 只缓存tabs数据（根据需求4）
       await _cacheTabsData(latestTabs);
       
       debugPrint('🏠 [DATA_PROVIDER] 后台更新tabs完成');
+
+      // 通知UI：后台更新后的tabs
+      _tabsStreamController.add(List.from(_cachedTabs));
     } catch (e) {
       debugPrint('🏠 [DATA_PROVIDER] 后台更新tabs失败: $e');
     }
@@ -341,6 +380,7 @@ class HomeTabListDataProvider {
     _cachedTabLists.clear();
     _isInitialized = false;
     _isInitializing = false;
+    await _tabsStreamController.close();
     debugPrint('🏠 [DATA_PROVIDER] HomeTabListDataProvider已清理');
   }
 }

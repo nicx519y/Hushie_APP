@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../components/custom_app_bar.dart';
 import '../components/custom_tab_bar.dart';
 import '../components/paged_audio_grid.dart';
@@ -27,6 +28,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // 首页Tab列表数据提供者
   final HomeTabListDataProvider _dataProvider = HomeTabListDataProvider.instance;
+  StreamSubscription<List<TabItemModel>>? _tabsSubscription;
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _tabsSubscription?.cancel();
     _tabController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -57,6 +60,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _tabItems = tabs;
       });
       _setupControllers();
+      // 订阅tabs更新（后台拉取完成后通知UI刷新）
+      _tabsSubscription = _dataProvider.tabsStream.listen((updatedTabs) {
+        if (!mounted) return;
+        bool needRebuild = updatedTabs.length != _tabItems.length;
+        if (!needRebuild) {
+          for (int i = 0; i < updatedTabs.length; i++) {
+            if (updatedTabs[i].id != _tabItems[i].id) {
+              needRebuild = true;
+              break;
+            }
+          }
+        }
+
+        setState(() {
+          _tabItems = updatedTabs;
+        });
+
+        if (needRebuild) {
+          try { _tabController.dispose(); } catch (_) {}
+          try { _pageController.dispose(); } catch (_) {}
+          _setupControllers();
+        }
+      });
     } catch (e) {
       debugPrint('初始化tabs失败: $e');
       _initDefaultTabs();

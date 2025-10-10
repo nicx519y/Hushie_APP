@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
 import '../models/audio_item.dart';
 import 'api/audio_list_service.dart';
 import 'package:flutter/foundation.dart';
@@ -16,6 +17,8 @@ import 'package:firebase_performance/firebase_performance.dart';
 class HomePageListService {
   static const String _storageKey = 'home_page_list_data';
   static const int _maxItemsPerTab = 20;
+  static const String _defaultTabId = 'for_you';
+  static const String _defaultAssetsPath = 'assets/configs/default_audio_list.json';
 
   // 单例模式
   static final HomePageListService _instance = HomePageListService._internal();
@@ -27,6 +30,8 @@ class HomePageListService {
 
   // 内存中的数据缓存
   final Map<String, List<AudioItem>> _tabDataCache = {};
+  // 标记哪些tab使用了预埋默认数据（首次渲染用，不参与服务端分页cid）
+  final Set<String> _defaultSeededTabs = {};
 
   // 是否已初始化
   bool _isInitialized = false;
@@ -38,15 +43,25 @@ class HomePageListService {
     try {
       _prefs = await SharedPreferences.getInstance();
 
-      // 清除之前的缓存数据
-      debugPrint('清除之前的缓存数据');
-      _tabDataCache.clear();
-
-      // 清除本地存储
-      await _prefs?.remove(_storageKey);
+      // 尝试从本地存储加载缓存
+      final stored = _prefs?.getString(_storageKey);
+      if (stored != null && stored.isNotEmpty) {
+        _loadDataFromStorage(stored);
+        debugPrint('HomePageListService 初始化完成：已加载本地缓存');
+      } else {
+        // 本地存储为空：加载预埋的默认数据到 for_you，并作为首次渲染数据
+        try {
+          final seedItems = await _loadDefaultSeedItems();
+          _tabDataCache[_defaultTabId] = seedItems;
+          _defaultSeededTabs.add(_defaultTabId);
+          debugPrint('HomePageListService 初始化完成：已加载预埋默认数据(${seedItems.length}条)');
+        } catch (e) {
+          debugPrint('HomePageListService 预埋数据加载失败: $e');
+          _tabDataCache[_defaultTabId] = [];
+        }
+      }
 
       _isInitialized = true;
-      debugPrint('HomePageListService 初始化完成，缓存已清除');
     } catch (error) {
       debugPrint('HomePageListService 初始化失败: $error');
       rethrow;
@@ -56,15 +71,13 @@ class HomePageListService {
   /// 获取指定tab的数据列表（不使用缓存）
   List<AudioItem> getTabData(String tabId) {
     _ensureInitialized();
-    // 不使用缓存，返回空列表
-    return [];
+    return _tabDataCache[tabId] ?? [];
   }
 
   /// 获取指定tab的lastCid
   /// 从当前正在使用的数据中获取最后一个item的id
   String? getTabLastCid(String tabId, {List<AudioItem>? currentData}) {
     _ensureInitialized();
-    
     // 优先使用传入的当前数据
     if (currentData != null && currentData.isNotEmpty) {
       return currentData.last.id;
@@ -109,8 +122,26 @@ class HomePageListService {
       );
 
       if (newItems.isNotEmpty) {
-        // 不使用缓存，每次都返回新数据
-        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: ${newItems.last.id}');
+        // 更新缓存：若之前是预埋默认数据，首次请求用新数据替换；否则追加并去重
+        final existing = _tabDataCache[tabId] ?? [];
+        List<AudioItem> merged;
+        if (_defaultSeededTabs.contains(tabId) || forceRefresh) {
+          merged = newItems;
+          _defaultSeededTabs.remove(tabId);
+        } else {
+          final ids = existing.map((e) => e.id).toSet();
+          merged = [...existing];
+          for (final item in newItems) {
+            if (!ids.contains(item.id)) {
+              merged.add(item);
+              ids.add(item.id);
+            }
+          }
+        }
+        _tabDataCache[tabId] = merged;
+        await _saveDataToStorage();
+
+        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，合并后共 ${merged.length} 条');
         final elapsed = DateTime.now().millisecondsSinceEpoch - startMs;
         trace?.setMetric('elapsed_ms', elapsed);
         trace?.setMetric('item_count', newItems.length);
@@ -160,7 +191,26 @@ class HomePageListService {
       );
 
       if (newItems.isNotEmpty) {
-        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，lastCid: ${newItems.last.id}');
+        // 同步缓存
+        final existing = _tabDataCache[tabId] ?? [];
+        List<AudioItem> merged;
+        if (_defaultSeededTabs.contains(tabId)) {
+          merged = newItems;
+          _defaultSeededTabs.remove(tabId);
+        } else {
+          final ids = existing.map((e) => e.id).toSet();
+          merged = [...existing];
+          for (final item in newItems) {
+            if (!ids.contains(item.id)) {
+              merged.add(item);
+              ids.add(item.id);
+            }
+          }
+        }
+        _tabDataCache[tabId] = merged;
+        await _saveDataToStorage();
+
+        debugPrint('Tab $tabId 获取数据成功: ${newItems.length} 条，合并后共 ${merged.length} 条');
         final elapsed = DateTime.now().millisecondsSinceEpoch - startMs;
         trace?.setMetric('elapsed_ms', elapsed);
         trace?.setMetric('item_count', newItems.length);
@@ -208,18 +258,32 @@ class HomePageListService {
   /// 预加载指定tab的数据（如果缓存为空）
   Future<void> preloadTabData(String tabId) async {
     _ensureInitialized();
-
-    // 不使用缓存，每次都获取新数据
-    debugPrint('预加载 Tab $tabId 的数据');
+    // 若本地是空且为默认tab，确保预埋数据已加载
+    if ((_tabDataCache[tabId] == null || _tabDataCache[tabId]!.isEmpty) && tabId == _defaultTabId) {
+      try {
+        final seedItems = await _loadDefaultSeedItems();
+        _tabDataCache[_defaultTabId] = seedItems;
+        _defaultSeededTabs.add(_defaultTabId);
+        debugPrint('预加载默认Tab($tabId)：写入预埋数据 ${seedItems.length} 条');
+      } catch (e) {
+        debugPrint('预加载默认Tab预埋数据失败: $e');
+      }
+    }
+    // 之后拉取服务器数据
     await fetchNextPageData(tabId);
   }
 
   /// 获取所有tab的缓存状态信息
   Map<String, Map<String, dynamic>> getAllTabsStatus() {
     _ensureInitialized();
-
-    // 由于不使用缓存，返回空状态
-    return {};
+    final status = <String, Map<String, dynamic>>{};
+    _tabDataCache.forEach((tabId, items) {
+      status[tabId] = {
+        'items': items.length,
+        'default_seeded': _defaultSeededTabs.contains(tabId),
+      };
+    });
+    return status;
   }
 
   /// 保存数据到本地存储
@@ -243,6 +307,36 @@ class HomePageListService {
     } catch (error) {
       debugPrint('保存数据到本地存储失败: $error');
     }
+  }
+
+  /// 从本地存储字符串加载数据到内存缓存
+  void _loadDataFromStorage(String stored) {
+    try {
+      final decoded = json.decode(stored) as Map<String, dynamic>;
+      final tabData = decoded['tabData'] as Map<String, dynamic>?;
+      _tabDataCache.clear();
+      if (tabData != null) {
+        tabData.forEach((tabId, list) {
+          final items = (list as List<dynamic>)
+              .map((e) => AudioItem.fromMap(e as Map<String, dynamic>))
+              .toList();
+          _tabDataCache[tabId] = items;
+        });
+      }
+      // 从本地加载的数据不属于预埋默认数据
+      _defaultSeededTabs.clear();
+    } catch (e) {
+      debugPrint('解析本地存储数据失败: $e');
+    }
+  }
+
+  /// 加载预埋默认数据（assets/configs/default_audio_list.json）
+  Future<List<AudioItem>> _loadDefaultSeedItems() async {
+    final jsonStr = await rootBundle.loadString(_defaultAssetsPath);
+    final list = json.decode(jsonStr) as List<dynamic>;
+    return list
+        .map((e) => AudioItem.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// 确保服务已初始化
