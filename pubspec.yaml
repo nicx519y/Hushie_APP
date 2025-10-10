@@ -68,6 +68,7 @@ dependencies:
   # 本地数据库
   sqflite: ^2.3.0
   path: ^1.8.3
+  path_provider: ^2.1.4
   
   # Google登录
   google_sign_in: ^6.2.1
@@ -101,6 +102,9 @@ dependencies:
   firebase_analytics: ^11.3.3
   firebase_crashlytics: ^4.1.4
   firebase_performance: ^0.10.1+10
+  package_info_plus: ^8.0.0
+  uuid: ^4.4.0
+  android_id: ^0.3.3
 
 dev_dependencies:
   flutter_test:

@@ -13,6 +13,8 @@ import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../router/navigation_utils.dart';
 import '../utils/webview_navigator.dart';
+import '../services/analytics_service.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -120,7 +122,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
     
 
     // 启动Google Play Billing支付流程
-    _initiateGooglePlayBillingPurchase();
+    await _initiateGooglePlayBillingPurchase();
   }
 
   /// 启动Google Play Billing购买流程
@@ -131,8 +133,6 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
     });
 
     try {
-
-      
 
       // 显示加载状态
       ToastHelper.showInfo(ToastMessages.subscriptionInitializing);
@@ -191,10 +191,105 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
         // 根据购买结果处理不同情况
         switch (purchaseResult.result) {
           case PurchaseResult.success:
+            // 手动上报 in_app_purchase 事件（Android 手动补充）
+            try {
+              final purchaseDetails = purchaseResult.purchaseDetails;
+              // 原始字段
+              final rawProductId = _product?.googlePlayProductId ?? '';
+              final rawCurrency = _selectedPlanAvailableOffer?.currency ?? _product?.basePlans[_selectedPlan].currency;
+              final rawValue = _selectedPlanAvailableOffer?.price ?? _product?.basePlans[_selectedPlan].price ?? 0.0;
+              final offerId = _selectedPlanAvailableOffer?.offerId;
+              final purchaseToken = purchaseDetails?.verificationData.serverVerificationData;
+
+              // 规范化：确保 GA4 所需类型与格式
+              final String productId = rawProductId.isNotEmpty ? rawProductId : 'unknown_product';
+              final String currency = (rawCurrency != null && rawCurrency.length == 3)
+                  ? rawCurrency
+                  : 'USD';
+              final double value = (rawValue is num)
+                  ? (rawValue as num).toDouble()
+                  : double.tryParse('$rawValue') ?? 0.0;
+              final String itemName = _selectedPlanAvailableOffer?.name ?? _product?.basePlans[_selectedPlan].name ?? _product?.name ?? 'subscription';
+              const int quantity = 1;
+
+              // 同步上报 GA4 推荐的 purchase 事件（含 items 数组）
+              await AnalyticsService().logCustomEvent(
+                eventName: 'purchase',
+                parameters: {
+                  'value': value, // 数值类型，不能是字符串
+                  'currency': currency,
+                  if (purchaseToken != null && purchaseToken.isNotEmpty) 'transaction_id': purchaseToken,
+                  // items：至少一个商品，包含 item_id / item_name / price / quantity
+                  'items': [
+                    {
+                      'item_id': productId,
+                      'item_name': itemName,
+                      'price': value,
+                      'quantity': quantity,
+                    }
+                  ],
+                  // 额外产品信息（非必填）
+                  'product_id': productId,
+                  'base_plan_id': basePlanId,
+                  if (offerId != null) 'offer_id': offerId,
+                },
+              );
+
+              // 明确手动上报 in_app_purchase（防止仅依赖自动采集导致 DebugView 不可见）
+              await AnalyticsService().logCustomEvent(
+                eventName: 'in_app_purchase',
+                parameters: {
+                  'value': value, // 数值类型
+                  'currency': currency,
+                  // 常见参数补充，提升事件识别稳定性
+                  'price': value,
+                  'quantity': quantity,
+                  if (purchaseToken != null && purchaseToken.isNotEmpty) 'transaction_id': purchaseToken,
+                  // items：满足 GA4 要求的数组格式
+                  'items': [
+                    {
+                      'item_id': productId,
+                      'item_name': itemName,
+                      'price': value,
+                      'quantity': quantity,
+                    }
+                  ],
+                  'product_id': productId,
+                  'base_plan_id': basePlanId,
+                  if (offerId != null) 'offer_id': offerId,
+                  // 辅助调试：标记来源为客户端手动上报
+                  'source': 'client_manual',
+                },
+              );
+
+              // 直接用 Firebase 实例调用，跳过自定义的 AnalyticsService
+              // await FirebaseAnalytics.instance.logEvent(
+              //   name: 'in_app_purchase',
+              //   parameters: {
+              //     'transaction_id': 'test_trans_${DateTime.now().microsecondsSinceEpoch}', // 绝对唯一
+              //     'value': 19.99, // 合理数值
+              //     'currency': 'USD', // 标准货币码
+              //     'items': [
+              //       {
+              //         'item_id': 'test_item_001',
+              //         'item_name': 'Test Product',
+              //         'price': 19.99, // 与 value 一致（单商品）
+              //         'quantity': 1, // int 类型
+              //       }
+              //     ],
+              //   },
+              // );
+
+
+            } catch (e) {
+              debugPrint('📊 [ANALYTICS] 手动上报 in_app_purchase 失败: $e');
+            }
+
             // ToastHelper.showSuccess(ToastMessages.subscriptionSuccess);
             // 购买成功，关闭对话框
             _closeDialog();
             _openSuccessNotification();
+            
             break;
           case PurchaseResult.pending:
             ToastHelper.showInfo(ToastMessages.subscriptionPending);
