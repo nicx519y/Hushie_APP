@@ -13,8 +13,8 @@ import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../router/navigation_utils.dart';
 import '../utils/webview_navigator.dart';
-import '../services/analytics_service.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import '../services/analytics_service.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -212,40 +212,33 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
               final String itemName = _selectedPlanAvailableOffer?.name ?? _product?.basePlans[_selectedPlan].name ?? _product?.name ?? 'subscription';
               const int quantity = 1;
 
-              // 同步上报 GA4 推荐的 purchase 事件（含 items 数组）
-              await AnalyticsService().logCustomEvent(
-                eventName: 'purchase',
-                parameters: {
-                  'value': value, // 数值类型，不能是字符串
-                  'currency': currency,
-                  if (purchaseToken != null && purchaseToken.isNotEmpty) 'transaction_id': purchaseToken,
-                  // items：至少一个商品，包含 item_id / item_name / price / quantity
-                  'items': [
-                    {
-                      'item_id': productId,
-                      'item_name': itemName,
-                      'price': value,
-                      'quantity': quantity,
-                    }
-                  ],
-                  // 额外产品信息（非必填）
-                  'product_id': productId,
-                  'base_plan_id': basePlanId,
-                  if (offerId != null) 'offer_id': offerId,
-                },
+              // 使用 FirebaseAnalytics 的标准 purchase 事件
+              await FirebaseAnalytics.instance.logPurchase(
+                currency: currency,
+                value: value,
+                transactionId: (purchaseToken != null && purchaseToken.isNotEmpty)
+                    ? purchaseToken
+                    : null,
+                items: [
+                  AnalyticsEventItem(
+                    itemId: productId,
+                    itemName: itemName,
+                    price: value,
+                    quantity: quantity,
+                  ),
+                ],
               );
 
-              // 明确手动上报 in_app_purchase（防止仅依赖自动采集导致 DebugView 不可见）
+              // 保留自定义 in_app_purchase 事件的手动上报（用于 DebugView 可见性与核对）
               await AnalyticsService().logCustomEvent(
                 eventName: 'in_app_purchase',
                 parameters: {
-                  'value': value, // 数值类型
+                  'value': value,
                   'currency': currency,
-                  // 常见参数补充，提升事件识别稳定性
                   'price': value,
                   'quantity': quantity,
-                  if (purchaseToken != null && purchaseToken.isNotEmpty) 'transaction_id': purchaseToken,
-                  // items：满足 GA4 要求的数组格式
+                  if (purchaseToken != null && purchaseToken.isNotEmpty)
+                    'transaction_id': purchaseToken,
                   'items': [
                     {
                       'item_id': productId,
@@ -257,7 +250,6 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                   'product_id': productId,
                   'base_plan_id': basePlanId,
                   if (offerId != null) 'offer_id': offerId,
-                  // 辅助调试：标记来源为客户端手动上报
                   'source': 'client_manual',
                 },
               );
