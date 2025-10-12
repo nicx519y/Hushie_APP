@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 使用纯色背景，避免透明背景在部分设备上显示为空 -->
+    <item android:drawable="@android:color/white"/>
+    <!-- 居中显示 Logo -->
     <item>
-        <bitmap android:gravity="fill" android:src="@drawable/background"/>
+        <bitmap android:gravity="center" android:src="@drawable/splash"/>
     </item>
 </layer-list>

@@ -17,47 +17,25 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('🚀 [MAIN] Flutter绑定初始化完成');
 
-  // 在 Android 上为非 Android 12 设备短暂延迟首帧，增强原生启动页的可见性
-  if (Platform.isAndroid) {
-    WidgetsBinding.instance.deferFirstFrame();
-    try {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
-      final sdk = androidInfo.version.sdkInt ?? 0;
-      final hold = sdk < 31 ? const Duration(milliseconds: 450) : const Duration(milliseconds: 50);
-      Future.delayed(hold, () {
-        WidgetsBinding.instance.allowFirstFrame();
-      });
-    } catch (e) {
-      Future.delayed(const Duration(milliseconds: 400), () {
-        WidgetsBinding.instance.allowFirstFrame();
-      });
-    }
-  }
+  // 在 Android 上延迟首帧，确保原生启动页可见（华为设备延长时间）
+  // if (Platform.isAndroid) {
+  //   WidgetsBinding.instance.deferFirstFrame();
+  //   try {
+  //     final isHuawei = await DeviceInfoService.isHuaweiDevice();
+  //     final hold = isHuawei
+  //         ? const Duration(milliseconds: 800)
+  //         : const Duration(milliseconds: 450);
+  //     Future.delayed(hold, () {
+  //       WidgetsBinding.instance.allowFirstFrame();
+  //     });
+  //   } catch (e) {
+  //     Future.delayed(const Duration(milliseconds: 500), () {
+  //       WidgetsBinding.instance.allowFirstFrame();
+  //     });
+  //   }
+  // }
 
-  // 配置系统UI样式 - 针对华为EMUI优化
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent, // 透明状态栏
-      statusBarIconBrightness: Brightness.dark, // 深色状态栏图标
-      statusBarBrightness: Brightness.light, // iOS状态栏亮度
-      systemNavigationBarColor: Colors.white, // 导航栏颜色
-      systemNavigationBarIconBrightness: Brightness.dark, // 深色导航栏图标
-    ),
-  );
-  debugPrint('🚀 [MAIN] 系统UI样式配置完成');
-
-  // 针对华为设备使用更保守的系统UI模式
-  try {
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-    );
-    debugPrint('🚀 [MAIN] 华为兼容的系统UI模式配置完成');
-  } catch (e) {
-    debugPrint('🚀 [MAIN] 系统UI模式配置失败，使用默认模式: $e');
-    // 如果失败，使用最基本的模式
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  }
+  // 将系统UI设置移动到首帧之后，避免干扰原生启动页显示
 
   // 华为设备特殊配置（非阻塞）
   _configureHuaweiStatusBar().then((_) {
@@ -87,6 +65,25 @@ void main() async {
 
   // 将核心服务初始化移至首帧之后，避免阻塞首屏渲染
   WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 配置系统UI样式 - 首帧后设置，避免影响启动页
+    try {
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+      );
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+      );
+    } catch (e) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+
     _initializeCoreServices();
   });
 }
@@ -100,7 +97,7 @@ Future<void> _configureHuaweiStatusBar() async {
       // 华为设备专用状态栏配置
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
+          statusBarColor: Colors.white,
           statusBarIconBrightness: Brightness.dark,
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.white,

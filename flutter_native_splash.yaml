@@ -2,8 +2,11 @@ flutter_native_splash:
   # 背景颜色
   color: "#ffffff"
 
-  # 仅使用整张图作为全屏背景（Android < 12 全屏显示）
-  background_image: assets/images/splash.png
+  # Android < 12：设置居中的图标，确保有可见元素
+  image: assets/images/splash_logo.png
+
+  # 使用纯色背景，避免透明背景在部分华为设备上显示为空
+  # 如需使用整屏背景图，请确保图片非透明并带有明显色块
 
   # 全屏显示
   fullscreen: true

@@ -1,35 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Normal Style with Status Bar - 针对华为EMUI优化 -->
-    <style name="NormalThemeStyle" parent="@android:style/Theme.Light.NoTitleBar">
+    <!-- 基础父主题，确保系统栏属性生效（含状态栏亮色图标） -->
+    <style name="NormalThemeStyle" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/white</item>
         <item name="android:windowLightStatusBar">true</item>
-        <!-- 华为EMUI特殊配置 -->
+        <item name="android:navigationBarColor">@android:color/white</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <!-- 华为设备兼容项 -->
         <item name="android:fitsSystemWindows">false</item>
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
     </style>
-    <!-- Theme applied to the Android Window while the process is starting -->
+
+    <!-- 冷启动阶段的主题：显示原生启动背景与居中Logo，且保留状态栏 -->
     <style name="LaunchTheme" parent="NormalThemeStyle">
-        <!-- 使用 flutter_native_splash 生成的原生启动页背景 -->
         <item name="android:windowBackground">@drawable/launch_background</item>
-        <!-- 保持状态栏样式 -->
         <item name="android:forceDarkAllowed">false</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowFullscreen">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:statusBarColor">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- 确保预览窗口可见且非透明 -->
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:windowIsTranslucent">false</item>
     </style>
-    <!-- Theme applied to the Android Window as soon as the process has started.
-         This theme determines the color of the Android Window while your
-         Flutter UI initializes, as well as behind your Flutter UI while its
-         running.
 
-         This Theme is only used starting with V2 of Flutter's Android embedding. -->
+    <!-- Flutter 首帧之后的主题：App 运行时窗口背景及系统栏配置 -->
     <style name="NormalTheme" parent="NormalThemeStyle">
         <item name="android:windowBackground">@android:color/white</item>
-        <!-- 确保华为设备状态栏始终显示 -->
         <item name="android:windowFullscreen">false</item>
     </style>
 </resources>
