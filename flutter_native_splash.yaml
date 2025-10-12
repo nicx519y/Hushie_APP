@@ -11,7 +11,7 @@ flutter_native_splash:
   # Android 12 需要单独配置
   android_12:
     color: "#ffffff"
-    image: assets/icons/applogo_adaptive.png
+    image: assets/images/splash_logo.png
     fullscreen: true
 
   
