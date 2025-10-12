@@ -11,7 +11,7 @@ class HighlightModel {
   factory HighlightModel.fromMap(Map<String, dynamic> map) {
     return HighlightModel(
       title: List<String>.from(map['title'] ?? []),
-      tags: List<String>.from(map['tags'] ?? []),
+      tags: List<String>.from(map['tags'] ?? []) + List<String>.from(map['tags_gender'] ?? []),
     );
   }
 

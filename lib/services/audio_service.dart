@@ -1,14 +1,15 @@
 import 'package:audio_service/audio_service.dart';
+import 'package:hushie_app/config/api_config.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/audio_item.dart';
 import 'package:flutter/foundation.dart';
 import 'exoplayer_config_service.dart';
 import 'network_healthy_manager.dart';
-import 'analytics_service.dart';
 import 'performance_service.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'dart:async';
+import '../config/api_config.dart';
 import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
 
 // 音频状态数据类
@@ -68,7 +69,7 @@ class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   // 配置：是否使用预埋音频（assets/audios/）
-  static const bool _useEmbeddedAudios = true;
+  static bool get _useEmbeddedAudios => ApiConfig.useEmbeddedData;
   static const String _embeddedAudiosDir = 'assets/audios';
 
   // 统一的音频状态流

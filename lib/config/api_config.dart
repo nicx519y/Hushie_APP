@@ -21,7 +21,11 @@ class ApiConfig {
   static const String clientPlatform = 'flutter';
 
   // 应用版本配置（可动态修改）
-  static String _appVersion = '1.0.0';
+  static String _appVersion = '1.0.2';
+
+  // 是否使用预埋数据（可动态修改并持久化）
+  static bool _useEmbeddedData = false;
+  static const String _useEmbeddedDataKey = 'use_embedded_data';
 
   /// 初始化应用版本（从存储中加载）
   static Future<void> _initializeAppVersion() async {
@@ -34,6 +38,34 @@ class ApiConfig {
     } catch (e) {
       debugPrint('初始化应用版本失败: $e');
       // 使用默认版本
+    }
+  }
+
+  /// 初始化是否使用预埋数据的开关（从存储中加载）
+  static Future<void> _initializeUseEmbeddedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getBool(_useEmbeddedDataKey);
+      if (stored != null) {
+        _useEmbeddedData = stored;
+      }
+    } catch (e) {
+      debugPrint('初始化预埋数据开关失败: $e');
+      // 使用默认开关值
+    }
+  }
+
+  /// 获取是否使用预埋数据
+  static bool get useEmbeddedData => _useEmbeddedData;
+
+  /// 设置是否使用预埋数据（并持久化）
+  static Future<void> setUseEmbeddedData(bool value) async {
+    _useEmbeddedData = value;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_useEmbeddedDataKey, value);
+    } catch (e) {
+      debugPrint('保存预埋数据开关失败: $e');
     }
   }
 
@@ -80,6 +112,7 @@ class ApiConfig {
   /// 初始化 API 配置
   static Future<void> initialize({bool? debugMode = false}) async {
     await _initializeAppVersion();
+    await _initializeUseEmbeddedData();
   }
 
   /// 获取完整的 API URL

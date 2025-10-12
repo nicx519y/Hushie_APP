@@ -127,10 +127,22 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
   /// 启动Google Play Billing购买流程
   Future<void> _initiateGooglePlayBillingPurchase() async {
+    // 基本防御：商品或选中计划不可用则直接提示并返回
+    if (_product == null) {
+      ToastHelper.showError(ToastMessages.productConfigError);
+      return;
+    }
+    if (_selectedPlan < 0 || _selectedPlan >= (_product!.basePlans.length)) {
+      ToastHelper.showError(ToastMessages.productConfigError);
+      return;
+    }
+
     // 设置购买状态为进行中，禁用订阅按钮
-    setState(() {
-      _isPurchasing = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isPurchasing = true;
+      });
+    }
 
     try {
 
@@ -147,9 +159,15 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
         return;
       }
 
-      // 获取产品信息
-      final basePlan = _product?.basePlans[_selectedPlan];
-      final basePlanId = basePlan?.googlePlayBasePlanId ?? '';
+      // 获取产品信息（加固空值与越界）
+      final basePlans = _product?.basePlans ?? const <BasePlan>[];
+      final BasePlan? basePlan =
+          (_selectedPlan >= 0 && _selectedPlan < basePlans.length)
+              ? basePlans[_selectedPlan]
+              : null;
+      final String basePlanId = basePlan?.googlePlayBasePlanId ?? '';
+
+      debugPrint('📦 [SUBSCRIBE_DIALOG] product=${_product?.googlePlayProductId}, selectedPlan=$_selectedPlan, basePlans=${basePlans.length}, basePlanId=$basePlanId');
 
       if (basePlanId.isEmpty) {
         ToastHelper.showError(ToastMessages.productConfigError);
@@ -308,9 +326,11 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
       ToastHelper.showError(errorMessage);
     } finally {
       // 恢复订阅按钮状态
-      setState(() {
-        _isPurchasing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+        });
+      }
     }
   }
 
@@ -414,7 +434,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
               // 价格选项
               Column(
-                children: _product!.basePlans
+                children: (_product?.basePlans ?? const <BasePlan>[])
                     .asMap()
                     .entries
                     .expand(
@@ -423,7 +443,7 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                           planIndex: entry.key,
                           basePlan: entry.value,
                         ),
-                        if (entry.key < _product!.basePlans.length - 1)
+                        if (entry.key < ((_product?.basePlans.length ?? 0) - 1))
                           const SizedBox(height: 18),
                       ],
                     )

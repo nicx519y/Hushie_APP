@@ -6,6 +6,7 @@ import '../models/audio_item.dart';
 import '../models/tab_item.dart';
 import 'api/home_tabs_service.dart';
 import 'home_page_list_service.dart';
+import '../config/api_config.dart';
 
 /// 首页Tab列表数据提供者
 /// 负责管理首页tabs和对应的音频列表数据，包括本地缓存策略
@@ -63,30 +64,39 @@ class HomeTabListDataProvider {
       // 1) 若本地缓存为空，先用第一个 for_you tab 和预埋数据渲染，再后台拉取服务器tabs并合并（仅填充空tab数据）
       // 2) 若本地缓存存在，直接返回缓存，再后台拉取服务器tabs并合并（仅填充空tab数据）
       if (_cachedTabs.isEmpty) {
-        debugPrint('🏠 [DATA_PROVIDER] 没有缓存数据，先使用 for_you 预埋数据渲染');
-        // 从列表服务获取预埋数据
-        var seedItems = _listService.getTabData('for_you');
-        if (seedItems.isEmpty) {
-          // 兜底确保预埋数据写入
-          await _listService.preloadTabData('for_you');
-          seedItems = _listService.getTabData('for_you');
+        if (ApiConfig.useEmbeddedData) {
+          debugPrint('🏠 [DATA_PROVIDER] 没有缓存数据，预埋数据开关开启，先使用 for_you 预埋数据渲染');
+          // 从列表服务获取预埋数据
+          var seedItems = _listService.getTabData('for_you');
+          if (seedItems.isEmpty) {
+            // 兜底确保预埋数据写入
+            await _listService.preloadTabData('for_you');
+            seedItems = _listService.getTabData('for_you');
+          }
+          // 设置一个仅包含 for_you 的临时tabs用于首屏渲染
+          _cachedTabs = [
+            const TabItemModel(id: 'for_you', label: 'For You', items: []),
+          ];
+          _cachedTabLists['for_you'] = seedItems;
+          debugPrint('🏠 [DATA_PROVIDER] 首屏渲染使用预埋数据: ${seedItems.length} 条');
+
+          // 先写入本地缓存，确保预埋数据被持久化
+          await _cacheTabsData(_cachedTabs);
+          await _cacheTabListData('for_you', seedItems);
+
+          // 通知UI：首屏tabs更新
+          _tabsStreamController.add(List.from(_cachedTabs));
+
+          // 后台拉取并合并服务器tabs
+          _updateTabsInBackground();
+        } else {
+          debugPrint('🏠 [DATA_PROVIDER] 没有缓存数据，预埋数据开关关闭，直接拉取服务器tabs');
+          await _fetchAndCacheInitialData();
+          // 通知UI：使用服务器返回的tabs
+          _tabsStreamController.add(List.from(_cachedTabs));
+          // 后台继续更新（维持合并策略）
+          _updateTabsInBackground();
         }
-        // 设置一个仅包含 for_you 的临时tabs用于首屏渲染
-        _cachedTabs = [
-          const TabItemModel(id: 'for_you', label: 'For You', items: []),
-        ];
-        _cachedTabLists['for_you'] = seedItems;
-        debugPrint('🏠 [DATA_PROVIDER] 首屏渲染使用预埋数据: ${seedItems.length} 条');
-
-        // 先写入本地缓存，确保预埋数据被持久化
-        await _cacheTabsData(_cachedTabs);
-        await _cacheTabListData('for_you', seedItems);
-
-        // 通知UI：首屏tabs更新
-        _tabsStreamController.add(List.from(_cachedTabs));
-
-        // 后台拉取并合并服务器tabs
-        _updateTabsInBackground();
       } else {
         debugPrint('🏠 [DATA_PROVIDER] 使用缓存数据，后台更新');
         // 通知UI：使用缓存的tabs

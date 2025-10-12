@@ -324,8 +324,9 @@ class _SearchPageState extends State<SearchPage> {
       _lastRenderedQuery = currentText;
       _debounceTimer?.cancel();
       _debounceTimer = Timer(Duration(milliseconds: _debounceDelay), () {
+        // 使用当前闭包捕获的非空文本，避免依赖状态变量的非空断言
         _currentSearchQuery = currentText;
-        _performSearch(_currentSearchQuery!);
+        _performSearch(currentText);
       });
     } else if (currentText.isEmpty) {
       _lastRenderedQuery = null;

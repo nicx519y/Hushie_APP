@@ -16,6 +16,7 @@ import 'api/audio_list_service.dart';
 import 'subscribe_privilege_manager.dart';
 import 'package:flutter/foundation.dart';
 import 'audio_likes_manager.dart';
+import '../config/api_config.dart';
 
 /// 预览区间即将超出事件
 class PreviewOutEvent {
@@ -387,6 +388,10 @@ class AudioManager {
     }
 
     // Fallback: 当当前播放状态缓存为空或解析失败时，使用默认音频列表的第一条
+    if (!ApiConfig.useEmbeddedData) {
+      debugPrint('[AudioManager]: 预埋数据开关关闭，跳过默认音频回退');
+      return;
+    }
     try {
       final jsonStr = await rootBundle.loadString('assets/configs/default_audio_list.json');
       final List<dynamic> data = json.decode(jsonStr) as List<dynamic>;
