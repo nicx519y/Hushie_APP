@@ -16,35 +16,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('🚀 [MAIN] Flutter绑定初始化完成');
 
-  // 初始化 Firebase
-  try {
-    await Firebase.initializeApp();
-    debugPrint('🔥 [FIREBASE] Firebase初始化完成');
-
-    // 初始化 Firebase Analytics
-    FirebaseAnalytics.instance;
-    debugPrint('📊 [ANALYTICS] Firebase Analytics初始化完成');
-    
-    // 初始化 Analytics 服务
-    AnalyticsService().initialize();
-    
-    // 初始化 Crashlytics 服务（尽早设置全局错误捕获）
-    await CrashlyticsService().initialize();
-
-    // 初始化 Firebase Performance（性能监控）
-    await PerformanceService().initialize();
-    
-    // 记录应用启动事件
-    await AnalyticsService().logAppOpen();
-  } catch (e) {
-    debugPrint('❌ [FIREBASE] Firebase初始化失败: $e');
-  }
-
-  // 初始化 just_audio_media_kit 并配置缓冲大小
-  JustAudioMediaKit.ensureInitialized();
-  // 设置缓冲大小为 128MB（默认32MB）
-  JustAudioMediaKit.bufferSize = 128 * 1024 * 1024;
-
   // 配置系统UI样式 - 针对华为EMUI优化
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -70,7 +41,7 @@ void main() async {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
-  // 华为设备特殊配置
+  // 华为设备特殊配置（非阻塞）
   _configureHuaweiStatusBar().then((_) {
     debugPrint('🚀 [MAIN] 华为设备状态栏特殊配置完成');
   }).catchError((e) {
@@ -82,17 +53,24 @@ void main() async {
   ]);
   debugPrint('🚀 [MAIN] 屏幕方向配置完成');
 
-  // 初始化 API 配置（同步操作，快速）
-  debugPrint('🚀 [MAIN] 开始初始化API配置');
-  ApiConfig.initialize(
-    debugMode: true, // 在开发环境启用调试模式
-  );
-  debugPrint('🚀 [MAIN] API配置初始化完成');
-
+  // 在 runApp 之前初始化 Firebase 和 Analytics，确保 observer 可用
+  try {
+    await Firebase.initializeApp();
+    debugPrint('🔥 [FIREBASE] Firebase初始化完成（启动前）');
+    AnalyticsService().initialize();
+    debugPrint('📊 [ANALYTICS] Analytics服务初始化完成（启动前）');
+  } catch (e) {
+    debugPrint('❌ [INIT] 启动前初始化失败: $e');
+  }
 
   // 立即启动应用，服务初始化在启动页中处理
   debugPrint('🚀 [MAIN] 开始运行应用');
   runApp(const MyApp());
+
+  // 将核心服务初始化移至首帧之后，避免阻塞首屏渲染
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _initializeCoreServices();
+  });
 }
 
 /// 为华为设备配置特殊的状态栏样式
@@ -113,10 +91,10 @@ Future<void> _configureHuaweiStatusBar() async {
       );
       
       // 强制显示系统UI
-      await SystemChrome.setEnabledSystemUIMode(
-        SystemUiMode.manual,
-        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-      );
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.manual,
+    overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+  );
       
       debugPrint('🔧 [DEVICE] 华为设备状态栏配置完成');
     } catch (e) {
@@ -167,6 +145,51 @@ class MyApp extends StatelessWidget {
       home: const AppRoot(),
       navigatorObservers: [AnalyticsService().observer],
       debugShowCheckedModeBanner: false,
-    );
+  );
   }
 }
+
+
+/// 首帧后初始化核心服务，减少冷启动耗时
+Future<void> _initializeCoreServices() async {
+  debugPrint('🚀 [INIT] 首帧后开始初始化核心服务');
+
+  try {
+    AnalyticsService().logAppOpen();
+  } catch (e) {
+    debugPrint('❌ [ANALYTICS] 记录 app_open 失败: $e');
+  }
+
+  // 初始化 just_audio_media_kit 并配置缓冲大小（非关键路径）
+  try {
+    JustAudioMediaKit.ensureInitialized();
+    JustAudioMediaKit.bufferSize = 128 * 1024 * 1024;
+    debugPrint('🎵 [AUDIO] MediaKit 初始化完成并设置缓冲');
+  } catch (e) {
+    debugPrint('🎵 [AUDIO] MediaKit 初始化失败: $e');
+  }
+
+  // 初始化 API 配置（非阻塞）
+  try {
+    debugPrint('🚀 [INIT] 开始初始化API配置');
+    await ApiConfig.initialize(debugMode: true);
+    debugPrint('🚀 [INIT] API配置初始化完成');
+  } catch (e) {
+    debugPrint('❌ [INIT] API配置初始化失败: $e');
+  }
+
+  // 初始化 Firebase 及相关服务（并发执行，避免串行等待）
+  try {
+    // 并发初始化非关键服务，并在完成后记录 app_open
+    await Future.wait(<Future<void>>[
+      CrashlyticsService().initialize(),
+      PerformanceService().initialize(),
+    ]);
+    debugPrint('🚀 [INIT] 首帧后核心服务初始化完成');
+  } catch (e) {
+    debugPrint('❌ [INIT] 首帧后核心服务初始化失败: $e');
+  }
+
+  
+}
+
