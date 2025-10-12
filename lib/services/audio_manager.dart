@@ -453,7 +453,7 @@ class AudioManager {
   }
 
   Future<void> signedOutInit() async {
-    AudioHistoryManager.instance.startListening(needRecord: false);
+    AudioHistoryManager.instance.startListening(needRecord: true);
     
     if(currentAudio != null) {
       return;

@@ -164,7 +164,7 @@ class AudioHistoryManager {
     }
 
     // 记录新音频开始播放（只在正在播放时记录）
-    if (audio != null && _isCurrentlyPlaying) {
+    if (audio != null) {
       if (needRecord) {
         _recordPlayStart(isFirst: true);
       }
