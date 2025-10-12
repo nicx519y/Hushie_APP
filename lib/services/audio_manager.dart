@@ -484,15 +484,6 @@ class AudioManager {
     final currentAudio = this.currentAudio;
     final bool auto = autoPlay ?? true;
 
-    // 记录音频播放事件
-    if(audio.id.isNotEmpty && auto == true) {
-      try {
-        TrackingService.track(actionType: 'audio_play', audioId: audio.id);
-      } catch (e) {
-        debugPrint('追踪播放事件失败: $e');
-      }
-    }
-
     if (currentAudio != null && currentAudio.id == audio.id) {
       debugPrint('相同音频正在播放，跳过: ${audio.title} (ID: ${audio.id})');
       if (!isPlaying && autoPlay == true) {

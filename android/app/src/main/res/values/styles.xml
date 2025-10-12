@@ -13,13 +13,13 @@
     </style>
     <!-- Theme applied to the Android Window while the process is starting -->
     <style name="LaunchTheme" parent="NormalThemeStyle">
-        <!-- 完全移除启动页背景 - 使用透明背景 -->
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
+        <!-- 使用 flutter_native_splash 生成的原生启动页背景 -->
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <!-- 保持状态栏样式 -->
         <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-        <!-- 华为设备启动页状态栏强制显示 -->
-        <item name="android:windowFullscreen">false</item>
     </style>
     <!-- Theme applied to the Android Window as soon as the process has started.
          This theme determines the color of the Android Window while your

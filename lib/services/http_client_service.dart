@@ -73,7 +73,7 @@ class HttpClientService {
           debugPrint('🔐 [HTTP] 检测到401未授权，尝试刷新Token后重发');
 
           // 记录401事件
-          await AnalyticsService().logCustomEvent(
+          AnalyticsService().logCustomEvent(
             eventName: 'StatusCode_401',
             parameters: {
               'uri': uri.toString(),

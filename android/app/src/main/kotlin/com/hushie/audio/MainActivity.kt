@@ -11,9 +11,13 @@ class MainActivity : AudioServiceActivity() {
     private val APP_OPERATIONS_CHANNEL = "com.hushie/app_operations"
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 立即设置主题为正常主题，跳过启动页
-        setTheme(androidx.appcompat.R.style.Theme_AppCompat_NoActionBar)
         super.onCreate(savedInstanceState)
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        // Flutter 首帧后切换到应用主题
+        setTheme(R.style.NormalTheme)
     }
 
     override fun onResume() {

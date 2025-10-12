@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 
 import 'config/api_config.dart';
 import 'pages/app_root.dart';
@@ -15,6 +16,23 @@ void main() async {
   debugPrint('🚀 [MAIN] 应用启动开始');
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('🚀 [MAIN] Flutter绑定初始化完成');
+
+  // 在 Android 上为非 Android 12 设备短暂延迟首帧，增强原生启动页的可见性
+  if (Platform.isAndroid) {
+    WidgetsBinding.instance.deferFirstFrame();
+    try {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final sdk = androidInfo.version.sdkInt ?? 0;
+      final hold = sdk < 31 ? const Duration(milliseconds: 450) : const Duration(milliseconds: 50);
+      Future.delayed(hold, () {
+        WidgetsBinding.instance.allowFirstFrame();
+      });
+    } catch (e) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        WidgetsBinding.instance.allowFirstFrame();
+      });
+    }
+  }
 
   // 配置系统UI样式 - 针对华为EMUI优化
   SystemChrome.setSystemUIOverlayStyle(
@@ -192,4 +210,6 @@ Future<void> _initializeCoreServices() async {
 
   
 }
+
+// 删除 Flutter 层整屏 Splash，直接进入 AppRoot，依赖原生启动页
 

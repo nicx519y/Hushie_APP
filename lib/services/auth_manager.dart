@@ -9,6 +9,9 @@ import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import 'analytics_service.dart';
 import 'crashlytics_service.dart';
+import 'api/tracking_service.dart';
+
+
 
 /// 认证状态枚举
 enum AuthStatus {
@@ -67,7 +70,7 @@ class AuthManager {
       }
 
       // 记录网络不健康事件
-      await AnalyticsService().logCustomEvent(
+      AnalyticsService().logCustomEvent(
         eventName: 'Network_Unhealthy',
         parameters: {
           'status': status.description,
@@ -80,7 +83,7 @@ class AuthManager {
       return false;
     } catch (e) {
       // 记录网络检测异常事件
-      await AnalyticsService().logCustomEvent(
+      AnalyticsService().logCustomEvent(
         eventName: 'Network_Check_Failed',
         parameters: {
           'action': action,
@@ -220,7 +223,7 @@ class AuthManager {
         debugPrint('Google登录失败: googleAuthResult.errNo: ${googleAuthResult.errNo}');
         
         // 记录Google登录失败事件
-        await AnalyticsService().logCustomEvent(
+        AnalyticsService().logCustomEvent(
           eventName: 'auth_google_login_failed',
           parameters: {
             'failure_reason': 'google_auth_failed',
@@ -244,7 +247,7 @@ class AuthManager {
         debugPrint('Google登录失败: tokenResult.errNo: ${tokenResult.errNo}');
         
         // 使用 Analytics 记录 Token 获取失败
-        await AnalyticsService().logAuthEvent(
+        AnalyticsService().logAuthEvent(
           event: 'login_failed',
           parameters: {
             'reason': 'token_exchange_failed',
@@ -257,6 +260,12 @@ class AuthManager {
         _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return ApiResponse.error(errNo: tokenResult.errNo);
       }
+
+      // 记录Google登录成功事件
+      TrackingService.track(actionType: 'login', extraData : {
+        'user_name': googleAuth.email,
+        'login_method': 'google',
+      });
 
       final accessToken = tokenResult.data!;
 
@@ -285,7 +294,7 @@ class AuthManager {
       debugPrint('Google登录流程失败: $e');
       
       // 使用 Analytics 记录登录流程异常
-      await AnalyticsService().logAuthEvent(
+      AnalyticsService().logAuthEvent(
         event: 'login_failed',
         parameters: {
           'reason': 'login_process_exception',
@@ -309,7 +318,13 @@ class AuthManager {
     try {
       // 记录用户登出事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await AnalyticsService().logAuthEvent(
+
+      TrackingService.track(actionType: 'logout', extraData : {
+        'user_name': userName,
+        'logout_reason': 'user_initiated',
+      });
+
+      AnalyticsService().logAuthEvent(
         event: 'logout',
         parameters: {
           'user_name': userName,
@@ -348,7 +363,7 @@ class AuthManager {
       
       // 记录登出失败但强制登出的事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await AnalyticsService().logAuthEvent(
+      AnalyticsService().logAuthEvent(
         event: 'logout',
         parameters: {
           'user_name': userName,
@@ -385,7 +400,13 @@ class AuthManager {
     try {
       // 记录用户删除账户事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await AnalyticsService().logAuthEvent(
+
+      TrackingService.track(actionType: 'logout', extraData : {
+        'user_name': userName,
+        'logout_reason': 'account_deleted',
+      });
+
+      AnalyticsService().logAuthEvent(
         event: 'account_deleted',
         parameters: {
           'user_name': userName,
@@ -423,7 +444,7 @@ class AuthManager {
       
       // 记录删除账户失败但强制清除数据的事件
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await AnalyticsService().logAuthEvent(
+      AnalyticsService().logAuthEvent(
         event: 'account_deleted',
         parameters: {
           'user_name': userName,
@@ -506,7 +527,7 @@ class AuthManager {
       
       // 记录因异常导致的登录态丢失
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      await AnalyticsService().logAuthEvent(
+      AnalyticsService().logAuthEvent(
         event: 'login_lost',
         parameters: {
           'user_name': userName,
@@ -648,7 +669,13 @@ class AuthManager {
           
           // 记录因RefreshToken无效导致的登录态丢失
           final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-          await AnalyticsService().logAuthEvent(
+
+          TrackingService.track(actionType: 'logout', extraData : {
+            'user_name': userName,
+            'logout_reason': 'refresh_token_invalid',
+          });
+
+          AnalyticsService().logAuthEvent(
             event: 'login_lost',
             parameters: {
               'user_name': userName,

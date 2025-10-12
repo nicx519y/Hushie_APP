@@ -17,11 +17,8 @@ class AppRoot extends StatefulWidget {
   State<AppRoot> createState() => _AppRootState();
 }
 
-class _AppRootState extends State<AppRoot> with TickerProviderStateMixin, WidgetsBindingObserver {
-  bool _isInitialized = false;
+class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
   bool servicesInitialized = false;
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
   // 冷启动与前台恢复打点控制
   bool _startupAppOpenSent = false;
   bool _shouldSendOnResume = false;
@@ -36,27 +33,13 @@ class _AppRootState extends State<AppRoot> with TickerProviderStateMixin, Widget
     TrackingService.track(actionType: 'app_open');
     _startupAppOpenSent = true;
     _shouldSendOnResume = false; // 直到进入后台后才在下次恢复时再次发送
-    
-    // 初始化动画控制器
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    ));
-    
-    _initializeApp();
+
+    // 异步初始化服务，不阻塞UI渲染
+    _initializeServices();
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
     // 释放生命周期观察者
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -75,28 +58,6 @@ class _AppRootState extends State<AppRoot> with TickerProviderStateMixin, Widget
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // 进入后台或非活动态，允许下次恢复时打点
       _shouldSendOnResume = true;
-    }
-  }
-
-  Future<void> _initializeApp() async {
-    debugPrint('🔄 [APP_ROOT] 开始初始化应用');
-
-    // 异步初始化服务，不阻塞UI渲染
-    debugPrint('🔄 [APP_ROOT] 开始异步初始化服务');
-    _initializeServices();
-
-    // 显示启动页2秒，让用户看到启动画面
-    debugPrint('🔄 [APP_ROOT] 等待2秒显示启动画面');
-    await Future.delayed(const Duration(seconds: 2));
-    debugPrint('🔄 [APP_ROOT] 启动画面显示完成，开始淡出动画');
-
-    // 开始淡出动画
-    if (mounted) {
-      await _fadeController.forward();
-      setState(() {
-        _isInitialized = true;
-      });
-      debugPrint('🔄 [APP_ROOT] Splash浮层已隐藏');
     }
   }
 
@@ -131,64 +92,13 @@ class _AppRootState extends State<AppRoot> with TickerProviderStateMixin, Widget
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 主应用（提前渲染）
-          const MainApp(),
-          
-          // Splash 浮层
-          if (!_isInitialized)
-            AnimatedBuilder(
-              animation: _fadeAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: const SplashOverlay(),
-                );
-              },
-            ),
-        ],
-      ),
+    return const Scaffold(
+      body: MainApp(),
     );
   }
 }
 
-/// Splash 浮层内容组件
-class SplashOverlay extends StatelessWidget {
-  const SplashOverlay({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.white, // 白色背景
-      child: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/luster_bg.png'),
-            colorFilter: ColorFilter.mode(Colors.transparent, BlendMode.color),
-            fit: BoxFit.fill,
-            alignment: Alignment.topCenter,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 启动页图片
-            Image.asset(
-              'assets/images/splash.png',
-              width: MediaQuery.of(context).size.width * 0.5, // 图片宽度为屏幕宽度的50%
-              fit: BoxFit.contain, // 保持图片比例
-            ),
-            const SizedBox(height: 40),
-          ],
-        ),
-       ),
-     );
-   }
- }
+// 删除 Flutter 层浮层，改用原生启动页
 
 // 独立的MainApp组件，从main.dart中提取
 class MainApp extends StatelessWidget {
