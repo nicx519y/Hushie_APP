@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
 import '../models/audio_item.dart';
@@ -32,6 +33,8 @@ class HomePageListService {
   final Map<String, List<AudioItem>> _tabDataCache = {};
   // 标记哪些tab使用了预埋默认数据（首次渲染用，不参与服务端分页cid）
   final Set<String> _defaultSeededTabs = {};
+  // 记录各 tab 的预加载进行中任务，避免重复触发
+  final Map<String, Future<void>> _preloadingTabs = {};
 
   // 是否已初始化
   bool _isInitialized = false;
@@ -256,21 +259,46 @@ class HomePageListService {
   }
 
   /// 预加载指定tab的数据（如果缓存为空）
+  /// 增加状态限制：当该 tab 的预加载已在进行中，等待其完成后返回，不重复发起
   Future<void> preloadTabData(String tabId) async {
     _ensureInitialized();
-    // 若本地是空且为默认tab，确保预埋数据已加载
-    if ((_tabDataCache[tabId] == null || _tabDataCache[tabId]!.isEmpty) && tabId == _defaultTabId) {
-      try {
-        final seedItems = await _loadDefaultSeedItems();
-        _tabDataCache[_defaultTabId] = seedItems;
-        _defaultSeededTabs.add(_defaultTabId);
-        debugPrint('预加载默认Tab($tabId)：写入预埋数据 ${seedItems.length} 条');
-      } catch (e) {
-        debugPrint('预加载默认Tab预埋数据失败: $e');
-      }
+
+    // 若已有进行中的预加载任务，直接等待其完成
+    final existingTask = _preloadingTabs[tabId];
+    if (existingTask != null) {
+      debugPrint('Tab $tabId 预加载进行中，等待现有任务完成');
+      await existingTask;
+      return;
     }
-    // 之后拉取服务器数据
-    await fetchNextPageData(tabId);
+
+    // 创建并注册新任务，确保并发调用只执行一次真正的预加载逻辑
+    final completer = Completer<void>();
+    _preloadingTabs[tabId] = completer.future;
+    try {
+      // 若本地是空且为默认tab，确保预埋数据已加载
+      if ((_tabDataCache[tabId] == null || _tabDataCache[tabId]!.isEmpty) && tabId == _defaultTabId) {
+        try {
+          final seedItems = await _loadDefaultSeedItems();
+          _tabDataCache[_defaultTabId] = seedItems;
+          _defaultSeededTabs.add(_defaultTabId);
+          debugPrint('预加载默认Tab($tabId)：写入预埋数据 ${seedItems.length} 条');
+        } catch (e) {
+          debugPrint('预加载默认Tab预埋数据失败: $e');
+        }
+      }
+      // 之后拉取服务器数据
+      await fetchNextPageData(tabId);
+      completer.complete();
+    } catch (e, st) {
+      // 将错误传播给所有等待者
+      if (!completer.isCompleted) {
+        completer.completeError(e, st);
+      }
+      rethrow;
+    } finally {
+      // 清理进行中标记
+      _preloadingTabs.remove(tabId);
+    }
   }
 
   /// 获取所有tab的缓存状态信息

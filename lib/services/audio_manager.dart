@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:hushie_app/services/api/tracking_service.dart';
 import 'package:hushie_app/services/auth_manager.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:audio_service/audio_service.dart';
@@ -17,6 +16,7 @@ import 'subscribe_privilege_manager.dart';
 import 'package:flutter/foundation.dart';
 import 'audio_likes_manager.dart';
 import '../config/api_config.dart';
+import 'home_page_list_service.dart';
 
 /// 预览区间即将超出事件
 class PreviewOutEvent {
@@ -608,6 +608,31 @@ class AudioManager {
     try {
       final playlist = AudioPlaylist.instance;
       final currentAudio = playlist.getCurrentAudio();
+
+      // 从首页for you获取列表第一个音频作为补充
+      try {
+        final listService = HomePageListService();
+        await listService.initialize();
+        List<AudioItem> items = listService.getTabData('for_you');
+        if (items.isEmpty) {
+          try {
+            await listService.preloadTabData('for_you');
+
+            if (items.isNotEmpty) {
+              playlist.addAudio(items.first);
+              debugPrint('成功补充播放列表(for_you): 写入首音频');
+              return;
+            }
+
+          } catch (_) {}
+          items = listService.getTabData('for_you');
+        }
+        
+      } catch (e) {
+        debugPrint('从首页for_you获取数据失败，回退到API: $e');
+      }
+      
+
 
       // 从API获取更多音频数据
       final response = await AudioListService.getAudioList(

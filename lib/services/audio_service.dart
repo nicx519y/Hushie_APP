@@ -9,7 +9,6 @@ import 'network_healthy_manager.dart';
 import 'performance_service.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'dart:async';
-import '../config/api_config.dart';
 import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
 
 // 音频状态数据类
@@ -107,6 +106,8 @@ class AudioPlayerService extends BaseAudioHandler {
   }
 
   void _init() {
+    // 初始化音量为最大
+    _audioPlayer.setVolume(1.0);
     // 配置 Android ExoPlayer 缓冲参数
     _configureExoPlayerBuffer();
 
