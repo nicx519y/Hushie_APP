@@ -157,6 +157,17 @@ class MyApp extends StatelessWidget {
           splashRadius: 30, // 点击波纹效果半径
         ),
       ),
+      // 全局包裹系统栏样式，确保不同页面不会覆盖导致图标变白
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const AppRoot(),
       navigatorObservers: [AnalyticsService().observer],
       debugShowCheckedModeBanner: false,
