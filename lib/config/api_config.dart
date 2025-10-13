@@ -21,7 +21,7 @@ class ApiConfig {
   static const String clientPlatform = 'flutter';
 
   // 应用版本配置（可动态修改）
-  static String _appVersion = '1.0.3';
+  static String _appVersion = '1.0.4';
 
   // 是否使用预埋数据（可动态修改并持久化）
   static bool _useEmbeddedData = false;
