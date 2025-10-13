@@ -72,9 +72,8 @@ class AudioPlayerService extends BaseAudioHandler {
   static const String _embeddedAudiosDir = 'assets/audios';
 
   // 统一的音频状态流
-  final BehaviorSubject<AudioPlayerState> _audioStateSubject = BehaviorSubject<AudioPlayerState>.seeded(
-    AudioPlayerState(),
-  );
+  final BehaviorSubject<AudioPlayerState> _audioStateSubject =
+      BehaviorSubject<AudioPlayerState>.seeded(AudioPlayerState());
 
   // 公开的统一状态流
   Stream<AudioPlayerState> get audioStateStream => _audioStateSubject.stream;
@@ -86,6 +85,23 @@ class AudioPlayerService extends BaseAudioHandler {
   bool _loadReported = false;
   Trace? _loadTrace;
 
+  // 串行化与并发保护
+  Future<void> _opSerial = Future.value();
+  Future<T> _enqueueOp<T>(Future<T> Function() op) {
+    final completer = Completer<T>();
+    _opSerial = _opSerial.then((_) async {
+      try {
+        final result = await op();
+        completer.complete(result);
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<void>? _currentLoadTask;
+  String? _loadingAudioId;
 
   // 当前状态的getter
   AudioPlayerState get currentState => _audioStateSubject.value;
@@ -96,7 +112,6 @@ class AudioPlayerService extends BaseAudioHandler {
   double get speed => _audioStateSubject.value.speed;
   PlayerState get playerState => _audioStateSubject.value.playerState;
   Duration get bufferedPosition => _audioStateSubject.value.bufferedPosition;
-
 
   AudioPlayerService() {
     debugPrint('AudioPlayerService constructor called');
@@ -113,7 +128,7 @@ class AudioPlayerService extends BaseAudioHandler {
 
     // 根据网络健康状态驱动缓冲策略选择
     _setupDynamicBufferStrategy();
-    
+
     // 监听播放状态变化
     _audioPlayer.playingStream.listen((playing) {
       _updateAudioState(isPlaying: playing);
@@ -187,84 +202,122 @@ class AudioPlayerService extends BaseAudioHandler {
   }
 
   Future<void> loadAudio(AudioItem audio, {Duration? initialPosition}) async {
-    try {
-      // 先完全停止并重置播放器状态
-      if(currentAudio != audio) {
-        updatePreloadAudio(audio);
+    // 并发保护：相同音频的重复加载直接复用；不同音频等待当前加载完成
+    if (_currentLoadTask != null) {
+      if (_loadingAudioId == audio.id) {
+        debugPrint('并发加载相同音频，复用当前加载任务: ${audio.title}');
+        await _currentLoadTask;
+        return;
+      } else {
+        debugPrint('已有加载任务进行中，等待其完成后再加载新音频');
+        await _currentLoadTask;
       }
+    }
 
-      await _stopAndReset();
-      _updateAudioState(currentAudio: audio);
-
-      // 验证音频URL
-      final audioUrl = audio.audioUrl;
-
-      if (audioUrl == null || audioUrl.isEmpty) {
-        throw Exception('音频URL为空');
-      }
-
-      debugPrint('loadAudio url: $audioUrl${initialPosition != null ? '，初始位置: ${initialPosition.inSeconds}秒' : ''}');
-
-      // 安全地获取封面URL
-      String? coverUrlString;
+    _loadingAudioId = audio.id;
+    _currentLoadTask = _enqueueOp<void>(() async {
       try {
-        final bestResolution = audio.cover.getBestResolution(160);
-        final url = bestResolution.url;
-        
-        // 验证URL有效性，避免设置无效的artUri
-        if (url.isNotEmpty && 
-            url.startsWith('http') && 
-            !url.contains('/default.jpg') && 
-            !url.contains('placeholder')) {
-          coverUrlString = url;
-          debugPrint('loadAudio cover url: $coverUrlString');
-        } else {
-          debugPrint('loadAudio 封面URL无效或为默认图片: $url，跳过artUri设置');
+        // 先完全停止并重置播放器状态
+        if (currentAudio != audio) {
+          updatePreloadAudio(audio);
+        }
+
+        await _stopAndReset();
+        _updateAudioState(currentAudio: audio);
+
+        // 验证音频URL
+        final audioUrl = audio.audioUrl;
+
+        if (audioUrl == null || audioUrl.isEmpty) {
+          throw Exception('音频URL为空');
+        }
+
+        debugPrint(
+          'loadAudio url: $audioUrl${initialPosition != null ? '，初始位置: ${initialPosition.inSeconds}秒' : ''}',
+        );
+
+        // 安全地获取封面URL
+        String? coverUrlString;
+        try {
+          final bestResolution = audio.cover.getBestResolution(160);
+          final url = bestResolution.url;
+
+          // 验证URL有效性，避免设置无效的artUri
+          if (url.isNotEmpty &&
+              url.startsWith('http') &&
+              !url.contains('/default.jpg') &&
+              !url.contains('placeholder')) {
+            coverUrlString = url;
+            debugPrint('loadAudio cover url: $coverUrlString');
+          } else {
+            debugPrint('loadAudio 封面URL无效或为默认图片: $url，跳过artUri设置');
+            coverUrlString = null;
+          }
+        } catch (e) {
+          debugPrint('获取封面URL失败: $e，使用默认封面');
           coverUrlString = null;
         }
+
+        // 设置MediaItem用于通知栏显示
+        final mediaItemData = MediaItem(
+          id: audio.id,
+          album: "Hushie",
+          title: audio.title,
+          artist: audio.author,
+          duration: audio.duration ?? Duration.zero,
+          artUri: coverUrlString != null ? Uri.parse(coverUrlString) : null,
+          extras: audio.toMap(),
+        );
+
+        mediaItem.add(mediaItemData);
+
+        // 选择音频来源：预埋资产优先（同名文件），否则使用网络URL
+        final audioSource = await _resolveAudioSource(audioUrl);
+        // 记录加载开始时间（用于统计从加载到可播放的耗时）
+        _loadStartMs = DateTime.now().millisecondsSinceEpoch;
+        _loadAudioId = audio.id;
+        _lastLoadInitialPositionMs = initialPosition?.inMilliseconds;
+        _loadReported = false;
+        // 启动性能 Trace 记录从加载到 ready 的耗时
+        _loadTrace = await PerformanceService().startTrace(
+          'audio_load_to_ready',
+        );
+        _loadTrace?.putAttribute('audio_id', audio.id);
+        _loadTrace?.putAttribute('audio_title', audio.title);
+        if (_lastLoadInitialPositionMs != null) {
+          _loadTrace?.putAttribute(
+            'initial_position_ms',
+            '${_lastLoadInitialPositionMs!}',
+          );
+        }
+        if (initialPosition != null) {
+          await _setAudioSourceWithRetry(
+            audioSource,
+            initialPosition: initialPosition,
+          );
+          debugPrint('音频加载完成，初始位置: ${initialPosition.inSeconds}秒');
+        } else {
+          await _setAudioSourceWithRetry(audioSource);
+          debugPrint('音频加载完成');
+        }
       } catch (e) {
-        debugPrint('获取封面URL失败: $e，使用默认封面');
-        coverUrlString = null;
+        debugPrint('装载音频时出错: $e');
+        // 附加网络与设备信息，便于诊断连接中止问题
+        try {
+          final netInfo = await NetworkHealthyManager.instance
+              .getDetailedNetworkInfo();
+          debugPrint('📶 [AUDIO][ERROR] 网络详情: ${netInfo.toString()}');
+        } catch (logErr) {
+          debugPrint('记录网络/设备详情失败: $logErr');
+        }
+        rethrow; // 重新抛出异常，让调用者处理
+      } finally {
+        _loadingAudioId = null;
+        _currentLoadTask = null;
       }
+    });
 
-      // 设置MediaItem用于通知栏显示
-      final mediaItemData = MediaItem(
-        id: audio.id,
-        album: "Hushie",
-        title: audio.title,
-        artist: audio.author,
-        duration: audio.duration ?? Duration.zero,
-        artUri: coverUrlString != null ? Uri.parse(coverUrlString) : null,
-        extras: audio.toMap(),
-      );
-
-      mediaItem.add(mediaItemData);
-
-      // 选择音频来源：预埋资产优先（同名文件），否则使用网络URL
-      final audioSource = await _resolveAudioSource(audioUrl);
-      // 记录加载开始时间（用于统计从加载到可播放的耗时）
-      _loadStartMs = DateTime.now().millisecondsSinceEpoch;
-      _loadAudioId = audio.id;
-      _lastLoadInitialPositionMs = initialPosition?.inMilliseconds;
-      _loadReported = false;
-      // 启动性能 Trace 记录从加载到 ready 的耗时
-      _loadTrace = await PerformanceService().startTrace('audio_load_to_ready');
-      _loadTrace?.putAttribute('audio_id', audio.id);
-      _loadTrace?.putAttribute('audio_title', audio.title);
-      if (_lastLoadInitialPositionMs != null) {
-        _loadTrace?.putAttribute('initial_position_ms', '${_lastLoadInitialPositionMs!}');
-      }
-      if (initialPosition != null) {
-        await _audioPlayer.setAudioSource(audioSource, initialPosition: initialPosition);
-        debugPrint('音频加载完成，初始位置: ${initialPosition.inSeconds}秒');
-      } else {
-        await _audioPlayer.setAudioSource(audioSource);
-        debugPrint('音频加载完成');
-      }
-    } catch (e) {
-      debugPrint('装载音频时出错: $e');
-      rethrow; // 重新抛出异常，让调用者处理
-    }
+    await _currentLoadTask;
   }
 
   // 解析并选择音频源：若启用预埋音频，则尝试匹配 assets/audios/ 同名文件
@@ -329,9 +382,11 @@ class AudioPlayerService extends BaseAudioHandler {
       } else {
         debugPrint('相同音频，跳过重新加载: ${audio.title} (ID: ${audio.id})');
       }
-      
+
       await _audioPlayer.play();
-      debugPrint('音频播放开始成功${initialPosition != null ? '，从${initialPosition.inSeconds}秒开始' : ''}');
+      debugPrint(
+        '音频播放开始成功${initialPosition != null ? '，从${initialPosition.inSeconds}秒开始' : ''}',
+      );
     } catch (e) {
       debugPrint('播放音频时出错: $e');
       await stop();
@@ -366,7 +421,7 @@ class AudioPlayerService extends BaseAudioHandler {
       }
       // 添加小延迟确保资源完全释放
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       // 使用统一的状态更新方法重置所有状态
       _updateAudioState(
         currentAudio: null,
@@ -384,37 +439,55 @@ class AudioPlayerService extends BaseAudioHandler {
   // 播放/暂停切换
   @override
   Future<void> play() async {
-    await _audioPlayer.play();
+    try {
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('播放时出错: $e');
+    }
   }
 
   @override
   Future<void> pause() async {
-    await _audioPlayer.pause();
+    try {
+      await _audioPlayer.pause();
+    } catch (e) {
+      debugPrint('暂停播放时出错: $e');
+    }
   }
 
   @override
   Future<void> stop() async {
-    try {
-      await _audioPlayer.stop();
-    } catch (e) {
-      debugPrint('停止播放时出错: $e');
-    } finally {
-      _updateAudioState(currentAudio: null);
-      mediaItem.add(null);
-    }
+    await _enqueueOp<void>(() async {
+      try {
+        await _audioPlayer.stop();
+      } catch (e) {
+        debugPrint('停止播放时出错: $e');
+      } finally {
+        _updateAudioState(currentAudio: null);
+        mediaItem.add(null);
+      }
+    });
   }
 
   // 跳转到指定位置
   @override
   Future<void> seek(Duration position) async {
-    await _audioPlayer.seek(position);
+    try {
+      await _audioPlayer.seek(position);
+    } catch (e) {
+      debugPrint('跳转播放位置时出错: $e');
+    }
   }
 
   // 设置播放速度
   @override
   Future<void> setSpeed(double speed) async {
-    await _audioPlayer.setSpeed(speed);
-    _updateAudioState(speed: speed);
+    try {
+      await _audioPlayer.setSpeed(speed);
+      _updateAudioState(speed: speed);
+    } catch (e) {
+      debugPrint('设置播放速度时出错: $e');
+    }
   }
 
   // 广播播放状态
@@ -463,6 +536,65 @@ class AudioPlayerService extends BaseAudioHandler {
         return AudioProcessingState.ready;
       case ProcessingState.completed:
         return AudioProcessingState.completed;
+    }
+  }
+
+  // -------- 加载重试增强逻辑（统一策略） --------
+
+  bool _isTransientAbort(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('connection aborted') ||
+        msg.contains('aborted') ||
+        msg.contains('network') ||
+        msg.contains('timeout');
+  }
+
+  Future<void> _setAudioSourceWithRetry(
+    AudioSource source, {
+    Duration? initialPosition,
+  }) async {
+    // 统一的重试策略，缓解偶发的连接中止
+    final attempts = 4;
+    final delays = [
+      const Duration(milliseconds: 500),
+      const Duration(seconds: 1),
+      const Duration(seconds: 2),
+      const Duration(seconds: 4),
+    ];
+
+    for (int i = 0; i < attempts; i++) {
+      try {
+        if (initialPosition != null) {
+          await _audioPlayer.setAudioSource(
+            source,
+            initialPosition: initialPosition,
+          );
+        } else {
+          await _audioPlayer.setAudioSource(source);
+        }
+        return; // 成功
+      } catch (e) {
+        final isLast = i == attempts - 1;
+        final attemptNo = i + 1;
+        debugPrint(
+          '🎧 [AUDIO] setAudioSource 失败(第$attemptNo/${attempts}次): $e',
+        );
+
+        // 捕获详细网络状态，帮助定位设备特有问题
+        try {
+          final netInfo = await NetworkHealthyManager.instance
+              .getDetailedNetworkInfo();
+          debugPrint('📶 [AUDIO] 当前网络详情: ${netInfo.toString()}');
+        } catch (_) {}
+
+        if (!_isTransientAbort(e) || isLast) {
+          rethrow; // 非瞬时错误或已达最大重试次数，抛出
+        }
+
+        // 退避等待后重试
+        final delay = delays[i];
+        await Future.delayed(delay);
+      }
     }
   }
 
@@ -520,9 +652,12 @@ class AudioPlayerService extends BaseAudioHandler {
     });
 
     // 订阅网络状态变化，适时调整缓冲策略
-    _networkStatusSubscription = NetworkHealthyManager.instance.networkStatusStream.listen((status) {
-      _applyBufferStrategyForStatus(status);
-    });
+    _networkStatusSubscription = NetworkHealthyManager
+        .instance
+        .networkStatusStream
+        .listen((status) {
+          _applyBufferStrategyForStatus(status);
+        });
   }
 
   Future<void> _applyBufferStrategyForStatus(NetworkHealthStatus status) async {
