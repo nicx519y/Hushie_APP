@@ -65,6 +65,13 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // 确保原生库采用传统打包方式，避免在部分设备/拆分安装场景下找不到 libflutter.so
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 flutter {

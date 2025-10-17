@@ -397,7 +397,7 @@ def get_app_config(app_id):
             'status': 'active',
             'supported_versions': ['v1'],
             'supported_platforms': ['flutter', 'ios', 'android'],
-            'secret_key': 'your_app_secret_key_here',
+            'secret_key': 'your_secret_key_here ',
             'rate_limit': 1000,  # 每分钟请求限制
             'features': ['audio_streaming', 'user_auth']
         }

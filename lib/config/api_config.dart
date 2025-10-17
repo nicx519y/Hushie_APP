@@ -3,8 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
   // API 基础配置
-  static const String baseUrl = 'https://api.hushie.ai/api/v1';
-  static const String healthCheckUrl = 'https://api.hushie.ai/health';
+  // static const String baseHost = 'https://testenv.hushie.ai'; //test env
+  static const String baseHost = 'https://api.hushie.ai';
+  static const String baseUrl = '$baseHost/api/v1';
+  static const String healthCheckUrl = '$baseHost/health';
+
+
   static const Duration defaultTimeout = Duration(seconds: 10);
 
   // 分页配置
@@ -74,7 +78,7 @@ class ApiConfig {
   // 2. 安全配置文件（不包含在版本控制中）
   // 3. 远程配置服务
   // 4. 设备证书存储
-  static const String _appSecret = 'your_app_secret_key_here';
+  static const String _appSecret = 'a_perfect_life_starts_with_a_triumph';
 
   // 签名算法配置
   static const String signatureAlgorithm = 'HMAC-SHA256';

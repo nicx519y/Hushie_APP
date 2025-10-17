@@ -1,6 +1,9 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:hushie_app/config/api_config.dart';
 
 /// 应用动态签名验证服务
 /// 实现基于HMAC-SHA256的动态签名生成和验证
@@ -8,7 +11,8 @@ class AppSignatureService {
   static const MethodChannel _channel = MethodChannel('app_signature_verification');
   
   // 与服务器约定的密钥（实际项目中应该从安全存储获取）
-  static const String _secretKey = 'your_secret_key_here';
+  // 改为动态获取，避免静态字段缓存问题
+  static String get _secretKey => ApiConfig.getAppSecret();
   
   // 缓存签名哈希，避免重复获取
   static String? _cachedSignatureHash;
@@ -48,32 +52,34 @@ class AppSignatureService {
       // 2. 生成随机数
       final nonce = _generateNonce();
       
-      // 3. 生成动态签名
-      final dynamic signatureResult = await _channel.invokeMethod('generateDynamicSignature', {
-        'timestamp': timestamp,
-        'nonce': nonce,
-        'secretKey': _secretKey,
-      });
-      
-      if (signatureResult == null) {
-        debugPrint('🔐 [SIGNATURE] 动态签名生成失败');
+      // 3. 获取应用签名哈希（原生计算，Dart缓存）
+      final signatureHash = await getSignatureHash();
+      if (signatureHash == null || signatureHash.isEmpty) {
+        debugPrint('🔐 [SIGNATURE] 获取签名哈希失败，无法生成动态签名');
         return null;
       }
-      
-      final Map<String, dynamic> resultMap = Map<String, dynamic>.from(signatureResult as Map);
+
+      // 4. 构造原始文本并在 Dart 侧计算 HMAC-SHA256
+      final origin = '$signatureHash|$timestamp|$nonce|$_secretKey';
+      final hmac = Hmac(sha256, utf8.encode(_secretKey));
+      final digest = hmac.convert(utf8.encode(origin));
+      final dynamicSignature = base64.encode(digest.bytes).trim();
+
       final result = {
-        'signature': resultMap['signature']?.toString() ?? '',
-        'timestamp': resultMap['timestamp']?.toString() ?? timestamp.toString(),
-        'nonce': resultMap['nonce']?.toString() ?? nonce,
+        'signature': dynamicSignature,
+        'timestamp': timestamp.toString(),
+        'nonce': nonce,
+        'origin': origin,
       };
-      
-      debugPrint('🔐 [SIGNATURE] 动态签名生成成功: ${result['signature']?.substring(0, 10)}...');
+
+      debugPrint('🔐 [SIGNATURE] 动态签名生成成功: ${dynamicSignature.substring(0, 10)}...');
       return result;
     } catch (e) {
       debugPrint('🔐 [SIGNATURE] 生成动态签名失败: $e');
       return null;
     }
   }
+
   
   /// 生成随机数
   /// @return 16位随机字符串

@@ -3,6 +3,8 @@ package com.hushie.audio
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -80,6 +82,48 @@ class SignatureVerificationPlugin : FlutterPlugin, MethodCallHandler {
                     result.success(resultMap)
                 } catch (e: Exception) {
                     result.error("INTEGRITY_ERROR", "获取完整性信息失败: ${e.message}", e.toString())
+                }
+            }
+            
+            // 检查 Google Play 服务可用性（用于在登录前进行设备兼容性预检）
+            "isGooglePlayServicesAvailable" -> {
+                try {
+                    val api = GoogleApiAvailability.getInstance()
+                    val status = api.isGooglePlayServicesAvailable(context)
+                    val isAvailable = status == ConnectionResult.SUCCESS
+                    Log.d("SignaturePlugin", "GMS availability status=$status, available=$isAvailable")
+                    result.success(isAvailable)
+                } catch (e: Exception) {
+                    Log.e("SignaturePlugin", "检查Google Play服务可用性失败: ${e.message}", e)
+                    result.success(false)
+                }
+            }
+            
+            // 返回更详细的 Google Play 服务状态信息
+            "getGooglePlayServicesStatus" -> {
+                try {
+                    val api = GoogleApiAvailability.getInstance()
+                    val status = api.isGooglePlayServicesAvailable(context)
+                    val isAvailable = status == ConnectionResult.SUCCESS
+                    val isUserResolvable = api.isUserResolvableError(status)
+                    var gmsVersionName: String? = null
+                    try {
+                        val pm = context.packageManager
+                        val pi = pm.getPackageInfo("com.google.android.gms", 0)
+                        gmsVersionName = pi.versionName
+                    } catch (e: Exception) {
+                        // 忽略获取版本失败
+                    }
+                    val map = mapOf(
+                        "status" to status,
+                        "isAvailable" to isAvailable,
+                        "isUserResolvable" to isUserResolvable,
+                        "gmsVersionName" to gmsVersionName
+                    )
+                    result.success(map)
+                } catch (e: Exception) {
+                    Log.e("SignaturePlugin", "获取GMS状态失败: ${e.message}", e)
+                    result.error("GMS_STATUS_ERROR", "获取Google Play服务状态失败: ${e.message}", e.toString())
                 }
             }
             

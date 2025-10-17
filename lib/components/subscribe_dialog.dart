@@ -15,6 +15,7 @@ import '../router/navigation_utils.dart';
 import '../utils/webview_navigator.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../services/analytics_service.dart';
+import '../services/api/tracking_service.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -34,7 +35,18 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
   @override
   void initState() {
     super.initState();
+    _sendOpenTracking();
     _loadProductData();
+  }
+
+  /// 订阅弹窗打开时上报一次打点
+  void _sendOpenTracking() {
+    try {
+      TrackingService.track(actionType: 'subscribe_dialog_open');
+      debugPrint('📍 [TRACKING] subscribe_dialog_open');
+    } catch (e) {
+      debugPrint('📍 [TRACKING] subscribe_dialog_open error: $e');
+    }
   }
 
   /// 从 SubscribePrivilegeManager 获取商品数据

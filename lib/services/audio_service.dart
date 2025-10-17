@@ -8,6 +8,7 @@ import 'exoplayer_config_service.dart';
 import 'network_healthy_manager.dart';
 import 'performance_service.dart';
 import 'package:firebase_performance/firebase_performance.dart';
+import 'api/tracking_service.dart';
 import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
 
@@ -404,7 +405,23 @@ class AudioPlayerService extends BaseAudioHandler {
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final elapsedMs = nowMs - _loadStartMs!;
       _loadTrace?.setMetric('elapsed_ms', elapsedMs);
-      await PerformanceService().stopTrace(_loadTrace);
+      PerformanceService().stopTrace(_loadTrace);
+      // 通过 TrackingService 发送打点（记录加载到可播放的耗时）
+      try {
+        TrackingService.track(
+          actionType: 'audio_load_to_ready',
+          audioId: audio.id,
+          extraData: {
+            'elapsed_ms': elapsedMs,
+            if (_lastLoadInitialPositionMs != null)
+              'initial_position_ms': _lastLoadInitialPositionMs,
+            'audio_title': audio.title,
+          },
+        );
+        debugPrint('📊 [TRACKING] audio_load_to_ready sent (elapsed=${elapsedMs}ms)');
+      } catch (e) {
+        debugPrint('📊 [TRACKING] 发送 audio_load_to_ready 失败: $e');
+      }
       _loadTrace = null;
       _loadReported = true;
       debugPrint('⚡ [PERF] 音频加载到可播放耗时: ${elapsedMs}ms (${audio.title})');

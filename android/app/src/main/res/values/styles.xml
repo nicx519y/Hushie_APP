@@ -4,10 +4,13 @@
     <style name="NormalThemeStyle" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@android:color/white</item>
+        <!-- 使用透明状态栏以支持沉浸式、内容延伸到系统栏 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:windowLightNavigationBar">true</item>
+        <!-- 允许内容延伸到刘海区域 -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <!-- 华为设备兼容项 -->
         <item name="android:fitsSystemWindows">false</item>
         <item name="android:windowTranslucentStatus">false</item>
@@ -21,7 +24,7 @@
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-        <item name="android:statusBarColor">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <!-- 确保预览窗口可见且非透明 -->
         <item name="android:windowDisablePreview">false</item>
@@ -32,5 +35,7 @@
     <style name="NormalTheme" parent="NormalThemeStyle">
         <item name="android:windowBackground">@android:color/white</item>
         <item name="android:windowFullscreen">false</item>
+        <!-- 运行时也允许内容延伸到刘海区域 -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

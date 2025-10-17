@@ -14,6 +14,7 @@
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"
         android:allowBackup="true"
+        android:extractNativeLibs="true"
         android:fullBackupContent="@xml/backup_rules">
         <activity
             android:name=".MainActivity"
@@ -24,6 +25,7 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait"
             android:networkSecurityConfig="@xml/network_security_config"
             >
             <!-- Specifies an Android theme to apply to this Activity as soon as

@@ -6,6 +6,7 @@ import '../http_client_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
+import '../google_services_availability.dart';
 
 /// Google认证服务
 class GoogleAuthService {
@@ -48,6 +49,26 @@ class GoogleAuthService {
   /// 真实接口 - Google账号登录
   static Future<ApiResponse<GoogleAuthResponse>> _getRealGoogleSignIn() async {
     try {
+      // Android 平台：在尝试登录前进行 GMS 预检，避免 SignInHubActivity 崩溃
+      if (Platform.isAndroid) {
+        final bool gmsAvailable = await GoogleServicesAvailability.isGmsAvailable();
+        if (!gmsAvailable) {
+          debugPrint('🔧 [GOOGLE_AUTH] Google Play 服务不可用，拦截登录以避免崩溃');
+          return ApiResponse.error(errNo: 3);
+        }
+
+        // 额外风险规避：OnePlus + Android 11+ 设备上已知存在兼容问题
+        try {
+          final androidInfo = await DeviceInfoPlugin().androidInfo;
+          final bool isOnePlus = (androidInfo.manufacturer.toLowerCase().contains('oneplus'));
+          final bool isAndroid11Plus = androidInfo.version.sdkInt >= 30;
+          if (isOnePlus && isAndroid11Plus) {
+            debugPrint('🔧 [GOOGLE_AUTH] 检测到 OnePlus Android11+ 组合，拦截登录');
+            return ApiResponse.error(errNo: 3);
+          }
+        } catch (_) {}
+      }
+
       // 检查是否已经登录
       if (await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();

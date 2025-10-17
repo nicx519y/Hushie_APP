@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -44,10 +45,19 @@ void main() async {
     debugPrint('🚀 [MAIN] 华为设备状态栏配置失败: $e');
   });
 
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
-  debugPrint('🚀 [MAIN] 屏幕方向配置完成');
+  try {
+    // Android 上通过 Manifest 固定方向，避免在非全屏/分屏模式下抛出异常
+    if (!Platform.isAndroid) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+      debugPrint('🚀 [MAIN] 屏幕方向配置完成 (非Android)');
+    } else {
+      debugPrint('🚀 [MAIN] Android 使用 Manifest 固定方向，跳过运行时设置');
+    }
+  } catch (e) {
+    debugPrint('⚠️ [MAIN] 设置屏幕方向失败，已忽略: $e');
+  }
 
   // 在 runApp 之前初始化 Firebase 和 Analytics，确保 observer 可用
   try {
@@ -69,17 +79,14 @@ void main() async {
     try {
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
-          statusBarColor: Colors.white,
+          statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.white,
           systemNavigationBarIconBrightness: Brightness.dark,
         ),
       );
-      SystemChrome.setEnabledSystemUIMode(
-        SystemUiMode.manual,
-        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-      );
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     } catch (e) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
@@ -97,7 +104,7 @@ Future<void> _configureHuaweiStatusBar() async {
       // 华为设备专用状态栏配置
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
-          statusBarColor: Colors.white,
+          statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.white,
@@ -106,10 +113,7 @@ Future<void> _configureHuaweiStatusBar() async {
       );
       
       // 强制显示系统UI
-  await SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.manual,
-    overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-  );
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       
       debugPrint('🔧 [DEVICE] 华为设备状态栏配置完成');
     } catch (e) {
@@ -160,7 +164,7 @@ class MyApp extends StatelessWidget {
       // 全局包裹系统栏样式，确保不同页面不会覆盖导致图标变白
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.white,
+          statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.white,

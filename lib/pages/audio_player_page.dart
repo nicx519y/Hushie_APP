@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hushie_app/components/subscribe_dialog.dart';
 import 'package:hushie_app/services/audio_likes_manager.dart';
 import 'package:hushie_app/services/auth_manager.dart';
@@ -440,10 +441,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SwipeToCloseContainer(
-      onClose: _closePage,
-      showDragIndicator: false,
-      child: Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: SwipeToCloseContainer(
+        onClose: _closePage,
+        showDragIndicator: false,
+        child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
@@ -451,6 +460,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             _buildStatusBar(),
             _buildControlBar(),
           ],
+        ),
         ),
       ),
     );

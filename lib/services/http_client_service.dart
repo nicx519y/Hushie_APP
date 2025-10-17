@@ -386,6 +386,7 @@ class HttpClientService {
           'signature': dynamicSignature['signature'] ?? '',
           'timestamp': dynamicSignature['timestamp'] ?? '',
           'nonce': dynamicSignature['nonce'] ?? '',
+          'origin': dynamicSignature['origin'] ?? '',
           'signatureHash': signatureHash,
           'integrityInfo': integrityInfo,
         };
@@ -606,25 +607,29 @@ class HttpClientService {
 
     // debugPrint("Authorization 成功 ${headers['Authorization']}");
     
-    // 添加动态签名验证信息
+    // 添加动态签名验证信息（每次请求重新生成，无缓存）
     try {
-      // 使用新的缓存和并发控制的动态签名生成函数
-      final Map<String, dynamic>? completeSignature = await _generateDynamicSignatureWithCache();
+      final appSignatureService = AppSignatureService();
+      final Map<String, String>? dynamicSignature = await appSignatureService.generateDynamicSignature();
       
-      if (completeSignature != null) {
+      if (dynamicSignature != null) {
         // 添加动态签名相关请求头
-        headers['X-Dynamic-Signature'] = completeSignature['signature'] ?? '';
-        headers['X-Timestamp'] = completeSignature['timestamp'] ?? '';
-        headers['X-Nonce'] = completeSignature['nonce'] ?? '';
+        headers['X-Dynamic-Signature'] = dynamicSignature['signature'] ?? '';
+        headers['X-Timestamp'] = dynamicSignature['timestamp'] ?? '';
+        headers['X-Nonce'] = dynamicSignature['nonce'] ?? '';
         
-        // 添加应用签名哈希
-        if (completeSignature['signatureHash'] != null) {
-          headers['X-App-Signature-Hash'] = completeSignature['signatureHash'];
+        // 添加应用签名哈希（哈希可缓存，动态签名不缓存）
+        final signatureHash = await appSignatureService.getSignatureHash();
+        if (signatureHash != null && signatureHash.isNotEmpty) {
+          headers['X-App-Signature-Hash'] = signatureHash;
         }
+
+        // 添加原始未加密动态签名文本（仅用于调试/排查）
+        // headers['X-Dynamic-Signature-Origin'] = dynamicSignature['origin'] ?? '';
         
-        // 添加完整性验证信息
-        final integrityInfo = completeSignature['integrityInfo'];
-        if (integrityInfo != null) {
+        // 添加完整性验证信息（可缓存，但这里简单获取一次）
+        final integrityInfo = await appSignatureService.getIntegrityInfo();
+        if (integrityInfo.isNotEmpty) {
           headers['X-App-Integrity'] = json.encode({
             'signature_valid': integrityInfo['isSignatureValid'],
             'trusted_source': integrityInfo['isFromTrustedSource'],
@@ -632,7 +637,7 @@ class HttpClientService {
           });
         }
         
-        debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名添加成功');
+        debugPrint('🔐 [DYNAMIC_SIGNATURE] 动态签名添加成功（本次请求）');
       } else {
         debugPrint('⚠️ [DYNAMIC_SIGNATURE] 动态签名生成失败，使用备用签名');
         

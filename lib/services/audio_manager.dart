@@ -159,13 +159,19 @@ class AudioManager {
 
     // 开启播放历史记录监听（通过AudioManager的状态流）
     try {
-      if(await AuthManager.instance.isSignedIn()) {
-        signedInit();
+      final signedIn = await AuthManager.instance.isSignedIn();
+      if (signedIn) {
+        await signedInit();
       } else {
-        signedOutInit();
+        await signedOutInit();
       }
     } catch (e) {
-      signedOutInit();
+      debugPrint('AudioManager: 初始化播放流程异常，尝试未登录恢复: $e');
+      try {
+        await signedOutInit();
+      } catch (err) {
+        debugPrint('AudioManager: 未登录恢复也失败: $err');
+      }
     }
 
     // 不在这里强制初始化AudioService，而是标记为可以初始化
@@ -438,7 +444,11 @@ class AudioManager {
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
     if (lastHistory.isNotEmpty) {
       debugPrint('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
-      await playAudio(lastHistory.first, autoPlay: false);
+      try {
+        await playAudio(lastHistory.first, autoPlay: false);
+      } catch (e) {
+        debugPrint('AudioManager: 从历史播放恢复失败: $e');
+      }
     } else {
       debugPrint('AudioManager: 没有播放历史记录');
       await _supplementPlaylist();
@@ -446,7 +456,11 @@ class AudioManager {
       if(playlist.playlistSize > 0) {
         final firstAudio = playlist.getFirstAudio();
         if(firstAudio != null) {
-          await playAudio(firstAudio, autoPlay: false);
+          try {
+            await playAudio(firstAudio, autoPlay: false);
+          } catch (e) {
+            debugPrint('AudioManager: 从播放列表恢复失败: $e');
+          }
         }
       }
     }
@@ -467,7 +481,11 @@ class AudioManager {
       if(playlist.playlistSize > 0) {
         final firstAudio = playlist.getFirstAudio();
         if(firstAudio != null) {
-          await playAudio(firstAudio, autoPlay: false);
+          try {
+            await playAudio(firstAudio, autoPlay: false);
+          } catch (e) {
+            debugPrint('AudioManager: 未登录初始化播放失败: $e');
+          }
         }
       }
     }

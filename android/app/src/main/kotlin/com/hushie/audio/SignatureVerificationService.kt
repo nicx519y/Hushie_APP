@@ -70,15 +70,20 @@ class SignatureVerificationService(private val context: Context) {
             
             // 构建签名原文：签名哈希 + 时间戳 + 随机数 + 密钥
             val rawData = "${signatureHash}|${timestamp}|${nonce}|${secretKey}"
-            Log.d(TAG, "签名原文: $rawData")
+            // var rawData = "DD52C498A56641BC1F0956D9E1968DFACB65222C2727E79C91B2FE0B2855198E|1760604041337|70BOFZMOwzlp7aOA|your_secret_key_here";
+            // var rawData = "DD52C498A56641BC1F0956D9E1968DFACB65222C2727E79C91B2FE0B2855198E|1760600510715|3jQLykOjurVawknR|your_secret_key_here";
+            // Log.d(TAG, "签名原文: $rawData")
             
             // 计算HMAC-SHA256
             val hmacSha256 = Mac.getInstance("HmacSHA256")
+            // val secretKeySpec = SecretKeySpec(secretKey.toByteArray(Charsets.UTF_8), "HmacSHA256")
             val secretKeySpec = SecretKeySpec(secretKey.toByteArray(), "HmacSHA256")
             hmacSha256.init(secretKeySpec)
             
             val signatureBytes = hmacSha256.doFinal(rawData.toByteArray())
-            val dynamicSignature = Base64.encodeToString(signatureBytes, Base64.NO_WRAP)
+            // 使用标准Base64编码（带填充），与服务端保持一致
+            // val dynamicSignature = Base64.encodeToString(signatureBytes, Base64.DEFAULT).trim()
+            val dynamicSignature = Base64.encodeToString(signatureBytes, Base64.NO_WRAP);
             
             Log.d(TAG, "生成动态签名: $dynamicSignature")
             
@@ -86,7 +91,9 @@ class SignatureVerificationService(private val context: Context) {
             mapOf(
                 "signature" to dynamicSignature,
                 "timestamp" to timestamp,
-                "nonce" to nonce
+                "nonce" to nonce,
+                // 原始签名文本（未加密），用于与服务器侧进行一致性校验
+                "origin" to rawData
             )
             
         } catch (e: Exception) {

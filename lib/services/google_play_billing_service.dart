@@ -170,6 +170,22 @@ class GooglePlayBillingService {
           message: 'Can not find product or base plan',
         );
       }
+
+      // 预检：验证 Base Plan 在 Google Play 中确实存在且包含可用的优惠
+      final isConfigValid = await validateBasePlanConfiguration(basePlanId);
+      if (!isConfigValid) {
+        BillingErrorHandler().logDeviceSpecificError(
+          'Invalid base plan configuration',
+          {
+            'base_plan_id': basePlanId,
+            'google_play_product_id': targetProduct.googlePlayProductId,
+          },
+        );
+        return PurchaseResultData(
+          result: PurchaseResult.error,
+          message: 'Invalid base plan configuration',
+        );
+      }
       
       // 查询Google Play产品详情
       final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails({targetProduct.googlePlayProductId});
@@ -228,8 +244,23 @@ class GooglePlayBillingService {
                 message: 'Has no available offer',
               );
             }
-            
+
             // 使用找到的优惠Token创建购买参数
+            // 额外防御：确保 offerIdToken 非空
+            if (targetOffer.offerIdToken.isEmpty) {
+              BillingErrorHandler().logDeviceSpecificError(
+                'Empty offer token for subscription',
+                {
+                  'base_plan_id': basePlanId,
+                  'offer_id': targetOffer.offerId,
+                },
+              );
+              return PurchaseResultData(
+                result: PurchaseResult.error,
+                message: 'Invalid offer token',
+              );
+            }
+
             purchaseParam = GooglePlayPurchaseParam(
               productDetails: productDetails,
               offerToken: targetOffer.offerIdToken,
@@ -270,6 +301,21 @@ class GooglePlayBillingService {
       debugPrint('  - 产品ID: $productId');
       debugPrint('  - 基础计划ID: $basePlanId');
       debugPrint('  - 优惠Token: ${(purchaseParam as GooglePlayPurchaseParam?)?.offerToken ?? 'N/A'}');
+
+      // 设备特定防御：拦截在高风险设备上的购买流程，避免 PendingIntent NPE 崩溃
+      if (BillingErrorHandler().isHighRiskConfiguration) {
+        BillingErrorHandler().logDeviceSpecificError(
+          'Blocked purchase on high-risk device configuration',
+          {
+            'product_id': productId,
+            'base_plan_id': basePlanId,
+          },
+        );
+        return PurchaseResultData(
+          result: PurchaseResult.error,
+          message: 'Purchase unavailable on this device configuration',
+        );
+      }
       
       final success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
       
