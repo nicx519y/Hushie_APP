@@ -3,11 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
   // API 基础配置
-  // static const String baseHost = 'https://testenv.hushie.ai'; //test env
+  static const String testHost = 'https://testenv.hushie.ai'; //test env
   static const String baseHost = 'https://api.hushie.ai';
-  static const String baseUrl = '$baseHost/api/v1';
-  static const String healthCheckUrl = '$baseHost/health';
+  // 动态当前域名（默认生产环境）
+  static String _currentHost = baseHost;
+  static const String _envKey = 'api_env_is_test';
+  static bool _useTestEnv = false;
 
+  static String get baseUrl => '$_currentHost/api/v1';
+  static String get healthCheckUrl => '$_currentHost/health';
 
   static const Duration defaultTimeout = Duration(seconds: 10);
 
@@ -56,6 +60,21 @@ class ApiConfig {
     } catch (e) {
       debugPrint('初始化预埋数据开关失败: $e');
       // 使用默认开关值
+    }
+  }
+
+  /// 初始化环境（从存储中加载当前域名环境）
+  static Future<void> _initializeEnvironment() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isTest = prefs.getBool(_envKey) ?? false;
+      _useTestEnv = isTest;
+      _currentHost = _useTestEnv ? testHost : baseHost;
+      debugPrint('🌐 [ApiConfig] 当前环境: ${_useTestEnv ? '测试' : '生产'} -> host=$_currentHost');
+    } catch (e) {
+      debugPrint('初始化环境失败: $e');
+      _useTestEnv = false;
+      _currentHost = baseHost;
     }
   }
 
@@ -117,6 +136,7 @@ class ApiConfig {
   static Future<void> initialize({bool? debugMode = false}) async {
     await _initializeAppVersion();
     await _initializeUseEmbeddedData();
+    await _initializeEnvironment();
   }
 
   /// 获取完整的 API URL
@@ -140,7 +160,24 @@ class ApiConfig {
     };
   }
 
-  /// 获取当前应用版本
+  /// 当前环境信息
+  static bool get isTestEnv => _useTestEnv;
+  static String get currentHost => _currentHost;
+
+  /// 切换环境（并持久化）
+  static Future<void> setEnvironment({required bool useTestEnv}) async {
+    _useTestEnv = useTestEnv;
+    _currentHost = useTestEnv ? testHost : baseHost;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_envKey, useTestEnv);
+      debugPrint('🌐 [ApiConfig] 已切换到${useTestEnv ? '测试' : '生产'}环境 -> host=$_currentHost');
+    } catch (e) {
+      debugPrint('保存环境设置失败: $e');
+    }
+  }
+
+  /// 获取应用版本
   static String getAppVersion() {
     return _appVersion;
   }

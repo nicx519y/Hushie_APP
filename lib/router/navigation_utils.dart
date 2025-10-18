@@ -6,6 +6,7 @@ import '../pages/account_page.dart';
 import '../pages/about_us_page.dart';
 import '../pages/search_page.dart';
 import '../pages/app_version_setting_page.dart';
+import '../pages/environment_setting_page.dart';
 import '../models/audio_item.dart';
 
 class NavigationUtils {
@@ -47,7 +48,7 @@ class NavigationUtils {
       _isLoginPageOpen = false;
     }
   }
-  
+
   /// 检查登录页面是否已经打开
   static bool get isLoginPageOpen => _isLoginPageOpen;
   
@@ -56,7 +57,7 @@ class NavigationUtils {
     _isLoginPageOpen = false;
     debugPrint('🔐 [LOGIN] 手动重置登录页面状态');
   }
-  
+
   /// 导航到音频播放器页面
   /// 使用上滑动画效果
   /// [initialAudio] 可选的初始音频，如果提供则会自动播放该音频
@@ -71,7 +72,7 @@ class NavigationUtils {
       return null;
     }
   }
-  
+
   /// 导航到设置页面
   static Future<void> navigateToSettings(BuildContext context) async {
     try {
@@ -87,7 +88,7 @@ class NavigationUtils {
       debugPrint('⚙️ [SETTINGS] 导航到设置页面时发生错误: $e');
     }
   }
-  
+
   /// 导航到账户页面
   static Future<void> navigateToAccount(BuildContext context) async {
     try {
@@ -103,7 +104,7 @@ class NavigationUtils {
       debugPrint('👤 [ACCOUNT] 导航到账户页面时发生错误: $e');
     }
   }
-  
+
   /// 导航到关于我们页面
   static Future<void> navigateToAboutUs(BuildContext context) async {
     try {
@@ -152,6 +153,22 @@ class NavigationUtils {
     }
   }
 
+  /// 导航到环境设置页面
+  static Future<void> navigateToEnvironmentSetting(BuildContext context) async {
+    try {
+      debugPrint('🌐 [ENV] 打开环境设置页面');
+      await Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) => const EnvironmentSettingPage(),
+          settings: const RouteSettings(name: '/environment_setting'),
+        ),
+      );
+      debugPrint('🌐 [ENV] 环境设置页面已关闭');
+    } catch (e) {
+      debugPrint('🌐 [ENV] 导航到环境设置页面时发生错误: $e');
+    }
+  }
+
   /// 导航到主应用页面（用于启动页跳转）
   /// 使用pushReplacement替换当前页面
   static Future<void> navigateToMainApp(BuildContext context, Widget mainApp) async {
@@ -170,5 +187,4 @@ class NavigationUtils {
       debugPrint('🏠 [MAIN_APP] 导航到主应用页面时发生错误: $e');
     }
   }
-
 }

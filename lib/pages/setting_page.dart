@@ -16,11 +16,20 @@ class SettingPage extends StatefulWidget {
 class _SettingPageState extends State<SettingPage> {
   bool _isLoggedIn = false;
   bool _isLogoutting = false;
+  int _settingTitleTapCount = 0;
 
   @override
   void initState() {
     super.initState();
     _checkLoginStatus();
+  }
+
+  void _onSettingTitleTap() {
+    _settingTitleTapCount++;
+    if (_settingTitleTapCount >= 10) {
+      _settingTitleTapCount = 0;
+      NavigationUtils.navigateToEnvironmentSetting(context);
+    }
   }
 
   Future<void> _checkLoginStatus() async {
@@ -80,12 +89,16 @@ class _SettingPageState extends State<SettingPage> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Setting',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
+        title: GestureDetector(
+          onTap: _onSettingTitleTap,
+          behavior: HitTestBehavior.opaque,
+          child: const Text(
+            'Setting',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         centerTitle: true,
