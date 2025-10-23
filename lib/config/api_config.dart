@@ -260,4 +260,8 @@ class ApiEndpoints {
 
   // 追踪打点接口
   static const String tracking = '/tracking';
+
+  // 新手引导接口
+  static const String onboardingGuideData = '/onboarding/guide-data';
+  static const String onboardingSetPreferences = '/onboarding/set-preferences';
 }

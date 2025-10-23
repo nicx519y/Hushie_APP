@@ -7,6 +7,7 @@ import '../pages/about_us_page.dart';
 import '../pages/search_page.dart';
 import '../pages/app_version_setting_page.dart';
 import '../pages/environment_setting_page.dart';
+import '../pages/onboarding_page.dart';
 import '../models/audio_item.dart';
 
 class NavigationUtils {
@@ -166,6 +167,22 @@ class NavigationUtils {
       debugPrint('🌐 [ENV] 环境设置页面已关闭');
     } catch (e) {
       debugPrint('🌐 [ENV] 导航到环境设置页面时发生错误: $e');
+    }
+  }
+
+  /// 导航到新手引导页面
+  static Future<void> navigateToOnboarding(BuildContext context) async {
+    try {
+      debugPrint('🎯 [ONBOARDING] 打开新手引导页面');
+      await Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) => const OnboardingPage(),
+          settings: const RouteSettings(name: '/onboarding'),
+        ),
+      );
+      debugPrint('🎯 [ONBOARDING] 新手引导页面已关闭');
+    } catch (e) {
+      debugPrint('🎯 [ONBOARDING] 导航到新手引导页面时发生错误: $e');
     }
   }
 

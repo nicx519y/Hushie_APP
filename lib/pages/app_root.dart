@@ -3,10 +3,12 @@ import 'dart:async';
 import '../layouts/main_layout.dart';
 import '../pages/home_page.dart';
 import '../pages/profile_page.dart';
+import '../pages/onboarding_page.dart';
 import '../services/audio_manager.dart';
 import '../services/subscribe_privilege_manager.dart';
 import '../services/auth_manager.dart';
 import '../services/network_healthy_manager.dart';
+import '../services/onboarding_manager.dart';
 import '../services/api/tracking_service.dart';
 
 /// 应用根组件 - 包含 MainApp 和 Splash 浮层
@@ -19,6 +21,8 @@ class AppRoot extends StatefulWidget {
 
 class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
   bool servicesInitialized = false;
+  bool onboardingChecked = false;
+  bool showOnboarding = false;
   // 冷启动与前台恢复打点控制
   bool _startupAppOpenSent = false;
   bool _shouldSendOnResume = false;
@@ -34,8 +38,8 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
     _startupAppOpenSent = true;
     _shouldSendOnResume = false; // 直到进入后台后才在下次恢复时再次发送
 
-    // 异步初始化服务，不阻塞UI渲染
-    _initializeServices();
+    // 异步初始化服务和检查新手引导状态
+    _initializeApp();
   }
 
   @override
@@ -58,6 +62,36 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // 进入后台或非活动态，允许下次恢复时打点
       _shouldSendOnResume = true;
+    }
+  }
+
+  /// 初始化应用：检查新手引导状态并初始化服务
+  Future<void> _initializeApp() async {
+    try {
+      // 首先检查新手引导状态
+      final isOnboardingCompleted = await OnboardingManager().isOnboardingCompleted();
+      
+      setState(() {
+        showOnboarding = !isOnboardingCompleted;
+        onboardingChecked = true;
+      });
+
+      // 如果需要显示新手引导，暂停服务初始化
+      if (showOnboarding) {
+        debugPrint('🎯 [APP_ROOT] 需要显示新手引导，暂停服务初始化');
+        return;
+      }
+
+      // 如果不需要新手引导，继续初始化服务
+      await _initializeServices();
+    } catch (e) {
+      debugPrint('🎯 [APP_ROOT] 初始化应用失败: $e');
+      // 出错时默认不显示新手引导，继续正常流程
+      setState(() {
+        showOnboarding = false;
+        onboardingChecked = true;
+      });
+      await _initializeServices();
     }
   }
 
@@ -92,6 +126,23 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // 如果还没检查新手引导状态，显示加载页面
+    if (!onboardingChecked) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // 如果需要显示新手引导
+    if (showOnboarding) {
+      return const Scaffold(
+        body: OnboardingPage(),
+      );
+    }
+
+    // 正常显示主应用
     return const Scaffold(
       body: MainApp(),
     );
