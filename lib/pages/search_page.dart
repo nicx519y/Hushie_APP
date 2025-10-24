@@ -8,7 +8,7 @@ import '../services/api/audio_search_service.dart';
 import '../services/audio_manager.dart';
 import '../router/navigation_utils.dart';
 import '../components/subscribe_dialog.dart';
-import '../services/subscribe_privilege_manager.dart';
+// import '../services/subscribe_privilege_manager.dart';
 import '../services/analytics_service.dart';
 
 class SearchPage extends StatefulWidget {
@@ -29,7 +29,7 @@ class _SearchPageState extends State<SearchPage> {
   List<AudioItem> _searchResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
-  bool _canTapSearchItem = false;
+  final bool _canTapSearchItem = true; // 是否可以点击搜索项，默认可以
 
   // 新增的分页相关状态
   bool _isLoadingMore = false;
@@ -46,19 +46,20 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
 
-    SubscribePrivilegeManager.instance.hasValidPremium().then((value) {
-      setState(() {
-        _canTapSearchItem = value;
-      });
-    });
+    // 根据是否订阅了Premium来决定是否可以点击搜索项 （此功能在 1.0.5删除）
+    // SubscribePrivilegeManager.instance.hasValidPremium().then((value) {
+    //   setState(() {
+    //     _canTapSearchItem = value;
+    //   });
+    // });
 
-    // 监听订阅状态变化
-    _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges
-        .listen((event) {
-          setState(() {
-            _canTapSearchItem = event.hasPremium;
-          });
-        });
+    // // 监听订阅状态变化
+    // _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges
+    //     .listen((event) {
+    //       setState(() {
+    //         _canTapSearchItem = event.hasPremium;
+    //       });
+    //     });
 
     _searchFocusNode = FocusNode();
 
