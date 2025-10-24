@@ -106,7 +106,7 @@ class AudioItem {
   factory AudioItem.fromMap(Map<String, dynamic> map) {
     return AudioItem(
       id: map['id'].toString(), // id
-      isFree: map['is_free'] ?? true, // 是否免费
+      isFree: map['is_free'] ?? false, // 是否免费
       cover: _parseImageModel(map['cover']) ?? _getDefaultImageModel(),
       title: map['title'] ?? '',
       desc: map['desc'] ?? '',
