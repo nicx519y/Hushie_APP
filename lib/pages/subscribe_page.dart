@@ -9,7 +9,8 @@ import '../pages/app_root.dart';
 /// 订阅页面
 /// 展示订阅选项，用户可以选择订阅计划
 class SubscribePage extends StatefulWidget {
-  const SubscribePage({super.key});
+  final String? bannerPreference; // 'M' | 'F' | 'F&M'
+  const SubscribePage({super.key, this.bannerPreference});
 
   @override
   State<SubscribePage> createState() => _SubscribePageState();
@@ -93,9 +94,52 @@ class _SubscribePageState extends State<SubscribePage> {
     );
   }
 
+  Widget _buildUnlockFullAccessTitle() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          padding: EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Color(0xFF502D19),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Image.asset(
+            'assets/images/crown_mini.png', //皇冠
+            fit: BoxFit.contain,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Unlock Full Access',
+          style: TextStyle(
+            fontSize: 20,
+            height: 1,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF502D19),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _bannerAssetByPreference(String? pref) {
+    switch (pref) {
+      case 'M':
+        return 'assets/images/banner_M.jpg';
+      case 'F&M':
+        return 'assets/images/banner_F&M.jpg';
+      case 'F':
+      default:
+        return 'assets/images/banner_F.jpg';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    AssetImage bannerImage = AssetImage('assets/images/banner_F.jpg');
+    final AssetImage bannerImage = AssetImage(_bannerAssetByPreference(widget.bannerPreference));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -152,34 +196,5 @@ class _SubscribePageState extends State<SubscribePage> {
     );
   }
 
-  Widget _buildUnlockFullAccessTitle() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          padding: EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Color(0xFF502D19),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Image.asset(
-            'assets/images/crown_mini.png', //皇冠
-            fit: BoxFit.contain,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'Unlock Full Access',
-          style: TextStyle(
-            fontSize: 20,
-            height: 1,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF502D19),
-          ),
-        ),
-      ],
-    );
-  }
+  
 }

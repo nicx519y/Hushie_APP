@@ -83,26 +83,28 @@ class _OnboardingPageState extends State<OnboardingPage> {
       // 标记新手引导为已完成
       await OnboardingManager().markOnboardingCompleted();
 
-      ToastHelper.showSuccess('偏好设置成功');
+      // ToastHelper.showSuccess('偏好设置成功');
 
       // 跳转到订阅页面
+      String pref = _computeBannerPreference();
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const SubscribePage(),
+            builder: (context) => SubscribePage(bannerPreference: pref),
             settings: const RouteSettings(name: '/subscribe'),
           ),
         );
       }
     } catch (e) {
       debugPrint('提交偏好失败: $e');
-      ToastHelper.showError('设置失败，请重试');
+      // ToastHelper.showError('设置失败，请重试');
       
       // 即使失败也跳转到订阅页面
+      String pref = _computeBannerPreference();
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const SubscribePage(),
+            builder: (context) => SubscribePage(bannerPreference: pref),
             settings: const RouteSettings(name: '/subscribe'),
           ),
         );
@@ -417,6 +419,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
+  /// 计算订阅页横幅偏好：
+  /// - 选择了 M4F 或 M4M => 偏好 M
+  /// - 选择了 F4M 或 F4F => 偏好 F
+  /// - 两者都包含 => 偏好 F&M
+  /// - 都未选 => 默认 F
+  String _computeBannerPreference() {
+    final hasM = _selectedGenders.contains('M4F') || _selectedGenders.contains('M4M');
+    final hasF = _selectedGenders.contains('F4F') || _selectedGenders.contains('F4M');
+
+    if (hasM && hasF) return 'F&M';
+    if (hasM) return 'M';
+    if (hasF) return 'F';
+    return 'F';
+  }
+
   /// 构建选项列表（根据当前步骤选择对应的渲染函数）
   Widget _buildOptionsList() {
     switch (_currentStep) {
@@ -442,10 +459,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
             onPressed: () async {
               // 跳过时也标记为已完成并跳转到订阅页面
               await OnboardingManager().markOnboardingCompleted();
+              String pref = _computeBannerPreference();
               if (mounted) {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => const SubscribePage(),
+                    builder: (context) => SubscribePage(bannerPreference: pref),
                     settings: const RouteSettings(name: '/subscribe'),
                   ),
                 );
