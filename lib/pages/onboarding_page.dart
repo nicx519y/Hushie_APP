@@ -3,7 +3,7 @@ import '../models/onboarding_model.dart';
 import '../services/api/onboarding_service.dart';
 import '../services/onboarding_manager.dart';
 import '../utils/toast_helper.dart';
-import '../pages/app_root.dart';
+import '../pages/subscribe_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/custom_icons.dart';
 
@@ -85,18 +85,28 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
       ToastHelper.showSuccess('偏好设置成功');
 
-      // 跳转到主应用
+      // 跳转到订阅页面
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const MainApp(),
-            settings: const RouteSettings(name: '/main'),
+            builder: (context) => const SubscribePage(),
+            settings: const RouteSettings(name: '/subscribe'),
           ),
         );
       }
     } catch (e) {
       debugPrint('提交偏好失败: $e');
       ToastHelper.showError('设置失败，请重试');
+      
+      // 即使失败也跳转到订阅页面
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const SubscribePage(),
+            settings: const RouteSettings(name: '/subscribe'),
+          ),
+        );
+      }
     }
   }
 
@@ -430,13 +440,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
         children: [
           TextButton(
             onPressed: () async {
-              // 跳过时也标记为已完成并跳转到主应用
+              // 跳过时也标记为已完成并跳转到订阅页面
               await OnboardingManager().markOnboardingCompleted();
               if (mounted) {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => const MainApp(),
-                    settings: const RouteSettings(name: '/main'),
+                    builder: (context) => const SubscribePage(),
+                    settings: const RouteSettings(name: '/subscribe'),
                   ),
                 );
               }
