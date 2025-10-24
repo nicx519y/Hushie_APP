@@ -5,6 +5,8 @@ import '../utils/custom_icons.dart';
 import '../components/fallback_image.dart';
 import '../services/audio_manager.dart';
 import '../services/audio_service.dart';
+import '../components/audio_free_tag.dart';
+
 import 'dart:async';
 
 class AudioList extends StatefulWidget {
@@ -187,7 +189,9 @@ class _AudioListState extends State<AudioList> {
       return Row(
         children: [
           Icon(CustomIcons.playing, color: _highlightColor, size: 14),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          audio.isFree ? AudioFreeTag() : const SizedBox.shrink(),
+          audio.isFree ? const SizedBox(width: 4) : const SizedBox.shrink(),
           Expanded(
             child: _buildHighlightedText(
               audio.title,
@@ -204,16 +208,24 @@ class _AudioListState extends State<AudioList> {
         ],
       );
     } else {
-      return _buildHighlightedText(
-        audio.title,
-        audio.highlight?.title ?? const [],
-        TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          height: 1.5,
-          color: _baseTitleColor,
-        ),
-        maxLines: 1,
+      return Row(
+        children: [
+          audio.isFree ? AudioFreeTag() : const SizedBox.shrink(),
+          audio.isFree ? const SizedBox(width: 4) : const SizedBox.shrink(),
+          Expanded(
+            child: _buildHighlightedText(
+              audio.title,
+              audio.highlight?.title ?? const [],
+              TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                height: 1.5,
+                color: _baseTitleColor,
+              ),
+              maxLines: 1,
+            ),
+          ),
+        ],
       );
     }
   }

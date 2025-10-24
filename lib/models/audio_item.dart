@@ -4,6 +4,7 @@ import 'image_model.dart';
 
 class AudioItem {
   final String id;
+  final bool isFree; // 是否免费
   final ImageModel cover;
   final ImageModel? bgImage; // 背景图片
   final String title;
@@ -27,6 +28,7 @@ class AudioItem {
 
   // 高亮
   HighlightModel? highlight; // 高亮信息  
+
 
   // 解析duration的静态方法，包含容错处理和数值验证
   static int _parseDurationMs(dynamic duration) {
@@ -79,6 +81,7 @@ class AudioItem {
 
   AudioItem({
     required this.id, // id
+    required this.isFree, // 是否免费
     required this.cover, // 封面
     required this.title, // 标题
     required this.desc, // 描述
@@ -102,7 +105,8 @@ class AudioItem {
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
     return AudioItem(
-      id: map['id'].toString(),
+      id: map['id'].toString(), // id
+      isFree: map['is_free'] ?? true, // 是否免费
       cover: _parseImageModel(map['cover']) ?? _getDefaultImageModel(),
       title: map['title'] ?? '',
       desc: map['desc'] ?? '',
@@ -135,7 +139,8 @@ class AudioItem {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      'id': id, // id
+      'is_free': isFree, // 是否免费
       'cover': cover.toJson(),
       'title': title,
       'desc': desc,
@@ -163,6 +168,7 @@ class AudioItem {
   AudioItem copyWith({
     String? id,
     String? cid,
+    bool? isFree, // 是否免费
     ImageModel? cover,
     String? title,
     String? desc,
@@ -185,7 +191,8 @@ class AudioItem {
     Map<String, List<String>>? highlight, // 高亮信息
   }) {
     return AudioItem(
-      id: id ?? this.id,
+      id: id ?? this.id, // id
+      isFree: isFree ?? this.isFree, // 是否免费
       cover: cover ?? this.cover,
       title: title ?? this.title,
       desc: desc ?? this.desc,

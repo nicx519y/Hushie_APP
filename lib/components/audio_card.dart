@@ -3,6 +3,7 @@ import 'package:hushie_app/components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../utils/custom_icons.dart';
 import '../models/audio_item.dart';
+import '../components/audio_free_tag.dart';
 import 'package:hushie_app/components/max_lines_wrap.dart';
 
 class AudioCard extends StatelessWidget {
@@ -140,16 +141,31 @@ class AudioCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 标题
-                  Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                      height: 1.2,
-                      color: Color(0xff333333),
+                  SizedBox(
+                    width: double.infinity,
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          height: 1.2,
+                          color: Color(0xff333333),
+                        ),
+                        children: [
+                          if (item.isFree)
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Padding(
+                                padding: EdgeInsets.only(right: 4),
+                                child: AudioFreeTag(),
+                              ),
+                            ),
+                          TextSpan(text: item.title),
+                        ],
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
                   // 标签
