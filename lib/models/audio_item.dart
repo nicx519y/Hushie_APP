@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:hushie_app/models/highlight_model.dart';
+import 'package:hushie_app/models/srt_model.dart';
 import 'image_model.dart';
 
 class AudioItem {
@@ -29,6 +30,8 @@ class AudioItem {
   // 高亮
   HighlightModel? highlight; // 高亮信息  
 
+  // 字幕
+  List<SrtParagraphModel>? srtParagraphs; // 字幕段落
 
   // 解析duration的静态方法，包含容错处理和数值验证
   static int _parseDurationMs(dynamic duration) {
@@ -101,6 +104,7 @@ class AudioItem {
     this.playDuration, // 播放时长
     this.playProgress, // 播放进度
     this.highlight, // 高亮信息
+    this.srtParagraphs, // 字幕段落
   });
 
   factory AudioItem.fromMap(Map<String, dynamic> map) {
@@ -134,6 +138,7 @@ class AudioItem {
       playDuration: map['play_duration_ms'] != null ? Duration(milliseconds: map['play_duration_ms']) : null,
       playProgress: map['play_progress_ms'] != null ? Duration(milliseconds: map['play_progress_ms']) : null,
       highlight: map['highlight'] != null ? HighlightModel.fromMap(map['highlight']) : null,
+      srtParagraphs: map['srt'] != null ? SrtModel.fromString(map['srt']).paragraphs : null,
     );
   }
 
@@ -162,6 +167,7 @@ class AudioItem {
       'play_duration_ms': playDuration?.inMilliseconds,
       'play_progress_ms': playProgress?.inMilliseconds,
       'highlight': highlight, // 高亮信息
+      'srt': srtParagraphs != null ? srtParagraphs.toString() : '', // 字幕段落
     };
   }
 
@@ -189,6 +195,7 @@ class AudioItem {
     Duration? playDuration,
     Duration? playProgress,
     Map<String, List<String>>? highlight, // 高亮信息
+    List<SrtParagraphModel>? srtParagraphs, // 字幕段落
   }) {
     return AudioItem(
       id: id ?? this.id, // id
@@ -212,6 +219,7 @@ class AudioItem {
       playDuration: playDuration ?? this.playDuration,
       playProgress: playProgress ?? this.playProgress,
       highlight: highlight != null ? HighlightModel.fromMap(highlight) : this.highlight, // 高亮信息
+      srtParagraphs: srtParagraphs ?? this.srtParagraphs, // 字幕段落
     );
   }
 

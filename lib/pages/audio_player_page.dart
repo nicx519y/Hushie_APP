@@ -71,7 +71,9 @@ class AudioPlayerPage extends StatefulWidget {
 
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _isPlaying = false;
-  bool _isPreviewMode = true;
+  bool _hasPremium = false;
+  // 删除预览模式标志，统一使用非预览逻辑
+  // bool _isPreviewMode = true;
   // Duration _currentPosition = Duration.zero;
 
   // 移除时长代理服务和渲染相关状态，现在由AudioProgressBar内部管理
@@ -115,14 +117,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _fetchAudioDetailAndUpdateLikeState(initialAudio.id);
         }
       });
-      
     }
 
     SubscribePrivilegeManager.instance
         .hasValidPremium(forceRefresh: false)
         .then((value) {
           setState(() {
-            _isPreviewMode = !value;
+            _hasPremium = value;
             _listenToAudioState();
           });
         });
@@ -149,7 +150,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               _localLikesCount = _currentAudio?.likesCount ?? 0;
               _isLikeButtonVisible = false; // 音频变化时隐藏点赞按钮
               needsUpdate = true;
-              
+
               // 获取音频详情并更新点赞状态
               if (_currentAudio != null) {
                 final audioId = _currentAudio?.id;
@@ -162,7 +163,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             // 检查播放状态是否变化
             if (_lastAudioState?.isPlaying != audioState.isPlaying) {
               _isPlaying = audioState.isPlaying;
-              
+
               // 记录播放/暂停事件
               if (_currentAudio != null) {
                 final audio = _currentAudio;
@@ -183,7 +184,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                   }
                 }
               }
-              
+
               needsUpdate = true;
             }
 
@@ -224,23 +225,23 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       SubscribePrivilegeManager.instance.privilegeChanges.listen((event) {
         if (mounted) {
           setState(() {
-            _isPreviewMode = !event.hasPremium;
+            _hasPremium = event.hasPremium;
           });
         }
       }),
     );
 
-    // 监听预览区间即将超出事件
-    _subscriptions.add(
-      AudioManager.previewOutEvents.listen((previewOutEvent) {
-        if (mounted) {
-          debugPrint(
-            '🎵 [PLAYER] 预览区间即将超出，触发解锁提示: ${previewOutEvent.position}',
-          );
-          _onUnlockFullAccessTap();
-        }
-      }),
-    );
+    // 移除预览区间即将超出事件监听
+    // _subscriptions.add(
+    //   AudioManager.previewOutEvents.listen((previewOutEvent) {
+    //     if (mounted) {
+    //       debugPrint(
+    //         '🎵 [PLAYER] 预览区间即将超出，触发解锁提示: ${previewOutEvent.position}',
+    //       );
+    //       _onUnlockFullAccessTap();
+    //     }
+    //   }),
+    // );
   }
 
   void _playAndPauseBtnPress() {
@@ -264,13 +265,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _audioManager.playAudio(audioToPlay);
         }
       } else {
-        // 如果是同一首音频，直接恢复播放
-        if (!_audioManager.isOutOfPreview) {
-          _audioManager.togglePlayPause();
-        } else {
-          // 预览区间已超出，提示用户解锁完整访问
-          _onUnlockFullAccessTap();
-        }
+        // 如果是同一首音频，直接恢复播放（不再检查预览区间）
+        _audioManager.togglePlayPause();
       }
     } else {
       // 暂停播放
@@ -338,10 +334,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Future<void> _fetchAudioDetailAndUpdateLikeState(String audioId) async {
     try {
       debugPrint('🎵 [PLAYER] 开始获取音频详情: $audioId');
-      
+
       // 获取最新的音频详情
       final audioDetail = await AudioDetailService.getAudioDetail(audioId);
-      
+
       if (mounted && _currentAudio?.id == audioId) {
         // 只有当前音频ID匹配时才更新状态
         setState(() {
@@ -349,12 +345,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _localLikesCount = audioDetail.likesCount ?? 0;
           _isLikeButtonVisible = true; // 获取成功后显示点赞按钮
         });
-        
-        debugPrint('🎵 [PLAYER] 音频详情获取成功，更新点赞状态: isLiked=${audioDetail.isLiked}, likesCount=${audioDetail.likesCount}');
+
+        debugPrint(
+          '🎵 [PLAYER] 音频详情获取成功，更新点赞状态: isLiked=${audioDetail.isLiked}, likesCount=${audioDetail.likesCount}',
+        );
       }
     } catch (e) {
       debugPrint('🎵 [PLAYER] 获取音频详情失败: $e');
-      
+
       if (mounted) {
         // 获取失败时也要显示点赞按钮，使用当前的状态
         setState(() {
@@ -434,9 +432,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         oldState.duration != newState.duration ||
         oldState.speed != newState.speed ||
         oldState.playerState.processingState !=
-            newState.playerState.processingState ||
-        oldState.renderPreviewStart != newState.renderPreviewStart ||
-        oldState.renderPreviewEnd != newState.renderPreviewEnd;
+            newState.playerState.processingState;
+    // 预览相关比较已移除
+    // oldState.renderPreviewStart != newState.renderPreviewStart ||
+    // oldState.renderPreviewEnd != newState.renderPreviewEnd;
   }
 
   @override
@@ -453,14 +452,41 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         onClose: _closePage,
         showDragIndicator: false,
         child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            _buildAudioBackground(),
-            _buildStatusBar(),
-            _buildControlBar(),
-          ],
-        ),
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              _buildAudioBackground(),
+              Positioned.fill(child: ColoredBox(color: Colors.black.withAlpha(128))),
+              // _buildStatusBar(),
+              Column(
+                children: [
+                  const SizedBox(height: 76),
+                  _buildAudioInfo(),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Expanded(child: Spacer()),
+                        _hasPremium ? const SizedBox.shrink() : Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: _buildUnlockFullAccessTip(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildControlBar(),
+                ],
+              ),
+              _buildCloseButton(),
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 20 + 174,
+                right: 16,
+                child: _buildLikeButton(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -492,78 +518,40 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       height: double.infinity,
       imageResource: _currentAudio?.bgImage,
       fallbackImage: 'assets/images/player_bg_backup.jpg',
-    );
-  }
-
-  // 构建状态栏
-  Widget _buildStatusBar() {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 10,
-          left: 28,
-          right: 28,
-          bottom: 10,
-        ),
-        child: Row(children: [_buildCloseButton()]),
-      ),
+      backgroundColor: Colors.black,
     );
   }
 
   // 构建控制栏
   Widget _buildControlBar() {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: RepaintBoundary(
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              stops: [0, 0.2, 1],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black.withAlpha(100),
-                Colors.black.withAlpha(180),
-              ],
-            ),
-          ),
-          padding: EdgeInsets.only(
-            top: 40,
-            left: 28,
-            right: 28,
-            bottom: MediaQuery.of(context).padding.bottom + 20,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAudioInfo(),
-              const SizedBox(height: 30),
-
-              Row(
-                children: [
-                  Expanded(child: _buildProgressBar()),
-                  _isPreviewMode
-                      ? const SizedBox(width: 10)
-                      : const SizedBox.shrink(),
-                  _isPreviewMode
-                      ? Transform.translate(
-                          offset: const Offset(0, -8),
-                          child: _buildUnlockFullAccessTip(),
-                        )
-                      : const SizedBox.shrink(),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildPlaybackControls(),
-              const SizedBox(height: 40),
-            ],
-          ),
+    return RepaintBoundary(
+      child: Container(
+        // decoration: BoxDecoration(
+        //   gradient: LinearGradient(
+        //     stops: [0, 0.2, 1],
+        //     begin: Alignment.topCenter,
+        //     end: Alignment.bottomCenter,
+        //     colors: [
+        //       Colors.transparent,
+        //       Colors.black.withAlpha(100),
+        //       Colors.black.withAlpha(180),
+        //     ],
+        //   ),
+        // ),
+        padding: EdgeInsets.only(
+          top: 27,
+          left: 28,
+          right: 28,
+          bottom: MediaQuery.of(context).padding.bottom + 20,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProgressBar(),
+            const SizedBox(height: 20),
+            _buildPlaybackControls(),
+            const SizedBox(height: 40),
+          ],
         ),
       ),
     );
@@ -571,42 +559,54 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建关闭按钮
   Widget _buildCloseButton() {
-    return IconButton(
-      alignment: Alignment.center,
-      style: IconButton.styleFrom(
-        // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        backgroundColor: const Color(0xFF4D4D4D).withAlpha(128),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        minimumSize: const Size(40, 40),
-      ),
-      onPressed: () => _closePage(),
-      icon: Transform.translate(
-        offset: const Offset(-2.5, 0),
-        child: Icon(CustomIcons.arrow_down, color: Colors.white, size: 9),
+    return Positioned(
+      top: 64,
+      left: 16,
+      child: IconButton(
+        alignment: Alignment.center,
+        style: IconButton.styleFrom(
+          // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          backgroundColor: const Color(0xFF4D4D4D).withAlpha(128),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          minimumSize: const Size(40, 40),
+        ),
+        onPressed: () => _closePage(),
+        icon: Transform.translate(
+          offset: const Offset(-2.5, 0),
+          child: Icon(CustomIcons.arrow_down, color: Colors.white, size: 9),
+        ),
       ),
     );
   }
 
   // 构建音频信息
   Widget _buildAudioInfo() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAudioTitle(),
-              const SizedBox(height: 8),
-              _buildArtistInfo(),
-              const SizedBox(height: 10),
-              _buildAudioDescription(),
-            ],
+    return Container(
+      height: 100,
+      // decoration: BoxDecoration(
+      //   color: Colors.black.withAlpha(128),
+      // ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildAudioTitle(),
+                const SizedBox(height: 8),
+                _buildArtistInfo(),
+                // const SizedBox(height: 10),
+                // _buildAudioDescription(),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 26),
-        _buildLikeButton(),
-      ],
+          // const SizedBox(width: 26),
+          // _buildLikeButton(),
+        ],
+      ),
     );
   }
 
@@ -614,94 +614,96 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Widget _buildAudioTitle() {
     final title = _currentAudio?.title ?? 'Unknown Title';
 
-    return Text(
-      title,
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
+    return SizedBox(
+      width: 240,
+      child: Text(
+        title,
+        maxLines: 3,
+        textAlign: TextAlign.center,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          height: 1.2,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
 
   // 构建艺术家信息
   Widget _buildArtistInfo() {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            const Icon(CustomIcons.user, color: Colors.white, size: 12),
-            const SizedBox(width: 6),
-            Text(
-              _currentAudio?.author ?? '',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.white,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
+        const Icon(CustomIcons.user, color: Colors.white, size: 12),
+        const SizedBox(width: 8),
+        Text(
+          _currentAudio?.author ?? '',
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.white,
+            fontWeight: FontWeight.w400,
+          ),
         ),
       ],
     );
   }
 
-  // 构建音频描述
-  Widget _buildAudioDescription() {
-    final desc = _currentAudio?.desc ?? 'No description available';
+  // 构建音频描述 1.0.5 版本删除
+  // Widget _buildAudioDescription() {
+  //   final desc = _currentAudio?.desc ?? 'No description available';
 
-    return InkWell(
-      onTap: _onReadMoreTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            desc,
-            style: const TextStyle(
-              // letterSpacing: 0,
-              fontSize: 12,
-              height: 1.7,
-              color: Colors.white,
-              // fontWeight: FontWeight.w300,
-            ),
-            textAlign: TextAlign.left,
-            maxLines: _isDescExpended ? 20 : 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              SizedBox(
-                width: 32,
-                child: Text(
-                  _isDescExpended ? 'Fold' : 'More',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+  //   return InkWell(
+  //     onTap: _onReadMoreTap,
+  //     child: Column(
+  //       mainAxisAlignment: MainAxisAlignment.start,
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Text(
+  //           desc,
+  //           style: const TextStyle(
+  //             // letterSpacing: 0,
+  //             fontSize: 12,
+  //             height: 1.7,
+  //             color: Colors.white,
+  //             // fontWeight: FontWeight.w300,
+  //           ),
+  //           textAlign: TextAlign.left,
+  //           maxLines: _isDescExpended ? 20 : 2,
+  //           overflow: TextOverflow.ellipsis,
+  //         ),
+  //         const SizedBox(height: 6),
+  //         Row(
+  //           children: [
+  //             SizedBox(
+  //               width: 32,
+  //               child: Text(
+  //                 _isDescExpended ? 'Fold' : 'More',
+  //                 style: const TextStyle(
+  //                   fontSize: 12,
+  //                   color: Colors.white,
+  //                   fontWeight: FontWeight.w700,
+  //                 ),
+  //               ),
+  //             ),
 
-              const SizedBox(width: 6),
-              Transform.scale(
-                scaleY: _isDescExpended ? -1 : 1,
-                alignment: Alignment.center, // 设置旋转中心为组件中心
-                child: Icon(
-                  CustomIcons.arrow_down,
-                  color: Colors.white,
-                  size: 9,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  //             const SizedBox(width: 6),
+  //             Transform.scale(
+  //               scaleY: _isDescExpended ? -1 : 1,
+  //               alignment: Alignment.center, // 设置旋转中心为组件中心
+  //               child: Icon(
+  //                 CustomIcons.arrow_down,
+  //                 color: Colors.white,
+  //                 size: 9,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // 构建点赞按钮
   Widget _buildLikeButton() {
@@ -749,9 +751,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建进度条
   Widget _buildProgressBar() {
-    return RepaintBoundary(
-      child: AudioProgressBar(onOutPreview: _onUnlockFullAccessTap),
-    );
+    return RepaintBoundary(child: AudioProgressBar());
   }
 
   // 构建播放控制按钮
@@ -762,10 +762,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         Expanded(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [_buildPlayPauseButton()],
+            children: [
+              const SizedBox(width: 76), // 占位按钮保持对称
+              _buildPlayPauseButton(),
+              const SizedBox(width: 48), // 占位按钮保持对称
+              _buildNextButton(),
+            ],
           ),
         ),
         const SizedBox(width: 48), // 占位按钮保持对称
+        // _buildNextButton(),
       ],
     );
   }
@@ -780,6 +786,26 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       ),
       onPressed: _onPlaylistButtonTap,
       icon: Icon(CustomIcons.menu, color: Colors.white, size: 20),
+    );
+  }
+
+  Future<void> _onNextButtonTap() async {
+    if (!_isAudioLoading &&
+        _currentAudio != null &&
+        _currentAudio?.id != null) {
+      await AudioManager.instance.playNextAudio(_currentAudio!.id);
+    }
+  }
+
+  Widget _buildNextButton() {
+    return IconButton(
+      style: IconButton.styleFrom(
+        minimumSize: Size.zero,
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: _onNextButtonTap,
+      icon: Icon(CustomIcons.skip_next, color: Colors.white, size: 32),
     );
   }
 
@@ -819,44 +845,48 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Widget _buildUnlockFullAccessTip() {
     return InkWell(
       onTap: _onUnlockFullAccessTap,
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            padding: EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(50),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Image.asset(
-              'assets/images/crown_mini.png',
-              fit: BoxFit.contain,
-            ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        widthFactor: 1.0, // 使宽度跟随子内容
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(50),
+            borderRadius: BorderRadius.circular(24),
           ),
-          const SizedBox(width: 4),
-          SizedBox(
-            // width: 92,
-            height: 40,
-            child: ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                colors: [Color(0xFFFEED96), Color(0xFFFFC733)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ).createShader(bounds),
-              child: Text(
-                'Unlock\nFull Access',
-                maxLines: 2,
-                style: TextStyle(
-                  color: Colors.white, // 这里必须设置颜色，会被shader覆盖
-                  fontSize: 16,
-                  height: 1.25,
-                  fontWeight: FontWeight.w700,
+          child: Row(
+            mainAxisSize: MainAxisSize.min, // 行宽度最小化，紧贴内容
+            children: [
+              Image.asset('assets/images/crown_mini.png', width: 27, height: 20, ),
+              const SizedBox(width: 8),
+              ShaderMask(
+                shaderCallback: (Rect bounds) {
+                  return const LinearGradient(
+                    colors: [
+                      Color(0xFFFFCB35), // 橙色
+                      Color(0xFFEED960), 
+                      Color(0xFFFEEF96), 
+                      Color(0xFFFFC733), // 红橙色
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height));
+                },
+                blendMode: BlendMode.srcIn,
+                child: const Text(
+                  'Unlock Full Access',
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

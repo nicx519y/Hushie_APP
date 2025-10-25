@@ -12,25 +12,13 @@ import 'audio_service.dart';
 import 'audio_playlist.dart';
 import 'audio_history_manager.dart';
 import 'api/audio_list_service.dart';
-import 'subscribe_privilege_manager.dart';
+
 import 'package:flutter/foundation.dart';
 import 'audio_likes_manager.dart';
 import '../config/api_config.dart';
 import 'home_page_list_service.dart';
+import 'subscribe_privilege_manager.dart';
 
-/// 预览区间即将超出事件
-class PreviewOutEvent {
-  final Duration position;
-  final DateTime timestamp;
-
-  PreviewOutEvent({required this.position, DateTime? timestamp})
-      : timestamp = timestamp ?? DateTime.now();
-
-  @override
-  String toString() {
-    return 'PreviewOutEvent(position: $position, timestamp: $timestamp)';
-  }
-}
 
 class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
@@ -52,25 +40,17 @@ class AudioManager {
   String? _lastAudioId;
   bool _lastIsPlaying = false;
   Duration _lastPosition = Duration.zero;
-  bool _isPreviewMode = false;
 
   // 播放列表管理状态标志位
   bool _isManagingPlaylist = false;
   String? _lastManagedAudioId;
 
-  // 预览区间即将超出事件流
-  static final StreamController<PreviewOutEvent> _previewOutController =
-      StreamController<PreviewOutEvent>.broadcast();
-
-  // 权益状态监听
-  StreamSubscription<PrivilegeChangeEvent>? _privilegeSubscription;
-  
   // 认证状态监听
   StreamSubscription<AuthStatusChangeEvent>? _authStatusSubscription;
 
-  /// 预览区间即将超出事件流（供外部订阅）
-  static Stream<PreviewOutEvent> get previewOutEvents =>
-      _previewOutController.stream;
+  // 权限状态
+  bool _hasPremium = false;
+  StreamSubscription<PrivilegeChangeEvent>? _premiumStatusSubscription;
 
   AudioManager._internal();
 
@@ -144,14 +124,16 @@ class AudioManager {
     await AudioPlaylist.instance.initialize();
     debugPrint('AudioManager: AudioPlaylist 初始化完成');
 
-    // 获取当前权益状态并设置播放权限
-    await _initializePrivilegeStatus();
-
-    // 监听权益变化事件
-    _setupPrivilegeListener();
 
     // 监听认证状态变化事件
     _setupAuthStatusListener();
+
+    // 初始化权限服务并监听权限状态
+    await SubscribePrivilegeManager.instance.initialize();
+    _setupPrivilegeStatusListener();
+    // 初始化 _hasPremium 初始值
+    final cachedPrivilege = SubscribePrivilegeManager.instance.getCachedPrivilege();
+    _hasPremium = cachedPrivilege?.hasPremium ?? false;
 
     // 使用统一的初始化方法，避免重复初始化
     await _ensureInitialized();
@@ -225,19 +207,6 @@ class AudioManager {
       }
       // debugPrint('[checkWillOutPreview] 播放列表管理完成');
       
-      // 检查预览区间 - 只在位置发生明显变化时检查
-      if (positionChanged && _checkWillOutPreview(position)) {
-        // 发送预览区间即将超出事件
-        
-        // 在暂停之前，跳转到预览区域中离当前位置最近的点
-        final nearestPosition = _transformPosition(position);
-        debugPrint('[AudioManager] 超出预览区间，从 $position 跳转到最近位置 $nearestPosition');
-        await seek(nearestPosition);
-        
-        pause();
-        _previewOutController.add(PreviewOutEvent(position: position));
-      }
-      
       // 更新播放器状态 - 只在状态发生变化时更新
       if (playingStateChanged || audioChanged) {
         _playerStateSubject.add(audioState.playerState);
@@ -267,92 +236,18 @@ class AudioManager {
     });
   }
 
-  // 检查是否超出预览区间
-  bool _checkWillOutPreview(Duration position) {
-    final audio = currentAudio;
-    if (audio == null ||
-        !isPlaying ||
-        !_isPreviewMode) {
-      return false;
-    }
 
-    final previewStart = audio.previewStart ?? Duration.zero;
-    final previewDuration = audio.previewDuration ?? Duration.zero;
-    final hasPreview =
-        previewStart >= Duration.zero && previewDuration > Duration.zero;
-
-    // debugPrint('[checkWillOutPreview] position: $position previewStart: $previewStart previewDuration: $previewDuration, hasPreview: $hasPreview');    
-
-    if (hasPreview && (position >= previewStart + previewDuration || position < previewStart)) {
-      debugPrint('[playAudio] position: $position previewStart: $previewStart previewDuration: $previewDuration');
-      return true;
-    }
-    return false;
-  }
-
-  Duration _transformPosition(Duration position, {AudioItem? audio}) {
-    // 如果能播放全部时长，直接返回原位置
-    if (!_isPreviewMode) {
-      return position;
-    }
-
-    late AudioItem currentAudio;
-
-    if(audio != null) {
-      currentAudio = audio;
-    } else {
-      final audioRef = this.currentAudio;
-      if (audioRef != null) {
-        currentAudio = audioRef;
-      } else {
-        return position;
-      }
-    }
-
-    final previewStart = currentAudio.previewStart;
-    final previewDuration = currentAudio.previewDuration;
-
-    // 检查预览参数是否有效
-    if (previewStart == null ||
-        previewStart < Duration.zero ||
-        previewDuration == null ||
-        previewDuration <= Duration.zero) {
-      return position;
-    }
-
-    // 计算预览区间的结束位置
-    final previewEnd = previewStart + previewDuration;
-
-    // 如果位置在预览区间内，直接返回
-    if (position >= previewStart && position <= previewEnd) {
-      return position;
-    }
-
-    // 如果位置在预览区间外，返回最近的边界位置
-    if (position < previewStart) {
-      // 位置在预览开始之前，返回预览开始位置
-      return previewStart;
-    } else {
-      // 位置在预览结束之后，返回预览结束位置
-      return previewEnd;
-    }
-  }
 
   /// 检查播放是否完成并自动播放下一首
   void _checkPlaybackCompletion() {
-    final canAutoPlayNext = !_isPreviewMode;
     final currentAudio = this.currentAudio;
     if (currentAudio != null) {
-      if (canAutoPlayNext) {
-        _playNextAudio(currentAudio.id);
-      } else {
-        pause();
-      }
+      playNextAudio(currentAudio.id);
     }
   }
 
   /// 播放下一首音频
-  Future<void> _playNextAudio(String currentAudioId) async {
+  Future<void> playNextAudio(String currentAudioId) async {
     try {
       final playlist = AudioPlaylist.instance;
 
@@ -525,9 +420,6 @@ class AudioManager {
       position = initialPosition;
     }
     
-    // 3. 通过 _transformPosition 过滤 initialPosition 得到正确的 initialPosition
-    final transformedPosition = _transformPosition(position, audio: audio);
-
     try {
       // await _ensureInitialized();
       debugPrint('[playAudio]: _audioService != null : ${_audioService != null}; auto : $auto');
@@ -536,12 +428,12 @@ class AudioManager {
         if (auto == true) {
           await _audioService!.playAudio(
             audio,
-            initialPosition: transformedPosition,
+            initialPosition: position,
           );
         } else {
           await _audioService!.loadAudio(
             audio,
-            initialPosition: transformedPosition,
+            initialPosition: position,
           );
         }
       } else {
@@ -561,33 +453,6 @@ class AudioManager {
     }
   }
 
-  // 检查当前播放位置是否超出预览区间
-  bool get isOutOfPreview {
-    // 如果不是预览模式，返回false
-    if (!_isPreviewMode) {
-      return false;
-    }
-    
-    // 如果没有当前音频，返回false
-    final audio = currentAudio;
-    if (audio == null) {
-      return false;
-    }
-    
-    final currentPosition = position;
-    final previewStart = audio.previewStart ?? Duration.zero;
-    final previewDuration = audio.previewDuration ?? Duration.zero;
-    
-    // 检查预览参数是否有效
-    if (previewStart < Duration.zero || previewDuration <= Duration.zero) {
-      return false;
-    }
-    
-    final previewEnd = previewStart + previewDuration;
-    
-    // 判断当前位置是否在预览区域之外
-    return currentPosition < previewStart || currentPosition >= previewEnd;
-  }
 
   /// 管理播放列表（清理和补充）
   Future<void> _managePlaylist(String currentAudioId) async {
@@ -702,8 +567,7 @@ class AudioManager {
   Future<void> seek(Duration position) async {
     // await _ensureInitialized();
     if (_audioService != null) {
-      // 使用 _transformPosition 方法处理位置转换
-      final seekPosition = _transformPosition(position);
+      final seekPosition = position;
       // debugPrint('[progressBar] AudioManager: seek到位置 $seekPosition (原始位置: $position)');
 
       return await _audioService!.seek(seekPosition);
@@ -808,32 +672,22 @@ class AudioManager {
     return _audioService?.currentState.bufferedPosition ?? Duration.zero;
   }
 
-  /// 初始化权益状态
-  Future<void> _initializePrivilegeStatus() async {
-    try {
-      final hasPremium = await SubscribePrivilegeManager.instance.hasValidPremium();
-      
-      debugPrint('AudioManager: 初始化权益状态 - hasPremium: $hasPremium');
-      _updatePlaybackPermissions(hasPremium);
-    } catch (e) {
-      debugPrint('AudioManager: 初始化权益状态失败: $e');
-      // 失败时设置为无权限状态
-      _updatePlaybackPermissions(false);
-    }
-  }
 
-  /// 设置权益监听器
-  void _setupPrivilegeListener() {
-    _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen(
+  /// 设置权限状态监听器
+  void _setupPrivilegeStatusListener() {
+    _premiumStatusSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen(
       (event) {
-        debugPrint('AudioManager: 收到权益变化事件 - hasPremium: ${event.hasPremium}');
-        _updatePlaybackPermissions(event.hasPremium);
+        final newHasPremium = event.hasPremium;
+        if (_hasPremium != newHasPremium) {
+          _hasPremium = newHasPremium;
+          debugPrint('AudioManager: 权限状态更新 - hasPremium=$_hasPremium');
+        }
       },
       onError: (error) {
-        debugPrint('AudioManager: 权益状态监听异常: $error');
+        debugPrint('AudioManager: 权限状态监听异常: $error');
       },
     );
-    debugPrint('AudioManager: 权益状态监听器已设置');
+    debugPrint('AudioManager: 权限状态监听器已设置');
   }
 
   /// 设置认证状态监听器
@@ -869,15 +723,6 @@ class AudioManager {
     }
   }
 
-  /// 根据权益状态更新播放权限
-  void _updatePlaybackPermissions(bool hasPremium) {
-    debugPrint('AudioManager: 更新播放权限 - hasPremium: $hasPremium');
-    
-    // 根据权益状态设置预览模式（hasPremium为true时，预览模式为false）
-    _isPreviewMode = !hasPremium;
-    
-    debugPrint('AudioManager: 播放权限已更新 - 预览模式: ${!hasPremium}');
-  }
 
   // 清理资源
   Future<void> dispose() async {
@@ -886,19 +731,17 @@ class AudioManager {
       await _audioService!.dispose();
     }
 
-    // 清理权益状态监听
-    await _privilegeSubscription?.cancel();
-    _privilegeSubscription = null;
 
     // 清理认证状态监听
     await _authStatusSubscription?.cancel();
     _authStatusSubscription = null;
 
+    // 清理权限状态监听
+    await _premiumStatusSubscription?.cancel();
+    _premiumStatusSubscription = null;
+
     // 关闭所有BehaviorSubject
     await _playerStateSubject.close();
-
-    // 关闭StreamController
-    await _previewOutController.close();
 
     AudioHistoryManager.instance.stopListening();
 

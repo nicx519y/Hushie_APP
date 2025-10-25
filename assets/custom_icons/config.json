@@ -151,6 +151,12 @@
       "css": "check",
       "code": 61452,
       "src": "fontawesome5"
+    },
+    {
+      "uid": "0f666a4a786b9ee9a39c7a6e493b9f93",
+      "css": "skip_next",
+      "code": 59402,
+      "src": "material"
     }
   ]
 }

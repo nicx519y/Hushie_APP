@@ -7,6 +7,7 @@ import 'package:hushie_app/models/image_model.dart';
 class FallbackImage extends StatelessWidget {
   /// 音频对象
   final ImageModel? imageResource;
+  final Color backgroundColor;
   final String? fallbackImage;
   final BoxFit? fit;
   
@@ -27,6 +28,7 @@ class FallbackImage extends StatelessWidget {
     this.width = 70,
     this.height = 78,
     this.borderRadius = 0,
+    this.backgroundColor = Colors.transparent,
   });
 
   @override
@@ -50,7 +52,7 @@ class FallbackImage extends StatelessWidget {
               fit: fit,
               fadeInDuration: Duration.zero, // 禁用fadeIn效果
               placeholder: (context, url) => Container(
-                color: Colors.grey[100], // 默认背景色
+                color: backgroundColor, // 默认背景色
                 child: const Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 2.0,
