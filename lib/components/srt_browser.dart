@@ -109,34 +109,49 @@ class _SrtBrowserState extends State<SrtBrowser> {
   void _setActiveByProgress(Duration position, [bool animate = true]) {
     if (widget.paragraphs.isEmpty) return;
     debugPrint('[srt_browser: _setActiveByProgress]  position: $position');
-    final int positionSeconds = position.inSeconds;
-    int targetIndex = 0;
 
-    // 获取所有字幕段落的开始时间（秒）
+    final int positionSeconds = position.inSeconds;
+
+    // 预先计算所有段落的开始时间（秒）
     final List<int> paragraphTimes = widget.paragraphs
         .map((p) => _parseTimeToSeconds(p.startTime))
         .toList();
 
-    // 遍历时间边界，定位当前时间所在的段落
-    for (int i = 0; i < paragraphTimes.length; i++) {
-      final int currentParagraphTime = paragraphTimes[i];
-      final int nextParagraphTime = i < paragraphTimes.length - 1
-          ? paragraphTimes[i + 1]
-          : currentParagraphTime + 5; // 最后段落追加少量缓冲
+    // 以旧的 activeIndex 为起点，根据时间大小决定前向或后向查找
+    int currentIndex = _activeIndex;
+    if (currentIndex < 0) currentIndex = 0;
+    if (currentIndex >= paragraphTimes.length) currentIndex = paragraphTimes.length - 1;
 
-      if (positionSeconds >= currentParagraphTime && positionSeconds < nextParagraphTime) {
-        debugPrint('[srt_browser: _setActiveByProgress]  positionSeconds: $positionSeconds; currentParagraphTime: $currentParagraphTime; nextParagraphTime: $nextParagraphTime');
-        targetIndex = i;
-        break;
-      }
+    final int currentActiveTime = paragraphTimes[currentIndex];
+    int targetIndex = currentIndex;
 
-      // 如果时间超过最后一个段落的开始时间，选中最后一个段落
-      if (i == paragraphTimes.length - 1 && positionSeconds >= currentParagraphTime) {
-        targetIndex = i;
+    if (positionSeconds >= currentActiveTime) {
+      // 传入时间大于等于旧 active 的时间：从旧索引向后查找
+      // 选择时间 <= 传入时间 的最后一个元素（若相邻时间相同，取最后一个）
+      int i = currentIndex;
+      while (i + 1 < paragraphTimes.length && paragraphTimes[i + 1] <= positionSeconds) {
+        i++;
       }
+      targetIndex = i;
+    } else {
+      // 传入时间小于旧 active 的时间：从旧索引向前查找
+      // 先向前移动到第一个 time <= positionSeconds 的位置
+      int i = currentIndex;
+      while (i > 0 && paragraphTimes[i] > positionSeconds) {
+        i--;
+      }
+      // 若存在多个相邻且时间相同的元素，取最后一个符合条件的元素
+      while (
+        i + 1 < paragraphTimes.length &&
+        paragraphTimes[i + 1] <= positionSeconds &&
+        paragraphTimes[i + 1] == paragraphTimes[i]
+      ) {
+        i++;
+      }
+      targetIndex = i;
     }
 
-    debugPrint('[srt_browser: _setActiveByProgress]  targetIndex: $targetIndex; len: ${widget.paragraphs.length}');
+    debugPrint('[srt_browser: _setActiveByProgress]  positionSeconds: $positionSeconds; oldIndex: ${_activeIndex}; targetIndex: $targetIndex; len: ${widget.paragraphs.length}');
 
     // 用户正在手动滚动：仅更新高亮，不滚动
     if (_isUserScrolling) {
@@ -221,7 +236,7 @@ class _SrtBrowserState extends State<SrtBrowser> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(width: 56, child: _TimeChip(label: timeLabel)),
+                isTitle ? SizedBox(width: 56, child: _TimeChip(label: timeLabel)) : const SizedBox(width: 56),
                 const SizedBox(width: 7),
                 Expanded(child: isTitle ? _TitleText(text: p.text) : _BodyText(text: p.text)),
                 const SizedBox(width: 63),

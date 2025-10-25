@@ -564,18 +564,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Widget _buildControlBar() {
     return RepaintBoundary(
       child: Container(
-        // decoration: BoxDecoration(
-        //   gradient: LinearGradient(
-        //     stops: [0, 0.2, 1],
-        //     begin: Alignment.topCenter,
-        //     end: Alignment.bottomCenter,
-        //     colors: [
-        //       Colors.transparent,
-        //       Colors.black.withAlpha(100),
-        //       Colors.black.withAlpha(180),
-        //     ],
-        //   ),
-        // ),
         padding: EdgeInsets.only(
           top: 20,
           left: 28,
@@ -748,11 +736,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         padding: EdgeInsets.zero,
         // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         backgroundColor: const Color(0xFF000000).withAlpha(128),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        minimumSize: const Size(40, 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+        minimumSize: const Size(46, 46),
+        side: BorderSide(color: Color(0xFF3E3E3E).withAlpha(128), width: 1),
       ),
       onPressed: _onReturnButtonPressed,
-      icon: Icon(CustomIcons.return_button, color: Colors.white, size: 14),
+      icon: Icon(CustomIcons.return_button, color: Colors.white, size: 18),
     );
   }
 
@@ -773,9 +762,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                 ? Colors.white
                 : const Color(0x66000000),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(23),
             ),
-            minimumSize: const Size(40, 40),
+            minimumSize: const Size(46, 46),
+            side: BorderSide(color: Color(0xFF3E3E3E).withAlpha(128), width: 1),
           ),
           onPressed: _onLikeButtonPressed, // 请求中禁用按钮
           icon: Transform.translate(
@@ -783,7 +773,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             child: Icon(
               CustomIcons.likes,
               color: _localIsLiked ? Color(0xFFFF254E) : Colors.white,
-              size: 14,
+              size: 18,
             ),
           ),
         ),
