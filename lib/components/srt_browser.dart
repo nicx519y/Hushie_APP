@@ -63,12 +63,8 @@ class _SrtBrowserState extends State<SrtBrowser> {
       _activeIndex = idx;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _isAutoScrolling = true;
-        _itemScrollController.scrollTo(
-          index: idx,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          alignment: 0.0,
-        ).then((_) => _isAutoScrolling = false);
+        _scrollWhenReady(idx, const Duration(milliseconds: 300), Curves.easeInOut, 0.0)
+            .whenComplete(() => _isAutoScrolling = false);
       });
     }
   }
@@ -80,6 +76,18 @@ class _SrtBrowserState extends State<SrtBrowser> {
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
+    }
+    // 列表数据可能变化，钳制当前 activeIndex 到合法范围
+    if (widget.paragraphs.isNotEmpty) {
+      final lastIndex = widget.paragraphs.length - 1;
+      if (_activeIndex < 0 || _activeIndex > lastIndex) {
+         final int clamped = _activeIndex < 0 ? 0 : (_activeIndex > lastIndex ? lastIndex : _activeIndex);
+         _activeIndex = clamped;
+       }
+    } else {
+      if (_activeIndex != 0) {
+        _activeIndex = 0;
+      }
     }
   }
 
@@ -96,12 +104,8 @@ class _SrtBrowserState extends State<SrtBrowser> {
     setState(() => _activeIndex = index);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _isAutoScrolling = true;
-      _itemScrollController.scrollTo(
-        index: index,
-        duration: animate ? const Duration(seconds: 1) : Duration.zero,
-        curve: Curves.easeInOut,
-        alignment: 0.0,
-      ).then((_) => _isAutoScrolling = false);
+      _scrollWhenReady(index, animate ? const Duration(seconds: 1) : Duration.zero, Curves.easeInOut, 0.0)
+          .whenComplete(() => _isAutoScrolling = false);
     });
   }
 
@@ -117,39 +121,58 @@ class _SrtBrowserState extends State<SrtBrowser> {
         .map((p) => _parseTimeToSeconds(p.startTime))
         .toList();
 
-    // 以旧的 activeIndex 为起点，根据时间大小决定前向或后向查找
-    int currentIndex = _activeIndex;
-    if (currentIndex < 0) currentIndex = 0;
-    if (currentIndex >= paragraphTimes.length) currentIndex = paragraphTimes.length - 1;
-
-    final int currentActiveTime = paragraphTimes[currentIndex];
-    int targetIndex = currentIndex;
-
-    if (positionSeconds >= currentActiveTime) {
-      // 传入时间大于等于旧 active 的时间：从旧索引向后查找
-      // 选择时间 <= 传入时间 的最后一个元素（若相邻时间相同，取最后一个）
-      int i = currentIndex;
-      while (i + 1 < paragraphTimes.length && paragraphTimes[i + 1] <= positionSeconds) {
+    // 边界：若传入时间在最小值之前或最大值之后，直接选择边界并处理相同时间簇
+    final int lastIndex = paragraphTimes.length - 1;
+    int targetIndex;
+    if (positionSeconds <= paragraphTimes.first) {
+      // 选择第一个元素的相同时间簇中的最后一个
+      int i = 0;
+      while (i + 1 <= lastIndex && paragraphTimes[i + 1] == paragraphTimes[i]) {
         i++;
       }
       targetIndex = i;
+    } else if (positionSeconds >= paragraphTimes[lastIndex]) {
+      // 选择最后一个元素（已自然是相同时间簇的最后）
+      targetIndex = lastIndex;
     } else {
-      // 传入时间小于旧 active 的时间：从旧索引向前查找
-      // 先向前移动到第一个 time <= positionSeconds 的位置
-      int i = currentIndex;
-      while (i > 0 && paragraphTimes[i] > positionSeconds) {
-        i--;
+      // 以旧的 activeIndex 为起点，根据时间大小决定前向或后向查找
+      int currentIndex = _activeIndex;
+      if (currentIndex < 0) currentIndex = 0;
+      if (currentIndex > lastIndex) currentIndex = lastIndex;
+
+      final int currentActiveTime = paragraphTimes[currentIndex];
+      targetIndex = currentIndex;
+
+      if (positionSeconds >= currentActiveTime) {
+        // 传入时间大于等于旧 active 的时间：从旧索引向后查找
+        // 选择时间 <= 传入时间 的最后一个元素（若相邻时间相同，取最后一个）
+        int i = currentIndex;
+        while (i + 1 <= lastIndex && paragraphTimes[i + 1] <= positionSeconds) {
+          i++;
+        }
+        targetIndex = i;
+      } else {
+        // 传入时间小于旧 active 的时间：从旧索引向前查找
+        // 先向前移动到第一个 time <= positionSeconds 的位置
+        int i = currentIndex;
+        while (i > 0 && paragraphTimes[i] > positionSeconds) {
+          i--;
+        }
+        // 若存在多个相邻且时间相同的元素，取最后一个符合条件的元素
+        while (
+          i + 1 <= lastIndex &&
+          paragraphTimes[i + 1] <= positionSeconds &&
+          paragraphTimes[i + 1] == paragraphTimes[i]
+        ) {
+          i++;
+        }
+        targetIndex = i;
       }
-      // 若存在多个相邻且时间相同的元素，取最后一个符合条件的元素
-      while (
-        i + 1 < paragraphTimes.length &&
-        paragraphTimes[i + 1] <= positionSeconds &&
-        paragraphTimes[i + 1] == paragraphTimes[i]
-      ) {
-        i++;
-      }
-      targetIndex = i;
     }
+
+    // 保险：索引钳制
+    if (targetIndex < 0) targetIndex = 0;
+    if (targetIndex > lastIndex) targetIndex = lastIndex;
 
     debugPrint('[srt_browser: _setActiveByProgress]  positionSeconds: $positionSeconds; oldIndex: ${_activeIndex}; targetIndex: $targetIndex; len: ${widget.paragraphs.length}');
 
@@ -194,15 +217,32 @@ class _SrtBrowserState extends State<SrtBrowser> {
       widget.onScrollStateChanged?.call(false);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _isAutoScrolling = true;
-        _itemScrollController.scrollTo(
-          index: _activeIndex,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-          alignment: 0.0,
-        ).then((_) => _isAutoScrolling = false);
+        // 钳制索引到合法范围
+        final lastIndex = (widget.paragraphs.isNotEmpty) ? widget.paragraphs.length - 1 : 0;
+        int idx = _activeIndex;
+        if (idx < 0) idx = 0; else if (idx > lastIndex) idx = lastIndex;
+        _scrollWhenReady(idx, const Duration(milliseconds: 500), Curves.easeInOut, 0.0)
+            .whenComplete(() => _isAutoScrolling = false);
       });
     }
   }
+
+  Future<void> _scrollWhenReady(int index, Duration duration, Curve curve, double alignment) async {
+    if (widget.paragraphs.isEmpty) return;
+    final int lastIndex = widget.paragraphs.length - 1;
+    final int clamped = index < 0 ? 0 : (index > lastIndex ? lastIndex : index);
+    // 等待列表布局完成（ItemPositions 可用）
+    while (_itemPositionsListener.itemPositions.value.isEmpty) {
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+    await _itemScrollController.scrollTo(
+      index: clamped,
+      duration: duration,
+      curve: curve,
+      alignment: alignment,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 用滚动通知检测用户手动滚动
