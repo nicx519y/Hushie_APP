@@ -3,14 +3,14 @@ import 'package:hushie_app/components/wide_image_showcase.dart';
 import '../components/subscribe_options.dart';
 import '../models/product_model.dart';
 import '../services/subscribe_privilege_manager.dart';
-import '../utils/toast_helper.dart';
 import '../pages/app_root.dart';
 
 /// 订阅页面
 /// 展示订阅选项，用户可以选择订阅计划
 class SubscribePage extends StatefulWidget {
   final String? bannerPreference; // 'M' | 'F' | 'F&M'
-  const SubscribePage({super.key, this.bannerPreference});
+  final String? scene; // 来源场景，用于打点
+  const SubscribePage({super.key, this.bannerPreference, this.scene});
 
   @override
   State<SubscribePage> createState() => _SubscribePageState();
@@ -62,8 +62,6 @@ class _SubscribePageState extends State<SubscribePage> {
 
   /// 订阅成功回调
   void _onSubscribeSuccess() {
-    ToastHelper.showSuccess('订阅成功！');
-
     // 跳转到主应用
     _closePage();
   }
@@ -168,6 +166,7 @@ class _SubscribePageState extends State<SubscribePage> {
                                 ? SubscribeOptions(
                                     product: _product,
                                     selectedPlan: _selectedPlan,
+                                    scene: widget.scene,
                                     onPlanSelected: (planIndex) {
                                       setState(() {
                                         _selectedPlan = planIndex;

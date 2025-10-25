@@ -9,11 +9,6 @@ class TrackingService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 提交打点
-  ///
-  /// 参数说明：
-  /// - actionType: 必需，行为类型
-  /// - audioId: 可选，音频ID（音频相关行为时使用）
-  /// - extraData: 可选，额外数据（JSON 对象）
   static Future<ApiResponse<TrackingResponse>> track({
     required String actionType,
     String? audioId,
@@ -35,7 +30,6 @@ class TrackingService {
     try {
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiEndpoints.tracking));
 
-      // 构建请求体（只包含有效字段）
       final Map<String, dynamic> body = {
         'action_type': actionType,
       };
@@ -55,7 +49,6 @@ class TrackingService {
       final Map<String, dynamic> jsonData = json.decode(response.body);
       debugPrint('📍 [TRACKING] errNo: ${jsonData['errNo']}');
 
-      // 统一响应处理
       return ApiResponse.fromJson<TrackingResponse>(
         jsonData,
         (dataJson) => TrackingResponse.fromMap(dataJson),
@@ -65,6 +58,125 @@ class TrackingService {
       return ApiResponse.error(errNo: -1);
     }
   }
+
+  // ===================== 便捷方法与事件类型 =====================
+  static Future<ApiResponse<TrackingResponse>> trackMembershipOverlay({
+    required String scene,
+  }) async {
+    return track(
+      actionType: TrackingEvents.membershipOverlayShow,
+      extraData: {'scene': scene},
+    );
+  }
+
+  // 登录触发（支持可选场景）
+  static Future<ApiResponse<TrackingResponse>> trackSubscribeClickLogin({String? scene}) async {
+    final extra = <String, dynamic>{'trigger': 'login'};
+    if (scene != null && scene.isNotEmpty) {
+      extra['scene'] = scene;
+    }
+    return track(
+      actionType: TrackingEvents.subscribeClick,
+      extraData: extra,
+    );
+  }
+
+  // 支付触发（包含可选的基础计划/优惠）
+  static Future<ApiResponse<TrackingResponse>> trackSubscribeClickPayment({
+    String? basePlanId,
+    String? offerId,
+  }) async {
+    final extra = <String, dynamic>{'trigger': 'payment'};
+    if (basePlanId != null && basePlanId.isNotEmpty) {
+      extra['base_plan_id'] = basePlanId;
+    }
+    if (offerId != null && offerId.isNotEmpty) {
+      extra['offer_id'] = offerId;
+    }
+    return track(
+      actionType: TrackingEvents.subscribeClick,
+      extraData: extra,
+    );
+  }
+
+  // 支付触发（支持场景）
+  static Future<ApiResponse<TrackingResponse>> trackSubscribeClickPay({
+    required String scene,
+  }) async {
+    return track(
+      actionType: TrackingEvents.subscribeClick,
+      extraData: {
+        'trigger': 'payment',
+        'scene': scene,
+      },
+    );
+  }
+
+  // 主页进入后台（改为：应用进入后台）
+  static Future<ApiResponse<TrackingResponse>> trackHomeBackground() async {
+    return track(actionType: TrackingEvents.appBackground);
+  }
+
+  // 别名：与调用处命名一致
+  static Future<ApiResponse<TrackingResponse>> trackHomeToBackground() async {
+    return trackHomeBackground();
+  }
+
+  // 主页 Tab 点击
+  static Future<ApiResponse<TrackingResponse>> trackHomepageTabTap(String tabName) async {
+    return track(
+      actionType: TrackingEvents.homepageTabTap,
+      extraData: {'tab': tabName},
+    );
+  }
+
+  // 别名：与调用处命名一致（命名参数）
+  static Future<ApiResponse<TrackingResponse>> trackHomeTabTap({required String tabName}) async {
+    return trackHomepageTabTap(tabName);
+  }
+
+  // 搜索输入（命名参数 keyword）
+  static Future<ApiResponse<TrackingResponse>> trackSearchInput({
+    required String keyword,
+  }) async {
+    return track(
+      actionType: TrackingEvents.searchInput,
+      extraData: {
+        'query': keyword,
+        'len': keyword.length,
+      },
+    );
+  }
+
+  // 搜索结果点击（仅 audioId）
+  static Future<ApiResponse<TrackingResponse>> trackSearchResultTap(String audioId) async {
+    return track(
+      actionType: TrackingEvents.searchResultTap,
+      audioId: audioId,
+    );
+  }
+
+  // 搜索结果点击（包含 keyword 与 resultId）
+  static Future<ApiResponse<TrackingResponse>> trackSearchResultClick({
+    required String keyword,
+    required String resultId,
+  }) async {
+    return track(
+      actionType: TrackingEvents.searchResultTap,
+      audioId: resultId,
+      extraData: {'query': keyword},
+    );
+  }
+}
+
+/// Tracking 事件常量
+class TrackingEvents {
+  static const String membershipOverlayShow = 'membership_overlay_show';
+  static const String subscribeClick = 'subscribe_click';
+  static const String appBackground = 'app_background';
+  static const String searchInput = 'search_input';
+  static const String searchResultTap = 'search_result_tap';
+  static const String homepageTabTap = 'homepage_tab_tap';
 }
 
 /// Tracking 响应模型
@@ -74,15 +186,11 @@ class TrackingResponse {
   TrackingResponse({required this.message});
 
   factory TrackingResponse.fromMap(Map<String, dynamic> map) {
-    return TrackingResponse(
-      message: map['message'] ?? '',
-    );
+    return TrackingResponse(message: map['message'] ?? '');
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'message': message,
-    };
+    return {'message': message};
   }
 
   @override

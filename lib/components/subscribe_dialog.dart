@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../components/notification_dialog.dart';
 import 'dart:async';
 import 'slide_up_overlay.dart';
 import 'subscribe_options.dart';
@@ -11,8 +10,9 @@ import '../services/api/tracking_service.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
+  final String? scene;
 
-  const SubscribeDialog({super.key, this.onSubscribe});
+  const SubscribeDialog({super.key, this.onSubscribe, this.scene});
 
   @override
   State<SubscribeDialog> createState() => _SubscribeDialogState();
@@ -30,13 +30,13 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
     _loadProductData();
   }
 
-  /// 订阅弹窗打开时上报一次打点
+  /// 订阅弹窗打开时上报一次打点（分场景）
   void _sendOpenTracking() {
     try {
-      TrackingService.track(actionType: 'subscribe_dialog_open');
-      debugPrint('📍 [TRACKING] subscribe_dialog_open');
+      TrackingService.trackMembershipOverlay(scene: widget.scene ?? 'unknown');
+      debugPrint('📍 [TRACKING] membership_overlay_show scene=${widget.scene ?? 'unknown'}');
     } catch (e) {
-      debugPrint('📍 [TRACKING] subscribe_dialog_open error: $e');
+      debugPrint('📍 [TRACKING] membership_overlay_show error: $e');
     }
   }
 
@@ -74,15 +74,6 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
     Navigator.of(context, rootNavigator: true).pop();
   }
 
-  // 打开成功提示框
-  void _openSuccessNotification() {
-    showNotificationDialog(
-      context,
-      title: 'Congratulations！',
-      message: 'You have successfully activated Hushie Pro Membership.',
-      buttonText: 'Enjoy It',
-    );
-  }
 
   @override
   void dispose() {
@@ -181,8 +172,9 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                 },
                 onSubscribeSuccess: () {
                   _closeDialog();
-                  _openSuccessNotification();
+                  openSubscribeSuccessNotification(context);
                 },
+                scene: widget.scene,
               ),
             ],
           ),
@@ -229,54 +221,8 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
 
 }
 
-// // 示例数据 - 创建一个示例Product
-// final sampleProduct = Product(
-//   googlePlayProductId: 'hushie_premium',
-//   name: 'Pro',
-//   description: 'Premium subscription with full access',
-//   productType: 'subscription',
-//   basePlans: [
-//     BasePlan(
-//       googlePlayBasePlanId: 'monthly_plan',
-//       name: 'Monthly',
-//       price: 9.99,
-//       originalPrice: 12.99,
-//       currency: 'USD',
-//       billingPeriod: 'monthly',
-//       durationDays: 30,
-//       isAvailable: true,
-//       isSubscribing: false,
-//       isShowDiscount: true,
-//       offers: [
-//         Offer.fromJson({
-//           'offer_id': 'monthly_plan',
-//           'name': 'First Month',
-//           'price': 3.99,
-//           'original_price': 12.99,
-//           'currency': 'USD',
-//           'description': 'Monthly subscription',
-//           'is_available': true,
-//         }),
-//       ],
-//     ),
-//     BasePlan(
-//       googlePlayBasePlanId: 'yearly_plan',
-//       name: 'Yearly',
-//       price: 99.99,
-//       originalPrice: 119.99,
-//       currency: 'USD',
-//       billingPeriod: 'yearly',
-//       durationDays: 365,
-//       isAvailable: false,
-//       isSubscribing: true,
-//       isShowDiscount: false,
-//       offers: [],
-//     ),
-//   ],
-// );
-
 // 显示订阅对话框的便捷方法
-Future<void> showSubscribeDialog(BuildContext context) async {
+Future<void> showSubscribeDialog(BuildContext context, {String? scene}) async {
   // 检查是否已有弹窗打开
   if (!DialogStateManager.instance.tryOpenDialog(
     DialogStateManager.subscribeDialog,
@@ -284,5 +230,5 @@ Future<void> showSubscribeDialog(BuildContext context) async {
     return; // 已有其他弹窗打开，直接返回
   }
 
-  return SlideUpOverlay.show(context: context, child: const SubscribeDialog());
+  return SlideUpOverlay.show(context: context, child: SubscribeDialog(scene: scene));
 }

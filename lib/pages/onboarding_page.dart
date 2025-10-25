@@ -20,12 +20,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   static const Color activeColor = Color(0xFFFF5082);
 
   int _currentStep = 0;
-  bool _isLoading = false; // 初始不请求，不显示loading
-  bool _isSubmitting = false; // 添加提交状态
+  bool _isLoading = false; // 加载状态
+  bool _isSubmitting = false; // 提交状态
   OnboardingGuideData? _guideData;
-
-  // 首次点击后再发起请求
-  bool _hasRequested = false;
 
   // 用户选择的偏好 - 改为多选
   final List<String> _selectedScenes = [];
@@ -35,17 +32,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   void initState() {
     super.initState();
-    // 初始化时不请求数据，等待用户首次点击
-  }
-
-  void _triggerFirstLoad() {
-    if (_hasRequested || _isLoading) return;
-    setState(() {
-      _hasRequested = true;
-      _isLoading = true;
-    });
+    // 页面初始化即加载引导数据
+    _isLoading = true;
     _loadGuideData();
   }
+
 
   /// 加载引导数据
   Future<void> _loadGuideData() async {
@@ -110,7 +101,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => SubscribePage(bannerPreference: pref),
+            builder: (context) => SubscribePage(bannerPreference: pref, scene: 'onboarding'),
             settings: const RouteSettings(name: '/subscribe'),
           ),
         );
@@ -122,7 +113,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => SubscribePage(bannerPreference: pref),
+            builder: (context) => SubscribePage(bannerPreference: pref, scene: 'onboarding'),
             settings: const RouteSettings(name: '/subscribe'),
           ),
         );
@@ -202,76 +193,72 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: !_hasRequested ? _triggerFirstLoad : null,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 8,
-                  ),
-                  child: Column(
-                    children: [
-                      // 顶部进度指示器
-                      Row(
-                        children: [
-                          Transform.translate(
-                            offset: const Offset(0, 0),
-                            child: SvgPicture.asset(
-                              'assets/icons/logo.svg',
-                              height: 30,
-                              width: 120,
-                            ),
-                          ),
-                          Expanded(child: _buildProgressIndicator()),
-                        ],
-                      ),
-
-                      SizedBox(height: 43),
-
-                      // 标题
-                      SizedBox(
-                        width: double.infinity,
-                        child: Text(
-                          _getStepTitle(),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF333333),
-                          ),
-                          textAlign: TextAlign.left,
-                        ),
-                      ),
-
-                      SizedBox(height: 24),
-
-                      // 选项列表
-                      Expanded(
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: _buildOptionsList(),
-                        ),
-                      ),
-
-                      SizedBox(height: 24),
-
-                      // 底部导航按钮
-                      SizedBox(
-                        width: double.infinity,
-                        child: _buildBottomNavigation(),
-                      ),
-                    ],
-                  ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
                 ),
-        ),
-      ),
-    );
-  }
+                child: Column(
+                  children: [
+                    // 顶部进度指示器
+                    Row(
+                      children: [
+                        Transform.translate(
+                          offset: const Offset(0, 0),
+                          child: SvgPicture.asset(
+                            'assets/icons/logo.svg',
+                            height: 30,
+                            width: 120,
+                          ),
+                        ),
+                        Expanded(child: _buildProgressIndicator()),
+                      ],
+                    ),
+
+                    SizedBox(height: 43),
+
+                    // 标题
+                    SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        _getStepTitle(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF333333),
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
+                    ),
+
+                    SizedBox(height: 24),
+
+                    // 选项列表
+                    Expanded(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: _buildOptionsList(),
+                      ),
+                    ),
+
+                    SizedBox(height: 24),
+
+                    // 底部导航按钮
+                    SizedBox(
+                      width: double.infinity,
+                      child: _buildBottomNavigation(),
+                    ),
+                  ],
+                ),
+            ),
+    ),
+  );
+}
 
   /// 构建进度指示器
   Widget _buildProgressIndicator() {
@@ -492,7 +479,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               if (mounted) {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => SubscribePage(bannerPreference: pref),
+                    builder: (context) => SubscribePage(bannerPreference: pref, scene: 'onboarding'),
                     settings: const RouteSettings(name: '/subscribe'),
                   ),
                 );

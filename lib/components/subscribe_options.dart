@@ -11,12 +11,24 @@ import '../router/navigation_utils.dart';
 import '../utils/webview_navigator.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../services/analytics_service.dart';
+import '../services/api/tracking_service.dart';
+
+// 订阅成功提示的复用方法
+void openSubscribeSuccessNotification(BuildContext context) {
+  showNotificationDialog(
+    context,
+    title: 'Congratulations！',
+    message: 'You have successfully activated Hushie Pro Membership.',
+    buttonText: 'Enjoy It',
+  );
+}
 
 class SubscribeOptions extends StatefulWidget {
   final Product? product;
   final int selectedPlan;
   final Function(int) onPlanSelected;
   final VoidCallback onSubscribeSuccess;
+  final String? scene;
 
   const SubscribeOptions({
     super.key,
@@ -24,6 +36,7 @@ class SubscribeOptions extends StatefulWidget {
     required this.selectedPlan,
     required this.onPlanSelected,
     required this.onSubscribeSuccess,
+    this.scene,
   });
 
   @override
@@ -43,6 +56,11 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
 
     final bool isLogin = await AuthManager.instance.isSignedIn();
     if (!isLogin) {
+      try {
+        TrackingService.trackSubscribeClickLogin(scene: widget.scene ?? 'unknown');
+      } catch (e) {
+        debugPrint('📍 [TRACKING] subscribe_click_login error: $e');
+      }
       if (mounted) {
         NavigationUtils.navigateToLogin(context);
       }
@@ -67,6 +85,12 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
         );
       }
       return;
+    }
+
+    try {
+      TrackingService.trackSubscribeClickPay(scene: widget.scene ?? 'unknown');
+    } catch (e) {
+      debugPrint('📍 [TRACKING] subscribe_click_pay error: $e');
     }
 
     // 启动Google Play Billing支付流程

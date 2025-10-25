@@ -167,7 +167,7 @@ class _PremiumAccessCardState extends State<PremiumAccessCard> {
                       const SizedBox(height: 22),
                       InkWell(
                         onTap: () {
-                          showSubscribeDialog(context);
+                          showSubscribeDialog(context, scene: 'me');
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(

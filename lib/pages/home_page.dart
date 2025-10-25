@@ -8,6 +8,7 @@ import '../models/tab_item.dart';
 import '../services/audio_manager.dart';
 import '../services/home_tab_list_data_provider.dart';
 import '../services/analytics_service.dart';
+import '../services/api/tracking_service.dart';
 
 import '../router/navigation_utils.dart';
 
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     debugPrint('🏠 [HOME_PAGE] HomePage initState开始');
     super.initState();
+    // WidgetsBinding.instance.addObserver(this); // 迁移到 AppRoot 统一监听
     debugPrint('🏠 [HOME_PAGE] 开始初始化tabs');
     _initTabs();
     debugPrint('🏠 [HOME_PAGE] 开始初始化列表服务');
@@ -46,6 +48,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _tabsSubscription?.cancel();
     _tabController.dispose();
     _pageController.dispose();
+    // WidgetsBinding.instance.removeObserver(this); // 迁移到 AppRoot 统一监听
     super.dispose();
   }
 
@@ -94,12 +97,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       // 数据提供者已在_initTabs中初始化
       debugPrint('数据提供者初始化完成');
-
-      // 预加载当前tab的数据
+  
+      // 预加载当前tab的数据（优先 for_you）
       if (_tabItems.isNotEmpty) {
-        await _dataProvider.preloadTabData(_tabItems[0].id);
+        final forYouIndex = _tabItems.indexWhere((t) => t.id == 'for_you');
+        final preloadIndex = forYouIndex >= 0 ? forYouIndex : (_currentTabIndex);
+        final preloadTabId = _tabItems[preloadIndex].id;
+        await _dataProvider.preloadTabData(preloadTabId);
       }
-
+  
     } catch (error) {
       debugPrint('数据提供者初始化失败: $error');
     }
@@ -113,8 +119,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _setupControllers() {
-    _tabController = TabController(length: _tabItems.length, vsync: this);
-    _pageController = PageController(initialPage: 0);
+    final forYouIndex = _tabItems.indexWhere((t) => t.id == 'for_you');
+    final initialIndex = forYouIndex >= 0 ? forYouIndex : 0;
+    _tabController = TabController(length: _tabItems.length, vsync: this, initialIndex: initialIndex);
+    _pageController = PageController(initialPage: initialIndex);
+    _currentTabIndex = initialIndex;
   }
 
   // 同步PageView到指定的Tab索引
@@ -126,12 +135,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // 记录 Tab 点击事件
     if (tabIndex >= 0 && tabIndex < _tabItems.length) {
       final tabName = _tabItems[tabIndex].label;
-      AnalyticsService().logCustomEvent(
-        eventName: 'tab_tap',
-        parameters: {
-          'tab_name': tabName,
-        },
-      );
+      try {
+        TrackingService.trackHomeTabTap(tabName: tabName);
+      } catch (e) {
+        debugPrint('📍 [TRACKING] home_tab_tap error: $e');
+      }
     }
 
     _isUpdatingFromTab = true;
@@ -149,9 +157,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         curve: Curves.easeInOut,
       );
     }
-
-    // 移除预加载逻辑，让 _onPageChanged 统一处理
-    // _preloadTabData(tabIndex);
 
     // 延迟重置标志，确保动画完成后再允许新的调用
     Future.delayed(const Duration(milliseconds: 350), () {
@@ -269,4 +274,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
     );
   }
+
+  // @override
+  // 移除页面级生命周期监听，改为在 AppRoot 统一上报
+  // @override
+  // void didChangeAppLifecycleState(AppLifecycleState state) {
+  //   if (state == AppLifecycleState.paused) {
+  //     try {
+  //       TrackingService.trackHomeToBackground();
+  //     } catch (e) {
+  //       debugPrint('📍 [TRACKING] home_to_background error: $e');
+  //     }
+  //   }
+  // }
 }

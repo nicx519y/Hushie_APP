@@ -31,12 +31,16 @@ class SrtBrowser extends StatefulWidget {
     this.controller, 
     this.initPorgress,
     this.onScrollStateChanged,
+    this.onParagraphTap,
+    this.canViewAllText = false,
   });
 
   final List<SrtParagraphModel> paragraphs;
   final SrtBrowserController? controller;
   final double? initPorgress; // 0.0 ~ 1.0 的初始进度
   final Function(bool isUserScrolling)? onScrollStateChanged; // 滚动状态变化回调
+  final Function(SrtParagraphModel paragraph)? onParagraphTap; // 段落点击回调
+  final bool canViewAllText; // 是否可查看完整文本
 
   @override
   State<SrtBrowser> createState() => _SrtBrowserState();
@@ -112,7 +116,7 @@ class _SrtBrowserState extends State<SrtBrowser> {
   // 根据进度设置激活索引：progress 为 0.0 ~ 1.0
   void _setActiveByProgress(Duration position, [bool animate = true]) {
     if (widget.paragraphs.isEmpty) return;
-    debugPrint('[srt_browser: _setActiveByProgress]  position: $position');
+    // debugPrint('[srt_browser: _setActiveByProgress]  position: $position');
 
     final int positionSeconds = position.inSeconds;
 
@@ -174,7 +178,7 @@ class _SrtBrowserState extends State<SrtBrowser> {
     if (targetIndex < 0) targetIndex = 0;
     if (targetIndex > lastIndex) targetIndex = lastIndex;
 
-    debugPrint('[srt_browser: _setActiveByProgress]  positionSeconds: $positionSeconds; oldIndex: ${_activeIndex}; targetIndex: $targetIndex; len: ${widget.paragraphs.length}');
+    // debugPrint('[srt_browser: _setActiveByProgress]  positionSeconds: $positionSeconds; oldIndex: ${_activeIndex}; targetIndex: $targetIndex; len: ${widget.paragraphs.length}');
 
     // 用户正在手动滚动：仅更新高亮，不滚动
     if (_isUserScrolling) {
@@ -263,27 +267,38 @@ class _SrtBrowserState extends State<SrtBrowser> {
         itemCount: widget.paragraphs.length,
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 0),
         itemBuilder: (context, index) {
-          final p = widget.paragraphs[index];
-          final timeLabel = _formatMmSs(p.startTime);
-          final isTitle = p.type == SrtParagraphType.title;
-          return Container(
-            // 移除基于 GlobalKey 的 key
-            padding: const EdgeInsets.symmetric(vertical: 7),
-            decoration: BoxDecoration(
-              color: _activeIndex != index ? Colors.transparent : const Color(0xFFF9F9F9).withAlpha(50),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                isTitle ? SizedBox(width: 56, child: _TimeChip(label: timeLabel)) : const SizedBox(width: 56),
-                const SizedBox(width: 7),
-                Expanded(child: isTitle ? _TitleText(text: p.text) : _BodyText(text: p.text)),
-                const SizedBox(width: 63),
-              ],
-            ),
-          );
-        },
+           final p = widget.paragraphs[index];
+           final timeLabel = _formatMmSs(p.startTime);
+           final isTitle = p.type == SrtParagraphType.title;
+           return GestureDetector(
+             onTap: () {
+               // 只有标题段落才能点击跳转
+               if (widget.onParagraphTap != null) {
+                 widget.onParagraphTap!(p);
+               }
+             },
+             child: Container(
+               // 移除基于 GlobalKey 的 key
+               padding: const EdgeInsets.symmetric(vertical: 7),
+               decoration: BoxDecoration(
+                 color: _activeIndex != index ? Colors.transparent : const Color(0xFFF9F9F9).withAlpha(50),
+                 borderRadius: BorderRadius.circular(8),
+               ),
+               child: Row(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   isTitle ? SizedBox(width: 56, child: _TimeChip(label: timeLabel)) : const SizedBox(width: 56),
+                   const SizedBox(width: 7),
+                   Expanded(child: isTitle 
+                     ? _TitleText(text: p.text, canViewAllText: widget.canViewAllText)
+                     : _BodyText(text: p.text, canViewAllText: widget.canViewAllText)
+                   ),
+                   const SizedBox(width: 63),
+                 ],
+               ),
+             ),
+           );
+         },
       ),
     );
   }
@@ -351,13 +366,16 @@ class _TimeChip extends StatelessWidget {
 }
 
 class _TitleText extends StatelessWidget {
-  const _TitleText({required this.text});
+  const _TitleText({required this.text, required this.canViewAllText});
   final String text;
+  final bool canViewAllText;
 
   @override
   Widget build(BuildContext context) {
     return Text(
       text,
+      maxLines: canViewAllText ? null : 3,
+      overflow: canViewAllText ? TextOverflow.visible : TextOverflow.ellipsis,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 14,
@@ -369,8 +387,9 @@ class _TitleText extends StatelessWidget {
 }
 
 class _BodyText extends StatelessWidget {
-  const _BodyText({required this.text});
+  const _BodyText({required this.text, required this.canViewAllText});
   final String text;
+  final bool canViewAllText;
 
   @override
   Widget build(BuildContext context) {
@@ -380,6 +399,8 @@ class _BodyText extends StatelessWidget {
     return Text.rich(
       TextSpan(children: spans),
       textAlign: TextAlign.left,
+      maxLines: canViewAllText ? null : 3,
+      overflow: canViewAllText ? TextOverflow.visible : TextOverflow.ellipsis,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 12,

@@ -19,6 +19,19 @@ import '../config/api_config.dart';
 import 'home_page_list_service.dart';
 import 'subscribe_privilege_manager.dart';
 
+// 权限违规事件类
+// 移除违规事件类定义与相关流
+// class PermissionViolationEvent {
+//   final AudioItem audio;
+//   final String reason;
+//   final DateTime timestamp;
+// 
+//   PermissionViolationEvent({
+//     required this.audio,
+//     required this.reason,
+//     DateTime? timestamp,
+//   }) : timestamp = timestamp ?? DateTime.now();
+// }
 
 class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
@@ -35,6 +48,10 @@ class AudioManager {
   // preloadAudio 流，用于推送预加载的音频信息
   final BehaviorSubject<AudioItem?> _preloadAudioSubject =
       BehaviorSubject<AudioItem?>.seeded(null);
+
+  // 权限违规事件流
+  // final BehaviorSubject<PermissionViolationEvent?> _permissionViolationSubject =
+  //     BehaviorSubject<PermissionViolationEvent?>.seeded(null);
 
   // 缓存本地状态，用于比对变化
   String? _lastAudioId;
@@ -201,8 +218,18 @@ class AudioManager {
         }
       }
 
+      // 权限检查 - 当播放状态变化为播放时进行检查
+      // if (playingStateChanged && isPlaying && audio != null) {
+      //   if (!_checkAudioPermission(audio)) {
+      //     final reason = _hasPremium 
+      //         ? 'Unknown permission error' 
+      //         : 'This audio requires premium membership, playback has been paused';
+      //     _handlePermissionViolation(audio, reason);
+      //   }
+      // }
+
       // 检查播放是否完成并自动播放下一首
-      if(positionChanged && audioState.playerState.playing && position >= audioState.duration * 0.995) {
+      if(positionChanged && audioState.playerState.playing && position >= audioState.duration * 0.995 && _hasPremium) {
         _checkPlaybackCompletion();
       }
       // debugPrint('[checkWillOutPreview] 播放列表管理完成');
@@ -393,13 +420,14 @@ class AudioManager {
 
   // 播放音频
   Future<void> playAudio(AudioItem audio, {bool? autoPlay = true, Duration? initialPosition} ) async {
+
     // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
     final currentAudio = this.currentAudio;
     final bool auto = autoPlay ?? true;
 
     if (currentAudio != null && currentAudio.id == audio.id) {
-      debugPrint('相同音频正在播放，跳过: ${audio.title} (ID: ${audio.id})');
-      if (!isPlaying && autoPlay == true) {
+      if (!isPlaying && auto == true && _checkAudioPermission(audio)) {
+        // 再次检查权限，防止权限状态在播放过程中发生变化
         play();
       }
       return;
@@ -425,7 +453,7 @@ class AudioManager {
       debugPrint('[playAudio]: _audioService != null : ${_audioService != null}; auto : $auto');
 
       if (_audioService != null) {
-        if (auto == true) {
+        if (auto == true && _checkAudioPermission(audio)) {
           await _audioService!.playAudio(
             audio,
             initialPosition: position,
@@ -722,6 +750,24 @@ class AudioManager {
       debugPrint('AudioManager: 已登出，停止监听播放历史');
     }
   }
+
+  /// 检查音频播放权限
+  bool _checkAudioPermission(AudioItem audio) {
+    // 如果用户有会员权限，可以播放所有音频
+    if (_hasPremium) {
+      return true;
+    }
+    
+    // 如果用户没有会员权限，只能播放免费音频
+    return audio.isFree;
+  }
+
+
+  /// 获取权限违规事件流
+  // 已移除：权限违规事件流
+  // Stream<PermissionViolationEvent?> get permissionViolationStream {
+  //   return _permissionViolationSubject.stream;
+  // }
 
 
   // 清理资源

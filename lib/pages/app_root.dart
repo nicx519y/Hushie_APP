@@ -60,8 +60,14 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
         _shouldSendOnResume = false;
       }
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // 进入后台或非活动态，允许下次恢复时打点
+      // 应用进入后台或非活动态：标记下次恢复打点，并上报后台事件
       _shouldSendOnResume = true;
+      try {
+        TrackingService.trackHomeToBackground();
+        debugPrint('📊 [TRACKING] App -> background sent');
+      } catch (e) {
+        debugPrint('📍 [TRACKING] app_background error: $e');
+      }
     }
   }
 

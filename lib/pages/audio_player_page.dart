@@ -83,6 +83,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   AudioItem? _currentAudio;
   bool _isLiked = false;
   bool _isAudioLoading = false; // 是否正在加载metadata
+  bool _isDetailLoading = false; // 是否正在加载音频详情
 
   // 点赞相关状态管理
   bool _isLikeRequesting = false; // 是否正在请求点赞
@@ -93,8 +94,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 播放列表相关状态管理
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
-
-  bool _isDescExpended = false; // 描述是否展开
 
   // StreamSubscription列表，用于在dispose时取消
   final List<StreamSubscription> _subscriptions = [];
@@ -121,7 +120,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         // 获取音频详情并更新点赞状态
         final initialAudio = widget.initialAudio;
         if (initialAudio != null) {
-          _fetchAudioDetailAndUpdateLikeState(initialAudio.id);
+          _fetchAudioDetail(initialAudio.id);
         }
       });
     }
@@ -134,6 +133,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             _listenToAudioState();
           });
         });
+  }
+
+  bool _canPlay() {
+    if (_currentAudio != null) {
+      return _hasPremium || (_currentAudio?.isFree ?? false);
+    } else {
+      return false;
+    }
   }
 
   void _onScrollStateChanged(bool isUserScrolling) {
@@ -174,7 +181,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               if (_currentAudio != null) {
                 final audioId = _currentAudio?.id;
                 if (audioId != null) {
-                  _fetchAudioDetailAndUpdateLikeState(audioId);
+                  _fetchAudioDetail(audioId);
                 }
               }
             }
@@ -225,7 +232,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             // 检查播放位置是否变化，驱动字幕高亮
             if (_lastAudioState?.position != audioState.position) {
               final duration = audioState.duration;
-              debugPrint('[audio_player_page: _listenToAudioState]  position: ${audioState.position}');
+              // debugPrint('[audio_player_page: _listenToAudioState]  position: ${audioState.position}');
               if (duration != null && duration.inMilliseconds > 0) {
                 // 改为按具体时间定位字幕
                 _srtController.setActiveByProgress(
@@ -257,6 +264,17 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         }
       }),
     );
+
+    // 监听权限违规事件（已移除）
+    // _subscriptions.add(
+    //   _audioManager.permissionViolationStream.listen((violationEvent) {
+    //     if (mounted && violationEvent != null) {
+    //       debugPrint('🚫 [PLAYER] 检测到权限违规: ${violationEvent.reason}');
+    //       // 显示订阅对话框
+    //       showSubscribeDialog(context, scene: 'player');
+    //     }
+    //   }),
+    // );
   }
 
   void _playAndPauseBtnPress() {
@@ -271,9 +289,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       final currentAudio = _audioManager.currentAudio;
       final currentAudioId = (_currentAudio?.id ?? 'unknown');
 
+      if(currentAudio != null && !_canPlay()) {
+        // 检查是否可以播放 如果不能播放 则显示订阅对话框
+        showSubscribeDialog(context, scene: 'player');
+        return;
+      }
+
       if (currentAudio == null || currentAudio.id != currentAudioId) {
         // 如果没有当前音频信息，无法播放
         if (_currentAudio == null) return;
+
         // 创建音频模型并播放
         final audioToPlay = _currentAudio;
         if (audioToPlay != null) {
@@ -346,7 +371,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   /// 获取音频详情并更新点赞状态
-  Future<void> _fetchAudioDetailAndUpdateLikeState(String audioId) async {
+  Future<void> _fetchAudioDetail(String audioId) async {
+    if (mounted) {
+      setState(() {
+        _isDetailLoading = true;
+      });
+    }
     try {
       debugPrint('🎵 [PLAYER] 开始获取音频详情: $audioId');
 
@@ -360,6 +390,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _localLikesCount = audioDetail.likesCount ?? 0;
           _isLikeButtonVisible = true; // 获取成功后显示点赞按钮
           _srtParagraphs = audioDetail.srtParagraphs ?? [];
+          _isDetailLoading = false; // 详情加载完成
         });
 
         debugPrint(
@@ -373,6 +404,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         // 获取失败时也要显示点赞按钮，使用当前的状态
         setState(() {
           _isLikeButtonVisible = true;
+          _isDetailLoading = false; // 失败也结束加载状态
         });
       }
     }
@@ -421,12 +453,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 解锁全功能提示点击事件
   void _onUnlockFullAccessTap() async {
     showSubscribeDialog(context);
-  }
-
-  void _onReadMoreTap() {
-    setState(() {
-      _isDescExpended = !_isDescExpended;
-    });
   }
 
   @override
@@ -485,11 +511,17 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                     child: Column(
                       children: [
                         Expanded(
-                          child: SrtBrowser(
-                            paragraphs: _srtParagraphs,
-                            controller: _srtController,
-                            onScrollStateChanged: _onScrollStateChanged,
-                          ),
+                          child: _isDetailLoading
+                              ? const SizedBox.expand()
+                              : _srtParagraphs.isEmpty
+                              ? _buildDesc()
+                              : SrtBrowser(
+                                  paragraphs: _srtParagraphs,
+                                  controller: _srtController,
+                                  onScrollStateChanged: _onScrollStateChanged,
+                                  onParagraphTap: _onParagraphTap,
+                                  canViewAllText: _canPlay(),
+                                ),
                         ), // 字幕组件
                         _hasPremium
                             ? const SizedBox.shrink()
@@ -670,60 +702,24 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     );
   }
 
-  // 构建音频描述 1.0.5 版本删除
-  // Widget _buildAudioDescription() {
-  //   final desc = _currentAudio?.desc ?? 'No description available';
-
-  //   return InkWell(
-  //     onTap: _onReadMoreTap,
-  //     child: Column(
-  //       mainAxisAlignment: MainAxisAlignment.start,
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Text(
-  //           desc,
-  //           style: const TextStyle(
-  //             // letterSpacing: 0,
-  //             fontSize: 12,
-  //             height: 1.7,
-  //             color: Colors.white,
-  //             // fontWeight: FontWeight.w300,
-  //           ),
-  //           textAlign: TextAlign.left,
-  //           maxLines: _isDescExpended ? 20 : 2,
-  //           overflow: TextOverflow.ellipsis,
-  //         ),
-  //         const SizedBox(height: 6),
-  //         Row(
-  //           children: [
-  //             SizedBox(
-  //               width: 32,
-  //               child: Text(
-  //                 _isDescExpended ? 'Fold' : 'More',
-  //                 style: const TextStyle(
-  //                   fontSize: 12,
-  //                   color: Colors.white,
-  //                   fontWeight: FontWeight.w700,
-  //                 ),
-  //               ),
-  //             ),
-
-  //             const SizedBox(width: 6),
-  //             Transform.scale(
-  //               scaleY: _isDescExpended ? -1 : 1,
-  //               alignment: Alignment.center, // 设置旋转中心为组件中心
-  //               child: Icon(
-  //                 CustomIcons.arrow_down,
-  //                 color: Colors.white,
-  //                 size: 9,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+  // 构建描述内容，当没有字幕时显示
+  Widget _buildDesc() {
+    final desc = _currentAudio?.desc ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 63),
+      child: SingleChildScrollView(
+        child: Text(
+          desc.isNotEmpty ? desc : '',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            height: 1.3,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
 
   // 构建返回按钮
   Widget _buildReturnButton() {
@@ -959,4 +955,46 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   // 构建拖拽指示器
+
+  // 段落点击回调：跳转到指定时间
+  void _onParagraphTap(SrtParagraphModel paragraph) {
+    try {
+      // 解析时间字符串为 Duration
+      final Duration seekTime = _parseTimeStringToDuration(paragraph.startTime);
+
+      // 调用 AudioManager 的 seek 方法跳转到指定时间
+      _audioManager.seek(seekTime);
+
+      // 打印调试信息
+      debugPrint(
+        '[AudioPlayerPage] 段落点击跳转: ${paragraph.startTime} -> ${seekTime.inSeconds}秒',
+      );
+    } catch (e) {
+      debugPrint('[AudioPlayerPage] 段落点击跳转失败: $e');
+    }
+  }
+
+  // 解析时间字符串为 Duration 对象
+  Duration _parseTimeStringToDuration(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      int h = 0, m = 0, s = 0;
+
+      if (parts.length == 3) {
+        h = int.tryParse(parts[0]) ?? 0;
+        m = int.tryParse(parts[1]) ?? 0;
+        s = int.tryParse(parts[2]) ?? 0;
+      } else if (parts.length == 2) {
+        m = int.tryParse(parts[0]) ?? 0;
+        s = int.tryParse(parts[1]) ?? 0;
+      } else if (parts.length == 1) {
+        s = int.tryParse(parts[0]) ?? 0;
+      }
+
+      return Duration(hours: h, minutes: m, seconds: s);
+    } catch (e) {
+      debugPrint('[AudioPlayerPage] 时间解析失败: $timeStr, 错误: $e');
+      return Duration.zero;
+    }
+  }
 }

@@ -10,6 +10,7 @@ import '../router/navigation_utils.dart';
 import '../components/subscribe_dialog.dart';
 // import '../services/subscribe_privilege_manager.dart';
 import '../services/analytics_service.dart';
+import '../services/api/tracking_service.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -280,7 +281,15 @@ class _SearchPageState extends State<SearchPage> {
 
   // 点击搜索结果项
   void _onSearchItemTap(AudioItem audio) {
-    // 记录搜索结果列表点击事件
+    try {
+      TrackingService.trackSearchResultClick(
+        keyword: _searchController.text.trim(),
+        resultId: audio.id,
+      );
+    } catch (e) {
+      debugPrint('📍 [TRACKING] search_result_click error: $e');
+    }
+    // 保留原有自定义事件
     AnalyticsService().logCustomEvent(
       eventName: 'search_result_audio_tap',
       parameters: {
@@ -290,14 +299,12 @@ class _SearchPageState extends State<SearchPage> {
     if (_canTapSearchItem) {
       // 保存当前搜索查询到历史
       _saveSearchHistory(_searchController.text);
-      
-      // 播放音频
+      // 播放音频并进入播放页
       _playAudio(audio);
-      // 进入播放页面
       NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
     } else {
-      // 没有权限，提示用户订阅
-      showSubscribeDialog(context);
+      // 没有权限，提示订阅
+      showSubscribeDialog(context, scene: 'search');
     }
   }
 
@@ -322,6 +329,13 @@ class _SearchPageState extends State<SearchPage> {
 
     final currentText = _searchController.text;
     if (currentText.isNotEmpty && currentText != _lastRenderedQuery) {
+      // 输入打点（去除首尾空格）
+      try {
+        TrackingService.trackSearchInput(keyword: currentText.trim());
+      } catch (e) {
+        debugPrint('📍 [TRACKING] search_input error: $e');
+      }
+
       _lastRenderedQuery = currentText;
       _debounceTimer?.cancel();
       _debounceTimer = Timer(Duration(milliseconds: _debounceDelay), () {
@@ -393,7 +407,7 @@ class _SearchPageState extends State<SearchPage> {
                     Align(
                       alignment: Alignment.center,
                       child: ElevatedButton(
-                        onPressed: () => showSubscribeDialog(context),
+                        onPressed: () => showSubscribeDialog(context, scene: 'search'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFFDE69),
                           foregroundColor: const Color(0xFF502D19),
