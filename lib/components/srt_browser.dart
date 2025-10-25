@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/srt_model.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 // 控制器：用于外部设置 activeIndex 并触发滚动
 class SrtBrowserController {
@@ -11,49 +12,63 @@ class SrtBrowserController {
   void setActiveIndex(int index, [bool animate = true]) {
     _state?._setActiveIndex(index, animate);
   }
-  void setActiveByProgress(double progress, [bool animate = true]) {
-    _state?._setActiveByProgress(progress, animate);
+  // 修改：按具体时间定位字幕，而不是进度比例
+  void setActiveByProgress(Duration position, [bool animate = true]) {
+    _state?._setActiveByProgress(position, animate);
+  }
+  // 新增：重置到自动滚动状态
+  void resetToAutoScroll() {
+    _state?._resetToAutoScroll();
   }
   int? get activeIndex => _state?._activeIndex;
 }
 
 /// 字幕浏览组件：根据 SrtParagraphModel 渲染标题与正文段落
 class SrtBrowser extends StatefulWidget {
-  const SrtBrowser({super.key, required this.paragraphs, this.controller, this.initPorgress});
+  const SrtBrowser({
+    super.key, 
+    required this.paragraphs, 
+    this.controller, 
+    this.initPorgress,
+    this.onScrollStateChanged,
+  });
 
   final List<SrtParagraphModel> paragraphs;
   final SrtBrowserController? controller;
   final double? initPorgress; // 0.0 ~ 1.0 的初始进度
+  final Function(bool isUserScrolling)? onScrollStateChanged; // 滚动状态变化回调
 
   @override
   State<SrtBrowser> createState() => _SrtBrowserState();
 }
 
 class _SrtBrowserState extends State<SrtBrowser> {
-  final ScrollController _scrollController = ScrollController();
-  late List<GlobalKey> _itemKeys;
+  // 替换为按索引滚动的控制器
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
+  // 移除 GlobalKey 列表与传统 ScrollController
   int _activeIndex = 0; // 当前激活的段落索引
+  bool _isUserScrolling = false; // 用户是否在手动滚动
+  bool _isAutoScrolling = false; // 是否正在自动滚动
 
   @override
   void initState() {
     super.initState();
-    _itemKeys = List.generate(widget.paragraphs.length, (_) => GlobalKey());
+    // 移除 _itemKeys 与 _scrollController 监听
     widget.controller?._attach(this);
-
     // 根据入参 initPorgress 设置初始 activeIndex
     if (widget.initPorgress != null && widget.paragraphs.isNotEmpty) {
       final p = widget.initPorgress!.clamp(0.0, 1.0);
       final idx = (p * (widget.paragraphs.length - 1)).round();
       _activeIndex = idx;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final ctx = _itemKeys[idx].currentContext;
-        if (ctx != null) {
-          Scrollable.ensureVisible(
-            ctx,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        }
+        _isAutoScrolling = true;
+        _itemScrollController.scrollTo(
+          index: idx,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: 0.0,
+        ).then((_) => _isAutoScrolling = false);
       });
     }
   }
@@ -61,16 +76,7 @@ class _SrtBrowserState extends State<SrtBrowser> {
   @override
   void didUpdateWidget(covariant SrtBrowser oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // paragraphs 长度变化时，同步 itemKeys
-    if (widget.paragraphs.length != _itemKeys.length) {
-      if (widget.paragraphs.length > _itemKeys.length) {
-        _itemKeys.addAll(List.generate(
-            widget.paragraphs.length - _itemKeys.length, (_) => GlobalKey()));
-      } else {
-        _itemKeys = _itemKeys.sublist(0, widget.paragraphs.length);
-      }
-    }
-    // 控制器变更处理
+    // 移除 itemKeys 同步逻辑，仅保留控制器绑定处理
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
@@ -80,86 +86,150 @@ class _SrtBrowserState extends State<SrtBrowser> {
   @override
   void dispose() {
     widget.controller?._detach(this);
-    _scrollController.dispose();
     super.dispose();
   }
 
   // 外部调用的设置激活索引方法：设置后可选择是否滚动动画（true=1s，false=无动画）
   void _setActiveIndex(int index, [bool animate = true]) {
     if (index < 0 || index >= widget.paragraphs.length) return;
-    if (index == _activeIndex) return; // 避免重复 setState
-    setState(() {
-      _activeIndex = index;
-    });
+    if (index == _activeIndex) return;
+    setState(() => _activeIndex = index);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final key = _itemKeys[index];
-      final ctx = key.currentContext;
-      if (ctx != null) {
-        Scrollable.ensureVisible(
-          ctx,
-          duration: animate ? const Duration(seconds: 1) : Duration.zero,
-          curve: Curves.easeInOut,
-        );
-      }
+      _isAutoScrolling = true;
+      _itemScrollController.scrollTo(
+        index: index,
+        duration: animate ? const Duration(seconds: 1) : Duration.zero,
+        curve: Curves.easeInOut,
+        alignment: 0.0,
+      ).then((_) => _isAutoScrolling = false);
     });
   }
 
-  // 通过进度定位激活索引：progress 0.0~1.0，自动计算索引并设置
-  void _setActiveByProgress(double progress, [bool animate = true]) {
+  // 根据进度设置激活索引：progress 为 0.0 ~ 1.0
+  void _setActiveByProgress(Duration position, [bool animate = true]) {
     if (widget.paragraphs.isEmpty) return;
-    final p = progress.clamp(0.0, 1.0);
-    final idx = (p * (widget.paragraphs.length - 1)).round();
-    _setActiveIndex(idx, animate);
+    debugPrint('[srt_browser: _setActiveByProgress]  position: $position');
+    final int positionSeconds = position.inSeconds;
+    int targetIndex = 0;
+
+    // 获取所有字幕段落的开始时间（秒）
+    final List<int> paragraphTimes = widget.paragraphs
+        .map((p) => _parseTimeToSeconds(p.startTime))
+        .toList();
+
+    // 遍历时间边界，定位当前时间所在的段落
+    for (int i = 0; i < paragraphTimes.length; i++) {
+      final int currentParagraphTime = paragraphTimes[i];
+      final int nextParagraphTime = i < paragraphTimes.length - 1
+          ? paragraphTimes[i + 1]
+          : currentParagraphTime + 5; // 最后段落追加少量缓冲
+
+      if (positionSeconds >= currentParagraphTime && positionSeconds < nextParagraphTime) {
+        debugPrint('[srt_browser: _setActiveByProgress]  positionSeconds: $positionSeconds; currentParagraphTime: $currentParagraphTime; nextParagraphTime: $nextParagraphTime');
+        targetIndex = i;
+        break;
+      }
+
+      // 如果时间超过最后一个段落的开始时间，选中最后一个段落
+      if (i == paragraphTimes.length - 1 && positionSeconds >= currentParagraphTime) {
+        targetIndex = i;
+      }
+    }
+
+    debugPrint('[srt_browser: _setActiveByProgress]  targetIndex: $targetIndex; len: ${widget.paragraphs.length}');
+
+    // 用户正在手动滚动：仅更新高亮，不滚动
+    if (_isUserScrolling) {
+      if (targetIndex != _activeIndex) {
+        setState(() {
+          _activeIndex = targetIndex;
+        });
+      }
+    } else {
+      // 自动模式：更新高亮并按需滚动
+      _setActiveIndex(targetIndex, animate);
+    }
+  }
+
+  // 解析时间字符串为秒数
+  int _parseTimeToSeconds(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      int h = 0, m = 0, s = 0;
+      if (parts.length == 3) {
+        h = int.tryParse(parts[0]) ?? 0;
+        m = int.tryParse(parts[1]) ?? 0;
+        s = int.tryParse(parts[2]) ?? 0;
+      } else if (parts.length == 2) {
+        m = int.tryParse(parts[0]) ?? 0;
+        s = int.tryParse(parts[1]) ?? 0;
+      } else if (parts.length == 1) {
+        s = int.tryParse(parts[0]) ?? 0;
+      }
+      return h * 3600 + m * 60 + s;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  // 重置到自动滚动状态
+  void _resetToAutoScroll() {
+    if (_isUserScrolling) {
+      _isUserScrolling = false;
+      widget.onScrollStateChanged?.call(false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _isAutoScrolling = true;
+        _itemScrollController.scrollTo(
+          index: _activeIndex,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.0,
+        ).then((_) => _isAutoScrolling = false);
+      });
+    }
   }
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (widget.paragraphs.isEmpty) {
-      return SizedBox.shrink();
-    }
-
-    // 段落列表
-    return ListView.separated(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 0),
-      itemCount: widget.paragraphs.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 1),
-      itemBuilder: (context, index) {
-        final p = widget.paragraphs[index];
-        final timeLabel = _formatMmSs(p.startTime);
-        final isTitle = p.type == SrtParagraphType.title;
-
-        return Container(
-          key: _itemKeys[index],
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          decoration: BoxDecoration(
-            color: _activeIndex != index
-                ? Colors.transparent
-                : const Color(0xFFF9F9F9).withAlpha(50),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 56,
-                child:
-                    isTitle ? _TimeChip(label: timeLabel) : const SizedBox.shrink(),
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Container(
-                  // padding: const EdgeInsets.symmetric(vertical: 4),
-                  child:
-                      isTitle ? _TitleText(text: p.text) : _BodyText(text: p.text),
-                ),
-              ),
-              const SizedBox(width: 63),
-            ],
-          ),
-        );
+    // 用滚动通知检测用户手动滚动
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (_isAutoScrolling) return false;
+        if (notification is ScrollUpdateNotification && notification.dragDetails != null) {
+          if (!_isUserScrolling) {
+            _isUserScrolling = true;
+            widget.onScrollStateChanged?.call(true);
+          }
+        }
+        return false;
       },
+      child: ScrollablePositionedList.builder(
+        itemScrollController: _itemScrollController,
+        itemPositionsListener: _itemPositionsListener,
+        itemCount: widget.paragraphs.length,
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 0),
+        itemBuilder: (context, index) {
+          final p = widget.paragraphs[index];
+          final timeLabel = _formatMmSs(p.startTime);
+          final isTitle = p.type == SrtParagraphType.title;
+          return Container(
+            // 移除基于 GlobalKey 的 key
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            decoration: BoxDecoration(
+              color: _activeIndex != index ? Colors.transparent : const Color(0xFFF9F9F9).withAlpha(50),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 56, child: _TimeChip(label: timeLabel)),
+                const SizedBox(width: 7),
+                Expanded(child: isTitle ? _TitleText(text: p.text) : _BodyText(text: p.text)),
+                const SizedBox(width: 63),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -179,9 +249,16 @@ class _SrtBrowserState extends State<SrtBrowser> {
         s = int.tryParse(parts[0]) ?? 0;
       }
       final total = Duration(hours: h, minutes: m, seconds: s);
-      final mm = total.inMinutes % 60; // 以分钟显示
+      final hh = total.inHours;
+      final mm = total.inMinutes % 60;
       final ss = total.inSeconds % 60;
-      return '${mm.toString().padLeft(2, '0')}:${ss.toString().padLeft(2, '0')}';
+      if (hh > 0) {
+        // 小时不补零，分秒补两位
+        return '$hh:${mm.toString().padLeft(2, '0')}:${ss.toString().padLeft(2, '0')}';
+      } else {
+        // 仅显示分秒，均补两位
+        return '${mm.toString().padLeft(2, '0')}:${ss.toString().padLeft(2, '0')}';
+      }
     } catch (_) {
       return hhmmss; // 兜底直接返回原字符串
     }

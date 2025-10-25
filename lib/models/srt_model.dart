@@ -81,7 +81,40 @@ class SrtModel {
       }
     }
     
+    // 根据时间对段落进行排序
+    paragraphs.sort((a, b) {
+      final timeA = _parseTimeToSeconds(a.startTime);
+      final timeB = _parseTimeToSeconds(b.startTime);
+      return timeA.compareTo(timeB);
+    });
+    
+    // 重新分配索引，确保索引与排序后的顺序一致
+    for (int i = 0; i < paragraphs.length; i++) {
+      paragraphs[i].index = i;
+    }
+    
     return SrtModel(paragraphs: paragraphs);
+  }
+  
+  /// 将时间字符串转换为秒数，用于排序比较
+  static int _parseTimeToSeconds(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      int h = 0, m = 0, s = 0;
+      if (parts.length == 3) {
+        h = int.tryParse(parts[0]) ?? 0;
+        m = int.tryParse(parts[1]) ?? 0;
+        s = int.tryParse(parts[2]) ?? 0;
+      } else if (parts.length == 2) {
+        m = int.tryParse(parts[0]) ?? 0;
+        s = int.tryParse(parts[1]) ?? 0;
+      } else if (parts.length == 1) {
+        s = int.tryParse(parts[0]) ?? 0;
+      }
+      return h * 3600 + m * 60 + s;
+    } catch (_) {
+      return 0;
+    }
   }
 
   /// 转换为字符串格式

@@ -15,7 +15,6 @@ import '../components/audio_history_dialog.dart';
 import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
-import '../services/audio_state_proxy.dart';
 import '../services/analytics_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../components/swipe_to_close_container.dart';
@@ -90,7 +89,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _localIsLiked = false; // 本地点赞状态
   int _localLikesCount = 0; // 本地点赞数
   bool _isLikeButtonVisible = false; // 点赞按钮是否可见
-  bool _isReturnButtonVisible = false; // 返回按钮是否可见
+  bool _isUserScrolling = false; // 用户是否在手动滚动字幕
 
   // 播放列表相关状态管理
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
@@ -137,11 +136,20 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         });
   }
 
+  void _onScrollStateChanged(bool isUserScrolling) {
+    setState(() {
+      _isUserScrolling = isUserScrolling;
+    });
+  }
+
+  void _onReturnButtonPressed() {
+    _srtController.resetToAutoScroll();
+  }
+
   void _listenToAudioState() {
-    // 使用代理后的音频状态流，自动处理duration过滤
-    final durationProxy = AudioStateProxy.createDurationFilter();
+    // 直接监听原始音频状态流，使用真实 position/duration
     _subscriptions.add(
-      _audioManager.audioStateStream.proxy(durationProxy).listen((audioState) {
+      _audioManager.audioStateStream.listen((audioState) {
         if (mounted) {
           // 如果是第一次接收状态或状态发生变化，才进行处理
           if (_lastAudioState == null ||
@@ -217,15 +225,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             // 检查播放位置是否变化，驱动字幕高亮
             if (_lastAudioState?.position != audioState.position) {
               final duration = audioState.duration;
+              debugPrint('[audio_player_page: _listenToAudioState]  position: ${audioState.position}');
               if (duration != null && duration.inMilliseconds > 0) {
-                final posMs = audioState.position.inMilliseconds;
-                final totalMs = duration.inMilliseconds;
-                double progress = posMs / totalMs;
-                if (progress.isNaN) progress = 0.0;
-                // 按进度定位字幕，不使用动画，避免频繁滚动抖动
+                // 改为按具体时间定位字幕
                 _srtController.setActiveByProgress(
-                  progress.clamp(0.0, 1.0),
-                  true,
+                  audioState.position,
+                  !_isUserScrolling, // 用户滚动时不使用动画
                 );
               }
               needsUpdate = true;
@@ -483,6 +488,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                           child: SrtBrowser(
                             paragraphs: _srtParagraphs,
                             controller: _srtController,
+                            onScrollStateChanged: _onScrollStateChanged,
                           ),
                         ), // 字幕组件
                         _hasPremium
@@ -733,7 +739,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建返回按钮
   Widget _buildReturnButton() {
-    if (!_isReturnButtonVisible) {
+    if (!_isUserScrolling) {
       return const SizedBox(width: 48, height: 48);
     }
 
@@ -745,7 +751,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         minimumSize: const Size(40, 40),
       ),
-      onPressed: _closePage,
+      onPressed: _onReturnButtonPressed,
       icon: Icon(CustomIcons.return_button, color: Colors.white, size: 14),
     );
   }
