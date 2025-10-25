@@ -792,7 +792,27 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建进度条
   Widget _buildProgressBar() {
-    return RepaintBoundary(child: AudioProgressBar());
+    // 仅使用 title 段的时间点作为关键点
+    final List<Duration> keyPoints = _srtParagraphs
+        .where((p) => p.type == SrtParagraphType.title)
+        .map((p) {
+          final parts = p.startTime.split(':');
+          int h = 0, m = 0, s = 0;
+          if (parts.length == 3) {
+            h = int.tryParse(parts[0]) ?? 0;
+            m = int.tryParse(parts[1]) ?? 0;
+            s = int.tryParse(parts[2]) ?? 0;
+          } else if (parts.length == 2) {
+            m = int.tryParse(parts[0]) ?? 0;
+            s = int.tryParse(parts[1]) ?? 0;
+          } else if (parts.length == 1) {
+            s = int.tryParse(parts[0]) ?? 0;
+          }
+          return Duration(seconds: h * 3600 + m * 60 + s);
+        })
+        .toList();
+
+    return RepaintBoundary(child: AudioProgressBar(keyPoints: keyPoints));
   }
 
   // 构建播放控制按钮

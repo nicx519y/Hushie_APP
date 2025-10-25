@@ -91,11 +91,11 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             if (_lastAudioState?.currentAudio?.id !=
                 audioState.currentAudio?.id) {
               // 音频切换时立即清零所有展现值
-              _renderPosition = Duration.zero;
-              _renderDuration = Duration.zero;
-              _realPosition = Duration.zero;
-              _realDuration = Duration.zero;
-              _dragValue = 0.0;
+              // _renderPosition = Duration.zero;
+              // _renderDuration = Duration.zero;
+              // _realPosition = Duration.zero;
+              // _realDuration = Duration.zero;
+              // _dragValue = 0.0;
               needsUpdate = true;
             }
 
@@ -211,7 +211,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
     }
 
     return Opacity(
-      opacity: _disabled ? 0.7 : 1.0, // 禁用时透明度降低50%
+      opacity: _disabled ? 1.0 : 1.0, // 禁用时透明度降低50%
       child: AbsorbPointer(
         absorbing: _disabled, // 禁用时阻止所有交互
         child: Column(
@@ -234,7 +234,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                   overlayColor: Colors.white,
                   // 使用包含关键点的自定义轨道
                   trackShape: CustomTrackShape(
-                    keyPointPositions: keyPointPositions,
+                    keyPointPositions: _disabled ? [] : keyPointPositions,
                   ),
                 ),
                 child: Slider(
@@ -270,26 +270,26 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _realDuration > Duration.zero
-                      ? Text(
-                          _formatDuration(_realPosition),
+                  // _realDuration > Duration.zero
+                      Text(
+                          _realDuration > Duration.zero ? _formatDuration(_realPosition) : '00:00',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      // : Container(),
+                  // _realDuration > Duration.zero
+                      Text(
+                          _realDuration > Duration.zero ? _formatDuration(_realDuration) : '00:00',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w400,
                           ),
                         )
-                      : Container(),
-                  _realDuration > Duration.zero
-                      ? Text(
-                          _formatDuration(_realDuration),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        )
-                      : Container(),
+                      // : Container(),
                 ],
               ),
             ),
