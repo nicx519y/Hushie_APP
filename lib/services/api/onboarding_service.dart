@@ -10,7 +10,7 @@ class OnboardingService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 是否使用Mock模式（开发测试用）
-  static bool _useMockMode = true; // 默认使用Mock模式
+  static bool _useMockMode = false; // 默认使用Mock模式
 
   /// 设置Mock模式
   static void setMockMode(bool enabled) {

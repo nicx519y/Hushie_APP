@@ -81,4 +81,9 @@ class CustomIcons {
     fontFamily: _kFontFam,
     fontPackage: _kFontPkg,
   );
+  static const IconData return_button = IconData(
+    0xe80b,
+    fontFamily: _kFontFam,
+    fontPackage: _kFontPkg,
+  );
 }

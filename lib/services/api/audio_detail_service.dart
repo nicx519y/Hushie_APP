@@ -8,6 +8,8 @@ import '../http_client_service.dart';
 class AudioDetailService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
+  // 已移除假SRT数据构造函数，统一使用接口返回的真实数据。
+
   /// 获取音频详情
   static Future<AudioItem> getAudioDetail(String audioId) async {
     return _getRealAudioDetail(audioId);

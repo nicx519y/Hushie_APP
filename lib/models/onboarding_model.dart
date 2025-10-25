@@ -46,15 +46,15 @@ class OnboardingGuideData {
 
   factory OnboardingGuideData.fromMap(Map<String, dynamic> map) {
     return OnboardingGuideData(
-      tagGender: (map['tag_gender'] as List<dynamic>?)
+      tagGender: (map['tags_gender'] as List<dynamic>?)
               ?.map((item) => TagOption.fromMap(item as Map<String, dynamic>))
               .toList() ??
           [],
-      tagTone: (map['tag_tone'] as List<dynamic>?)
+      tagTone: (map['tags_tone'] as List<dynamic>?)
               ?.map((item) => TagOption.fromMap(item as Map<String, dynamic>))
               .toList() ??
           [],
-      tagScene: (map['tag_scene'] as List<dynamic>?)
+      tagScene: (map['tags_scene'] as List<dynamic>?)
               ?.map((item) => TagOption.fromMap(item as Map<String, dynamic>))
               .toList() ??
           [],
@@ -63,9 +63,9 @@ class OnboardingGuideData {
 
   Map<String, dynamic> toMap() {
     return {
-      'tag_gender': tagGender.map((item) => item.toMap()).toList(),
-      'tag_tone': tagTone.map((item) => item.toMap()).toList(),
-      'tag_scene': tagScene.map((item) => item.toMap()).toList(),
+      'tags_gender': tagGender.map((item) => item.toMap()).toList(),
+      'tags_tone': tagTone.map((item) => item.toMap()).toList(),
+      'tags_scene': tagScene.map((item) => item.toMap()).toList(),
     };
   }
 
@@ -88,9 +88,9 @@ class UserPreferencesRequest {
 
   Map<String, dynamic> toMap() {
     return {
-      'tag_gender': tagGender,
-      'tag_tone': tagTone,
-      'tag_scene': tagScene,
+      'tags_gender': tagGender,
+      'tags_tone': tagTone,
+      'tags_scene': tagScene,
     };
   }
 

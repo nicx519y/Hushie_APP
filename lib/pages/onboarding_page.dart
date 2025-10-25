@@ -20,8 +20,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
   static const Color activeColor = Color(0xFFFF5082);
 
   int _currentStep = 0;
-  bool _isLoading = true;
+  bool _isLoading = false; // 初始不请求，不显示loading
+  bool _isSubmitting = false; // 添加提交状态
   OnboardingGuideData? _guideData;
+
+  // 首次点击后再发起请求
+  bool _hasRequested = false;
 
   // 用户选择的偏好 - 改为多选
   final List<String> _selectedScenes = [];
@@ -31,6 +35,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   void initState() {
     super.initState();
+    // 初始化时不请求数据，等待用户首次点击
+  }
+
+  void _triggerFirstLoad() {
+    if (_hasRequested || _isLoading) return;
+    setState(() {
+      _hasRequested = true;
+      _isLoading = true;
+    });
     _loadGuideData();
   }
 
@@ -38,6 +51,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Future<void> _loadGuideData() async {
     try {
       final data = await OnboardingService.getGuideData();
+      if (!mounted) return;
       setState(() {
         _guideData = data;
         _isLoading = false;
@@ -45,6 +59,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     } catch (e) {
       debugPrint('加载引导数据失败: $e');
       ToastHelper.showError('加载数据失败，请重试');
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -71,6 +86,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
       return;
     }
 
+    // 防止重复提交
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
     try {
       final request = UserPreferencesRequest(
         tagGender: List<String>.from(_selectedGenders),
@@ -82,8 +104,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
       // 标记新手引导为已完成
       await OnboardingManager().markOnboardingCompleted();
-
-      // ToastHelper.showSuccess('偏好设置成功');
 
       // 跳转到订阅页面
       String pref = _computeBannerPreference();
@@ -97,8 +117,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       }
     } catch (e) {
       debugPrint('提交偏好失败: $e');
-      // ToastHelper.showError('设置失败，请重试');
-      
       // 即使失败也跳转到订阅页面
       String pref = _computeBannerPreference();
       if (mounted) {
@@ -108,6 +126,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
             settings: const RouteSettings(name: '/subscribe'),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
     }
   }
@@ -171,75 +195,80 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   /// 检查是否可以进入下一步
   bool _canProceed() {
+    // 如果正在提交，禁用按钮
+    if (_isSubmitting) return false;
     return _getCurrentSelections().isNotEmpty;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 8,
-                ),
-                child: Column(
-                  children: [
-                    // 顶部进度指示器
-                    Row(
-                      children: [
-                        Transform.translate(
-                          offset: const Offset(0, 0),
-                          child: SvgPicture.asset(
-                            'assets/icons/logo.svg',
-                            height: 30,
-                            width: 120,
-                            // height: 25,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: !_hasRequested ? _triggerFirstLoad : null,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      // 顶部进度指示器
+                      Row(
+                        children: [
+                          Transform.translate(
+                            offset: const Offset(0, 0),
+                            child: SvgPicture.asset(
+                              'assets/icons/logo.svg',
+                              height: 30,
+                              width: 120,
+                            ),
                           ),
-                        ),
-                        Expanded(child: _buildProgressIndicator()),
-                      ],
-                    ),
-
-                    SizedBox(height: 43),
-
-                    // 标题
-                    SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        _getStepTitle(),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF333333),
-                        ),
-                        textAlign: TextAlign.left,
+                          Expanded(child: _buildProgressIndicator()),
+                        ],
                       ),
-                    ),
 
-                    SizedBox(height: 24),
+                      SizedBox(height: 43),
 
-                    // 选项列表
-                    Expanded(
-                      child: SizedBox(
+                      // 标题
+                      SizedBox(
                         width: double.infinity,
-                        child: _buildOptionsList(),
+                        child: Text(
+                          _getStepTitle(),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF333333),
+                          ),
+                          textAlign: TextAlign.left,
+                        ),
                       ),
-                    ),
 
-                    SizedBox(height: 24),
+                      SizedBox(height: 24),
 
-                    // 底部导航按钮
-                    SizedBox(
-                      width: double.infinity,
-                      child: _buildBottomNavigation(),
-                    ),
-                  ],
+                      // 选项列表
+                      Expanded(
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: _buildOptionsList(),
+                        ),
+                      ),
+
+                      SizedBox(height: 24),
+
+                      // 底部导航按钮
+                      SizedBox(
+                        width: double.infinity,
+                        child: _buildBottomNavigation(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -489,17 +518,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 color: _canProceed() ? activeColor : const Color(0xFFBBBBBB),
                 shape: BoxShape.circle,
               ),
-              child: Transform.rotate(
-                angle: -3.1415926 / 2,
-                child: Transform.translate(
-                  offset: const Offset(0, 2),
-                  child: Icon(
-                    CustomIcons.arrow_down,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Transform.rotate(
+                      angle: -3.1415926 / 2,
+                      child: Transform.translate(
+                        offset: const Offset(0, 2),
+                        child: Icon(
+                          CustomIcons.arrow_down,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ],

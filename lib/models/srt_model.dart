@@ -35,6 +35,7 @@ class SrtModel {
      final paragraphs = <SrtParagraphModel>[];
      // 统一换行并合并多个连续换行为一个
      final normalized = content
+        .replaceAll(RegExp(r'\<title\d+\>'), '<title>')
          .replaceAll(RegExp(r'\r\n?'), '\n')
          .replaceAll(RegExp(r'\n+'), '\n')
          .trim();

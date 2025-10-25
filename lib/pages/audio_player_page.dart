@@ -19,6 +19,8 @@ import '../services/audio_state_proxy.dart';
 import '../services/analytics_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../components/swipe_to_close_container.dart';
+import '../models/srt_model.dart';
+import '../components/srt_browser.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -88,6 +90,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   bool _localIsLiked = false; // 本地点赞状态
   int _localLikesCount = 0; // 本地点赞数
   bool _isLikeButtonVisible = false; // 点赞按钮是否可见
+  bool _isReturnButtonVisible = false; // 返回按钮是否可见
 
   // 播放列表相关状态管理
   bool _isShowingPlaylist = false; // 是否正在显示播放列表
@@ -96,6 +99,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // StreamSubscription列表，用于在dispose时取消
   final List<StreamSubscription> _subscriptions = [];
+  // 字幕段落
+  List<SrtParagraphModel> _srtParagraphs = [];
+  // 字幕浏览控制器
+  late SrtBrowserController _srtController;
 
   // 本地状态缓存，用于差异对比
   AudioPlayerState? _lastAudioState;
@@ -104,6 +111,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   void initState() {
     super.initState();
     _audioManager = AudioManager.instance;
+    _srtController = SrtBrowserController();
 
     // 用初始音频初始化状态
     if (widget.initialAudio != null) {
@@ -150,6 +158,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               _localLikesCount = _currentAudio?.likesCount ?? 0;
               _isLikeButtonVisible = false; // 音频变化时隐藏点赞按钮
               needsUpdate = true;
+
+              // 切换音频后先清空字幕列表
+              _srtParagraphs = [];
 
               // 获取音频详情并更新点赞状态
               if (_currentAudio != null) {
@@ -203,9 +214,20 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
               needsUpdate = true;
             }
 
-            // 检查播放位置是否变化
+            // 检查播放位置是否变化，驱动字幕高亮
             if (_lastAudioState?.position != audioState.position) {
-              // _currentPosition = audioState.position;
+              final duration = audioState.duration;
+              if (duration != null && duration.inMilliseconds > 0) {
+                final posMs = audioState.position.inMilliseconds;
+                final totalMs = duration.inMilliseconds;
+                double progress = posMs / totalMs;
+                if (progress.isNaN) progress = 0.0;
+                // 按进度定位字幕，不使用动画，避免频繁滚动抖动
+                _srtController.setActiveByProgress(
+                  progress.clamp(0.0, 1.0),
+                  true,
+                );
+              }
               needsUpdate = true;
             }
 
@@ -230,18 +252,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         }
       }),
     );
-
-    // 移除预览区间即将超出事件监听
-    // _subscriptions.add(
-    //   AudioManager.previewOutEvents.listen((previewOutEvent) {
-    //     if (mounted) {
-    //       debugPrint(
-    //         '🎵 [PLAYER] 预览区间即将超出，触发解锁提示: ${previewOutEvent.position}',
-    //       );
-    //       _onUnlockFullAccessTap();
-    //     }
-    //   }),
-    // );
   }
 
   void _playAndPauseBtnPress() {
@@ -344,6 +354,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _localIsLiked = audioDetail.isLiked ?? false;
           _localLikesCount = audioDetail.likesCount ?? 0;
           _isLikeButtonVisible = true; // 获取成功后显示点赞按钮
+          _srtParagraphs = audioDetail.srtParagraphs ?? [];
         });
 
         debugPrint(
@@ -456,26 +467,41 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           body: Stack(
             children: [
               _buildAudioBackground(),
-              Positioned.fill(child: ColoredBox(color: Colors.black.withAlpha(128))),
+              Positioned.fill(
+                child: ColoredBox(color: Colors.black.withAlpha(128)),
+              ),
               // _buildStatusBar(),
               Column(
                 children: [
                   const SizedBox(height: 76),
                   _buildAudioInfo(),
+                  const SizedBox(height: 18),
                   Expanded(
                     child: Column(
                       children: [
-                        Expanded(child: Spacer()),
-                        _hasPremium ? const SizedBox.shrink() : Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: _buildUnlockFullAccessTip(),
+                        Expanded(
+                          child: SrtBrowser(
+                            paragraphs: _srtParagraphs,
+                            controller: _srtController,
                           ),
-                        ),
+                        ), // 字幕组件
+                        _hasPremium
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: EdgeInsets.only(
+                                  left: 24,
+                                  right: 24,
+                                  top: 16,
+                                ),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: _buildUnlockFullAccessTip(),
+                                ),
+                              ),
                       ],
                     ),
                   ),
+
                   _buildControlBar(),
                 ],
               ),
@@ -484,6 +510,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                 bottom: MediaQuery.of(context).padding.bottom + 20 + 174,
                 right: 16,
                 child: _buildLikeButton(),
+              ),
+
+              Positioned(
+                bottom: MediaQuery.of(context).size.height / 2 - 20,
+                right: 16,
+                child: _buildReturnButton(),
               ),
             ],
           ),
@@ -539,7 +571,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         //   ),
         // ),
         padding: EdgeInsets.only(
-          top: 27,
+          top: 20,
           left: 28,
           right: 28,
           bottom: MediaQuery.of(context).padding.bottom + 20,
@@ -566,7 +598,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         alignment: Alignment.center,
         style: IconButton.styleFrom(
           // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          backgroundColor: const Color(0xFF4D4D4D).withAlpha(128),
+          backgroundColor: const Color(0xFF000000).withAlpha(128),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -583,30 +615,24 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建音频信息
   Widget _buildAudioInfo() {
-    return Container(
-      height: 100,
-      // decoration: BoxDecoration(
-      //   color: Colors.black.withAlpha(128),
-      // ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _buildAudioTitle(),
-                const SizedBox(height: 8),
-                _buildArtistInfo(),
-                // const SizedBox(height: 10),
-                // _buildAudioDescription(),
-              ],
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildAudioTitle(),
+              const SizedBox(height: 3),
+              _buildArtistInfo(),
+              // const SizedBox(height: 10),
+              // _buildAudioDescription(),
+            ],
           ),
-          // const SizedBox(width: 26),
-          // _buildLikeButton(),
-        ],
-      ),
+        ),
+        // const SizedBox(width: 26),
+        // _buildLikeButton(),
+      ],
     );
   }
 
@@ -615,7 +641,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     final title = _currentAudio?.title ?? 'Unknown Title';
 
     return SizedBox(
-      width: 240,
+      width: 200,
       child: Text(
         title,
         maxLines: 3,
@@ -704,6 +730,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   //     ),
   //   );
   // }
+
+  // 构建返回按钮
+  Widget _buildReturnButton() {
+    if (!_isReturnButtonVisible) {
+      return const SizedBox(width: 48, height: 48);
+    }
+
+    return IconButton(
+      style: IconButton.styleFrom(
+        padding: EdgeInsets.zero,
+        // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        backgroundColor: const Color(0xFF000000).withAlpha(128),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        minimumSize: const Size(40, 40),
+      ),
+      onPressed: _closePage,
+      icon: Icon(CustomIcons.return_button, color: Colors.white, size: 14),
+    );
+  }
 
   // 构建点赞按钮
   Widget _buildLikeButton() {
@@ -857,20 +902,26 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           child: Row(
             mainAxisSize: MainAxisSize.min, // 行宽度最小化，紧贴内容
             children: [
-              Image.asset('assets/images/crown_mini.png', width: 27, height: 20, ),
+              Image.asset(
+                'assets/images/crown_mini.png',
+                width: 27,
+                height: 20,
+              ),
               const SizedBox(width: 8),
               ShaderMask(
                 shaderCallback: (Rect bounds) {
                   return const LinearGradient(
                     colors: [
                       Color(0xFFFFCB35), // 橙色
-                      Color(0xFFEED960), 
-                      Color(0xFFFEEF96), 
+                      Color(0xFFEED960),
+                      Color(0xFFFEEF96),
                       Color(0xFFFFC733), // 红橙色
                     ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
-                  ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height));
+                  ).createShader(
+                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                  );
                 },
                 blendMode: BlendMode.srcIn,
                 child: const Text(

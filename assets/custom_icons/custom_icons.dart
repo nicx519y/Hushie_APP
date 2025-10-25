@@ -75,4 +75,5 @@ class CustomIcons {
     fontPackage: _kFontPkg,
   );
   static const IconData skip_next = IconData(0xe80a, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData return_button = IconData(0xe80b, fontFamily: _kFontFam, fontPackage: _kFontPkg);
 }

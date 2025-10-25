@@ -67,7 +67,7 @@ class ApiConfig {
   static Future<void> _initializeEnvironment() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final isTest = prefs.getBool(_envKey) ?? false;
+      final isTest = prefs.getBool(_envKey) ?? true;
       _useTestEnv = isTest;
       _currentHost = _useTestEnv ? testHost : baseHost;
       debugPrint('🌐 [ApiConfig] 当前环境: ${_useTestEnv ? '测试' : '生产'} -> host=$_currentHost');
