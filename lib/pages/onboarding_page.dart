@@ -38,7 +38,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Future<void> _enterMain() async {
-
     if (!mounted) return;
     try {
       Navigator.of(context).pushReplacement(
@@ -59,7 +58,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (!mounted) return;
 
       // 如果数据为空（所有选项列表均为空），直接进入主页
-      final isEmpty = data.tagGender.isEmpty && data.tagTone.isEmpty && data.tagScene.isEmpty;
+      final isEmpty =
+          data.tagGender.isEmpty &&
+          data.tagTone.isEmpty &&
+          data.tagScene.isEmpty;
       if (isEmpty) {
         debugPrint('🎯 [ONBOARDING] 引导数据为空，跳转到主页');
         await _enterMain();
@@ -121,7 +123,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => SubscribePage(bannerPreference: pref, scene: 'onboarding'),
+            builder: (context) =>
+                SubscribePage(bannerPreference: pref, scene: 'onboarding'),
             settings: const RouteSettings(name: '/subscribe'),
           ),
         );
@@ -133,7 +136,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => SubscribePage(bannerPreference: pref, scene: 'onboarding'),
+            builder: (context) =>
+                SubscribePage(bannerPreference: pref, scene: 'onboarding'),
             settings: const RouteSettings(name: '/subscribe'),
           ),
         );
@@ -146,21 +150,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
       }
     }
   }
-  
+
   Widget _buildStepTitle() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24, top: 20),
       child: SizedBox(
-      width: double.infinity,
-      child: Text(
-        _getStepTitle(),
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF333333),
+        width: double.infinity,
+        child: Text(
+          _getStepTitle(),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF333333),
+          ),
+          textAlign: TextAlign.left,
         ),
-        textAlign: TextAlign.left,
-      ),
       ),
     );
   }
@@ -293,10 +297,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ),
                   ],
                 ),
-            ),
-    ),
-  );
-}
+              ),
+      ),
+    );
+  }
 
   /// 构建进度指示器
   Widget _buildProgressIndicator() {
@@ -348,7 +352,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: isSelected ? Colors.white : bgColor,
           borderRadius: BorderRadius.circular(999), // 圆角Tag
           border: Border.all(
             width: 2,
@@ -427,11 +431,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStepTitle(),
           Wrap(
             spacing: 12,
             runSpacing: 12,
+            alignment: WrapAlignment.start,
+            runAlignment: WrapAlignment.start,
             children: options.map((option) {
               final isSelected = selectedValues.contains(option.value);
               return _buildTagItem(option, isSelected);
@@ -451,6 +458,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStepTitle(),
           ...options.map((option) {
@@ -471,11 +479,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStepTitle(),
           Wrap(
             spacing: 12,
             runSpacing: 12,
+            alignment: WrapAlignment.start,
+            runAlignment: WrapAlignment.start,
             children: options.map((option) {
               final isSelected = selectedValues.contains(option.value);
               return _buildTagItem(option, isSelected);
@@ -492,8 +503,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
   /// - 两者都包含 => 偏好 F&M
   /// - 都未选 => 默认 F
   String _computeBannerPreference() {
-    final hasM = _selectedGenders.contains('M4F') || _selectedGenders.contains('M4M');
-    final hasF = _selectedGenders.contains('F4F') || _selectedGenders.contains('F4M');
+    final hasM =
+        _selectedGenders.contains('M4F') || _selectedGenders.contains('M4M');
+    final hasF =
+        _selectedGenders.contains('F4F') || _selectedGenders.contains('F4M');
 
     if (hasM && hasF) return 'F&M';
     if (hasM) return 'M';
@@ -518,7 +531,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
   /// 构建底部导航
   Widget _buildBottomNavigation() {
     return Padding(
-      padding: EdgeInsets.only(left: 14, right: 14, top: 14, bottom: MediaQuery.of(context).padding.bottom + 26),
+      padding: EdgeInsets.only(
+        left: 14,
+        right: 14,
+        top: 14,
+        bottom: MediaQuery.of(context).padding.bottom == 0 ? 26 : MediaQuery.of(context).padding.bottom,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -545,7 +563,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
               width: 70,
               height: 70,
               decoration: BoxDecoration(
-                color: (_canProceed() || _isSubmitting) ? activeColor : const Color(0xFFBBBBBB),
+                color: (_canProceed() || _isSubmitting)
+                    ? activeColor
+                    : const Color(0xFFBBBBBB),
                 shape: BoxShape.circle,
               ),
               child: _isSubmitting

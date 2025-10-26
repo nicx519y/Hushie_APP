@@ -20,6 +20,7 @@ import 'package:just_audio/just_audio.dart';
 import '../components/swipe_to_close_container.dart';
 import '../models/srt_model.dart';
 import '../components/srt_browser.dart';
+import '../components/audio_free_tag.dart';
 
 /// 音频播放器页面专用的上滑过渡效果
 class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
@@ -289,7 +290,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       final currentAudio = _audioManager.currentAudio;
       final currentAudioId = (_currentAudio?.id ?? 'unknown');
 
-      if(currentAudio != null && !_canPlay()) {
+      if (currentAudio != null && !_canPlay()) {
         // 检查是否可以播放 如果不能播放 则显示订阅对话框
         showSubscribeDialog(context, scene: 'player');
         return;
@@ -641,43 +642,58 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   // 构建音频信息
   Widget _buildAudioInfo() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildAudioTitle(),
-              const SizedBox(height: 6),
-              _buildArtistInfo(),
-              // const SizedBox(height: 10),
-              // _buildAudioDescription(),
-            ],
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 55),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildAudioTitle(),
+                const SizedBox(height: 6),
+                _buildArtistInfo(),
+                // const SizedBox(height: 10),
+                // _buildAudioDescription(),
+              ],
+            ),
           ),
-        ),
-        // const SizedBox(width: 26),
-        // _buildLikeButton(),
-      ],
+          // const SizedBox(width: 26),
+          // _buildLikeButton(),
+        ],
+      ),
     );
   }
 
   // 构建音频标题
   Widget _buildAudioTitle() {
     final title = _currentAudio?.title ?? 'Unknown Title';
+    final bool isFree = _currentAudio?.isFree ?? false;
 
     return SizedBox(
-      width: 200,
-      child: Text(
-        title,
-        maxLines: 3,
+      width: double.infinity,
+      child: RichText(
         textAlign: TextAlign.center,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          height: 1.2,
-          fontWeight: FontWeight.w700,
+        maxLines: 3,
+        text: TextSpan(
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+          ),
+          children: [
+            if (isFree) ...[
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: const AudioFreeTag(),
+              ),
+              const WidgetSpan(child: SizedBox(width: 6)),
+            ],
+            TextSpan(text: title),
+          ],
         ),
       ),
     );
