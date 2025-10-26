@@ -146,6 +146,24 @@ class _OnboardingPageState extends State<OnboardingPage> {
       }
     }
   }
+  
+  Widget _buildStepTitle() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24, top: 20),
+      child: SizedBox(
+      width: double.infinity,
+      child: Text(
+        _getStepTitle(),
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF333333),
+        ),
+        textAlign: TextAlign.left,
+      ),
+      ),
+    );
+  }
 
   /// 获取当前步骤的标题
   String _getStepTitle() {
@@ -240,23 +258,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ],
                     ),
 
-                    SizedBox(height: 43),
+                    SizedBox(height: 10),
 
                     // 标题
-                    SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        _getStepTitle(),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF333333),
-                        ),
-                        textAlign: TextAlign.left,
-                      ),
-                    ),
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   child: Text(
+                    //     _getStepTitle(),
+                    //     style: const TextStyle(
+                    //       fontSize: 20,
+                    //       fontWeight: FontWeight.w500,
+                    //       color: Color(0xFF333333),
+                    //     ),
+                    //     textAlign: TextAlign.left,
+                    //   ),
+                    // ),
 
-                    SizedBox(height: 24),
+                    // SizedBox(height: 24),
 
                     // 选项列表
                     Expanded(
@@ -266,7 +284,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                     ),
 
-                    SizedBox(height: 24),
+                    SizedBox(height: 14),
 
                     // 底部导航按钮
                     SizedBox(
@@ -321,20 +339,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget _buildTagItem(TagOption option, bool isSelected) {
     final bgColor = const Color(0xFFF1F3F6); // 浅灰底色
     final textColor = isSelected ? activeColor : const Color(0xFF333333);
-    final textWeight = isSelected ? FontWeight.w700 : FontWeight.w400;
+    final textWeight = FontWeight.w400;
 
     final labelText = option.label;
 
     return GestureDetector(
       onTap: () => _toggleSelection(option.value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(999), // 圆角Tag
           border: Border.all(
             width: 2,
-            color: isSelected ? activeColor : Colors.transparent,
+            color: isSelected ? activeColor : bgColor,
           ),
         ),
         child: Text(
@@ -357,7 +375,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : const Color(0xFFE9EAEB),
+          color: isSelected ? Colors.white : const Color(0xFFF1F3F6),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             width: 2,
@@ -372,8 +390,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 option.label,
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                  color: isSelected ? activeColor : const Color(0xFF333333),
+                  fontWeight: FontWeight.w400,
+                  color: isSelected ? activeColor : const Color(0xFF3D3D3D),
                 ),
               ),
             ),
@@ -387,7 +405,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 color: isSelected ? activeColor : Colors.white,
                 border: Border.all(
                   width: 2,
-                  color: activeColor,
+                  color: isSelected ? activeColor : const Color(0xFF777777),
                 ),
               ),
               child: isSelected
@@ -408,13 +426,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final selectedValues = _selectedScenes;
 
     return SingleChildScrollView(
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: options.map((option) {
-          final isSelected = selectedValues.contains(option.value);
-          return _buildTagItem(option, isSelected);
-        }).toList(),
+      child: Column(
+        children: [
+          _buildStepTitle(),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: options.map((option) {
+              final isSelected = selectedValues.contains(option.value);
+              return _buildTagItem(option, isSelected);
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -428,10 +451,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     return SingleChildScrollView(
       child: Column(
-        children: options.map((option) {
-          final isSelected = selectedValues.contains(option.value);
-          return _buildCheckboxItem(option, isSelected);
-        }).toList(),
+        children: [
+          _buildStepTitle(),
+          ...options.map((option) {
+            final isSelected = selectedValues.contains(option.value);
+            return _buildCheckboxItem(option, isSelected);
+          }).toList(),
+        ],
       ),
     );
   }
@@ -444,13 +470,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final selectedValues = _selectedTones;
 
     return SingleChildScrollView(
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: options.map((option) {
-          final isSelected = selectedValues.contains(option.value);
-          return _buildTagItem(option, isSelected);
-        }).toList(),
+      child: Column(
+        children: [
+          _buildStepTitle(),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: options.map((option) {
+              final isSelected = selectedValues.contains(option.value);
+              return _buildTagItem(option, isSelected);
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -487,7 +518,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   /// 构建底部导航
   Widget _buildBottomNavigation() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.only(left: 14, right: 14, top: 14, bottom: MediaQuery.of(context).padding.bottom + 26),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -495,15 +526,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             onPressed: () async {
               // 跳过时也标记为已完成并跳转到订阅页面
               await OnboardingManager().markOnboardingCompleted();
-              String pref = _computeBannerPreference();
-              if (mounted) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => SubscribePage(bannerPreference: pref, scene: 'onboarding'),
-                    settings: const RouteSettings(name: '/subscribe'),
-                  ),
-                );
-              }
+              _enterMain();
             },
             child: const Text(
               'I\'m a Returning User',

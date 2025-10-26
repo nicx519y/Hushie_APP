@@ -11,6 +11,7 @@ import 'package:firebase_performance/firebase_performance.dart';
 import 'api/tracking_service.dart';
 import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
+import 'subscribe_privilege_manager.dart';
 
 // 音频状态数据类
 class AudioPlayerState {
@@ -86,6 +87,10 @@ class AudioPlayerService extends BaseAudioHandler {
   bool _loadReported = false;
   Trace? _loadTrace;
 
+  // 会员权限状态
+  bool _hasPremium = false;
+  StreamSubscription<PrivilegeChangeEvent>? _privilegeSubscription;
+
   // 串行化与并发保护
   Future<void> _opSerial = Future.value();
   Future<T> _enqueueOp<T>(Future<T> Function() op) {
@@ -138,9 +143,18 @@ class AudioPlayerService extends BaseAudioHandler {
 
     // 监听播放位置变化 - 添加防抖动以减少更新频率
     _audioPlayer.positionStream.listen((position) {
-      _updateAudioState(position: position);
-      _broadcastState(); // 调用，减少广播频率
-      // 位置更新不需要频繁广播状态，其他状态变化时会自动广播
+      
+      if(currentAudio != null) {
+        
+        // 检查权限并暂停播放
+        if(!_checkAudioPermission(currentAudio) && isPlaying) {
+          pause();
+        }
+
+        _updateAudioState(position: position);
+        _broadcastState(); // 调用，减少广播频率
+      }
+
     });
 
     // 监听播放时长变化
@@ -167,6 +181,24 @@ class AudioPlayerService extends BaseAudioHandler {
     _audioPlayer.bufferedPositionStream.listen((bufferedPosition) {
       _updateAudioState(bufferedPosition: bufferedPosition);
     });
+
+    // 监听会员权限状态变化
+    try {
+      // 初始化当前权限状态
+      final cachedPrivilege = SubscribePrivilegeManager.instance.getCachedPrivilege();
+      _hasPremium = cachedPrivilege?.isValidPremium ?? false;
+
+      _privilegeSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen(
+        (event) async {
+          _hasPremium = event.privilege?.isValidPremium ?? false;
+        },
+        onError: (error) {
+          debugPrint('🏆 [AUDIO] 权限事件流错误: $error');
+        },
+      );
+    } catch (e) {
+      debugPrint('🏆 [AUDIO] 初始化权限监听失败: $e');
+    }
   }
 
   // 统一的状态更新方法
@@ -371,6 +403,7 @@ class AudioPlayerService extends BaseAudioHandler {
   // 加载并播放音频
   Future<void> playAudio(AudioItem audio, {Duration? initialPosition}) async {
     try {
+
       // 检查是否需要加载新音频或重新设置初始位置
       final currentAudio = this.currentAudio;
       if (currentAudio == null || currentAudio.id != audio.id) {
@@ -383,7 +416,11 @@ class AudioPlayerService extends BaseAudioHandler {
       } else {
         debugPrint('相同音频，跳过重新加载: ${audio.title} (ID: ${audio.id})');
       }
-
+      
+      if(!_checkAudioPermission(audio)){
+        debugPrint('🚫 [AUDIO] 无播放权限：需会员或免费音频。audio_id=${audio.id}');
+        return;
+      }
       await _audioPlayer.play();
       debugPrint(
         '音频播放开始成功${initialPosition != null ? '，从${initialPosition.inSeconds}秒开始' : ''}',
@@ -457,6 +494,14 @@ class AudioPlayerService extends BaseAudioHandler {
   @override
   Future<void> play() async {
     try {
+      // 若存在当前音频，仍需权限检查
+      final audio = currentAudio;
+      if (audio != null) {
+        if (!_checkAudioPermission(audio)) {
+          debugPrint('🚫 [AUDIO] 无播放权限：需会员或免费音频。');
+          return;
+        }
+      }
       await _audioPlayer.play();
     } catch (e) {
       debugPrint('播放时出错: $e');
@@ -726,4 +771,12 @@ class AudioPlayerService extends BaseAudioHandler {
     await _audioStateSubject.close();
     await _networkStatusSubscription?.cancel();
   }
+
+  bool _checkAudioPermission(AudioItem? audio) {
+    if(audio == null) return false;
+    return (audio.isFree || _hasPremium);  
+  }
 }
+
+// 播放权限检查：会员或免费音频
+

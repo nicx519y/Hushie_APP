@@ -423,7 +423,7 @@ class AudioManager {
     final bool auto = autoPlay ?? true;
 
     if (currentAudio != null && currentAudio.id == audio.id) {
-      if (!isPlaying && auto == true && _checkAudioPermission(audio)) {
+      if (!isPlaying && auto == true) {
         // 再次检查权限，防止权限状态在播放过程中发生变化
         play();
       }
@@ -452,7 +452,7 @@ class AudioManager {
       );
 
       if (_audioService != null) {
-        if (auto == true && _checkAudioPermission(audio)) {
+        if (auto == true) {
           await _audioService!.playAudio(audio, initialPosition: position);
         } else {
           await _audioService!.loadAudio(audio, initialPosition: position);

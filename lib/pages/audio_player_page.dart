@@ -649,7 +649,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _buildAudioTitle(),
-              const SizedBox(height: 3),
+              const SizedBox(height: 6),
               _buildArtistInfo(),
               // const SizedBox(height: 10),
               // _buildAudioDescription(),
@@ -675,7 +675,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 20,
+          fontSize: 16,
           height: 1.2,
           fontWeight: FontWeight.w700,
         ),
@@ -689,11 +689,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Icon(CustomIcons.user, color: Colors.white, size: 12),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         Text(
           _currentAudio?.author ?? '',
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             color: Colors.white,
             fontWeight: FontWeight.w400,
           ),
@@ -876,7 +876,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
       ),
       onPressed: _playAndPauseBtnPress,
-      icon: _isAudioLoading
+      icon: (_isAudioLoading && _canPlay())
           ? const SizedBox(
               width: 24,
               height: 24,
