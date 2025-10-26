@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/onboarding_model.dart';
 import '../services/api/onboarding_service.dart';
 import '../services/onboarding_manager.dart';
-import '../utils/toast_helper.dart';
 import '../pages/subscribe_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/custom_icons.dart';
+import '../pages/app_root.dart';
 
 /// 新手引导页面
 /// 包含3个步骤：场景选择 -> 性别选择 -> 语调选择
@@ -37,23 +37,44 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _loadGuideData();
   }
 
+  Future<void> _enterMain() async {
+
+    if (!mounted) return;
+    try {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const MainApp(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+      );
+    } catch (e) {
+      debugPrint('🏠 [MAIN_APP] 跳转主页失败: $e');
+    }
+  }
 
   /// 加载引导数据
   Future<void> _loadGuideData() async {
     try {
       final data = await OnboardingService.getGuideData();
       if (!mounted) return;
+
+      // 如果数据为空（所有选项列表均为空），直接进入主页
+      final isEmpty = data.tagGender.isEmpty && data.tagTone.isEmpty && data.tagScene.isEmpty;
+      if (isEmpty) {
+        debugPrint('🎯 [ONBOARDING] 引导数据为空，跳转到主页');
+        await _enterMain();
+        return;
+      }
+
       setState(() {
         _guideData = data;
         _isLoading = false;
       });
     } catch (e) {
       debugPrint('加载引导数据失败: $e');
-      ToastHelper.showError('加载数据失败，请重试');
       if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      // 获取失败时也直接进入主页
+      await _enterMain();
     }
   }
 
@@ -73,7 +94,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (_selectedScenes.isEmpty ||
         _selectedGenders.isEmpty ||
         _selectedTones.isEmpty) {
-      ToastHelper.showError('请完成所有选择');
       return;
     }
 
@@ -502,17 +522,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
               width: 70,
               height: 70,
               decoration: BoxDecoration(
-                color: _canProceed() ? activeColor : const Color(0xFFBBBBBB),
+                color: (_canProceed() || _isSubmitting) ? activeColor : const Color(0xFFBBBBBB),
                 shape: BoxShape.circle,
               ),
               child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                  ? CircularProgressIndicator(
+                      padding: EdgeInsets.all(18.0),
+                      color: Colors.white,
+                      strokeWidth: 2,
                     )
                   : Transform.rotate(
                       angle: -3.1415926 / 2,

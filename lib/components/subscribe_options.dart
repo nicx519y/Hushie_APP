@@ -163,6 +163,18 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
         return;
       }
 
+      // 订阅流程开始打点
+      try {
+        TrackingService.trackSubscribeFlowStart(
+          productId: widget.product?.googlePlayProductId,
+          basePlanId: basePlanId,
+          offerId: availableOffer?.offerId,
+          scene: widget.scene ?? 'unknown',
+        );
+      } catch (e) {
+        debugPrint('📍 [TRACKING] subscribe_flow_start error: $e');
+      }
+
       try {
         // 显示加载状态
         ToastHelper.showInfo(ToastMessages.subscriptionProcessing);
@@ -200,7 +212,7 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
               const int quantity = 1;
 
               // 使用 FirebaseAnalytics 的标准 purchase 事件
-              await FirebaseAnalytics.instance.logPurchase(
+              FirebaseAnalytics.instance.logPurchase(
                 currency: currency,
                 value: value,
                 transactionId: (purchaseToken != null && purchaseToken.isNotEmpty)
@@ -217,7 +229,7 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
               );
 
               // 保留自定义 in_app_purchase 事件的手动上报（用于 DebugView 可见性与核对）
-              await AnalyticsService().logCustomEvent(
+              AnalyticsService().logCustomEvent(
                 eventName: 'in_app_purchase',
                 parameters: {
                   'value': value,
@@ -240,6 +252,21 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
                   'source': 'client_manual',
                 },
               );
+
+              // 订阅结果打点（成功）- 移到变量作用域内
+              try {
+                TrackingService.trackSubscribeResult(
+                  status: 'success',
+                  productId: productId,
+                  basePlanId: basePlanId,
+                  offerId: offerId,
+                  purchaseToken: purchaseToken,
+                  currency: currency,
+                  price: '$value',
+                );
+              } catch (e) {
+                debugPrint('📍 [TRACKING] subscribe_result success error: $e');
+              }
             } catch (e) {
               debugPrint('📊 [ANALYTICS] 手动上报 in_app_purchase 失败: $e');
             }
@@ -253,17 +280,52 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
             break;
           case PurchaseResult.canceled:
             ToastHelper.showInfo(ToastMessages.subscriptionCanceled);
+            // 订阅结果打点（取消）
+            try {
+              TrackingService.trackSubscribeResult(
+                status: 'canceled',
+                productId: widget.product?.googlePlayProductId ?? 'unknown_product',
+                basePlanId: basePlanId,
+                offerId: _selectedPlanAvailableOffer?.offerId,
+              );
+            } catch (e) {
+              debugPrint('📍 [TRACKING] subscribe_result canceled error: $e');
+            }
             break;
           case PurchaseResult.error:
           case PurchaseResult.failed:
             ToastHelper.showError(
               purchaseResult.message ?? ToastMessages.subscriptionFailed,
             );
+            // 订阅结果打点（失败）
+            try {
+              TrackingService.trackSubscribeResult(
+                status: 'failed',
+                productId: widget.product?.googlePlayProductId ?? 'unknown_product',
+                basePlanId: basePlanId,
+                offerId: _selectedPlanAvailableOffer?.offerId,
+                errorMessage: purchaseResult.message,
+              );
+            } catch (e) {
+              debugPrint('📍 [TRACKING] subscribe_result failed error: $e');
+            }
             break;
         }
       } catch (e) {
         debugPrint('Google Play Billing购买异常: $e');
         ToastHelper.showError(ToastMessages.subscriptionException);
+        // 订阅结果打点（异常归为失败）
+        try {
+          TrackingService.trackSubscribeResult(
+            status: 'failed',
+            productId: widget.product?.googlePlayProductId ?? 'unknown_product',
+            basePlanId: basePlanId,
+            offerId: _selectedPlanAvailableOffer?.offerId,
+            errorMessage: e.toString(),
+          );
+        } catch (e) {
+          debugPrint('📍 [TRACKING] subscribe_result exception error: $e');
+        }
       }
     } catch (e) {
       debugPrint('Google Play Billing购买失败: $e');
@@ -271,6 +333,18 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
       // 使用统一的错误消息处理
       final errorMessage = ToastMessages.getBillingErrorMessage(e);
       ToastHelper.showError(errorMessage);
+      // 订阅结果打点（外层失败）
+      try {
+        TrackingService.trackSubscribeResult(
+          status: 'failed',
+          productId: widget.product?.googlePlayProductId ?? 'unknown_product',
+          basePlanId: 'unknown_base_plan',
+          offerId: _selectedPlanAvailableOffer?.offerId,
+          errorMessage: errorMessage,
+        );
+      } catch (e) {
+        debugPrint('📍 [TRACKING] subscribe_result outer failed error: $e');
+      }
     } finally {
       // 恢复订阅按钮状态
       if (mounted) {

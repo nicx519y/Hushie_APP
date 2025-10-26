@@ -134,6 +134,68 @@
 }
 ```
 
+### 7) 订阅流程开始：`subscribe_flow_start`
+- 方法：`TrackingService.trackSubscribeFlowStart({ String? productId, String? basePlanId, String? offerId, String? scene })`
+- 参数：
+  - `product_id: string?`（产品标识，如 `premium_monthly`）
+  - `base_plan_id: string?`（基础计划 ID）
+  - `offer_id: string?`（优惠 ID/促销标识）
+  - `scene: string?`（来源场景，如 `onboarding`）
+- 逻辑：进入支付 SDK 前的关键节点上报一次，便于串联渠道与支付链路
+- 典型调用：`SubscribeOptions._initiateGooglePlayBillingPurchase()` 开头处
+- 示例载荷：
+```json
+{
+  "action_type": "subscribe_flow_start",
+  "extra_data": {
+    "product_id": "premium_monthly",
+    "base_plan_id": "monthly_001",
+    "offer_id": "intro_7d",
+    "scene": "onboarding"
+  }
+}
+```
+
+### 8) 订阅结果：`subscribe_result`
+- 方法：`TrackingService.trackSubscribeResult({ required String status, String? productId, String? basePlanId, String? offerId, String? purchaseToken, String? currency, String? price, String? errorMessage })`
+- 参数：
+  - `status: string`（结果状态，`success` | `canceled` | `failed`）
+  - `product_id: string?`
+  - `base_plan_id: string?`
+  - `offer_id: string?`
+  - `purchase_token: string?`（购买 token）
+  - `currency: string?`（币种，ISO 代码）
+  - `price: string?`（价格，字符串形式）
+  - `error_message: string?`（失败时的错误信息）
+- 逻辑：对每个分支各上报一次，确保结果闭环
+- 典型调用：`SubscribeOptions._initiateGooglePlayBillingPurchase()` 的成功/取消/失败分支以及异常捕获处
+- 示例载荷（成功）：
+```json
+{
+  "action_type": "subscribe_result",
+  "extra_data": {
+    "status": "success",
+    "product_id": "premium_monthly",
+    "base_plan_id": "monthly_001",
+    "offer_id": "intro_7d",
+    "purchase_token": "token_xxx",
+    "currency": "USD",
+    "price": "4.99"
+  }
+}
+```
+- 示例载荷（失败）：
+```json
+{
+  "action_type": "subscribe_result",
+  "extra_data": {
+    "status": "failed",
+    "product_id": "premium_monthly",
+    "error_message": "BILLING_RESPONSE_RESULT_ERROR"
+  }
+}
+```
+
 ## 场景（scene）规范
 - 作用：标识来源场景，便于归因（如用户从哪个入口触发订阅）
 - 常见取值：
@@ -148,6 +210,8 @@
   - 订阅页：`SubscribePage(scene: 'onboarding') -> SubscribeOptions.scene`
 
 ## 调用位置与逻辑建议
+- 订阅流程开始：在进入支付流程函数开头上报，携带产品/计划/场景
+- 订阅结果：在购买成功/取消/失败/异常分支分别上报，含 `status` 等
 - 订阅弹窗展示：在弹窗 `initState` 中立即上报一次
 - 订阅点击（登录）：在按钮点击但用户未登录时上报，并导航登录
 - 订阅点击（支付）：在进入支付流程前上报，并携带 `scene` 或 `base_plan_id / offer_id`
@@ -175,3 +239,4 @@
 ## 变更记录
 - 2025-10-25：初版文档，依据当前实现整理事件、参数与场景规范。
 - 2025-10-25：将后台事件改为 `app_background`，并改为在 `AppRoot` 统一上报。
+- 2025-10-26：新增订阅流程开始与订阅结果事件，并补充调用建议。

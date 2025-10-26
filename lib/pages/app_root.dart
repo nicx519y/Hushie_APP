@@ -74,22 +74,14 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
   /// 初始化应用：检查新手引导状态并初始化服务
   Future<void> _initializeApp() async {
     try {
-      // 首先检查新手引导状态
-      final isOnboardingCompleted = await OnboardingManager().isOnboardingCompleted();
+
+      final bool isOnboardingCompleted = await OnboardingManager().isOnboardingCompleted();
       
       setState(() {
         showOnboarding = !isOnboardingCompleted;
         onboardingChecked = true;
       });
 
-      // 如果需要显示新手引导，暂停服务初始化
-      if (showOnboarding) {
-        debugPrint('🎯 [APP_ROOT] 需要显示新手引导，暂停服务初始化');
-        return;
-      }
-
-      // 如果不需要新手引导，继续初始化服务
-      await _initializeServices();
     } catch (e) {
       debugPrint('🎯 [APP_ROOT] 初始化应用失败: $e');
       // 出错时默认不显示新手引导，继续正常流程
@@ -97,8 +89,10 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
         showOnboarding = false;
         onboardingChecked = true;
       });
-      await _initializeServices();
     }
+
+    await _initializeServices();
+
   }
 
   Future<void> _initializeServices() async {

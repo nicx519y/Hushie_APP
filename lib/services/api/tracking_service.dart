@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import '../../models/api_response.dart';
 import '../../config/api_config.dart';
 import '../http_client_service.dart';
 
@@ -9,12 +7,12 @@ class TrackingService {
   static Duration get _defaultTimeout => ApiConfig.defaultTimeout;
 
   /// 提交打点
-  static Future<ApiResponse<TrackingResponse>> track({
+  static Future<void> track({
     required String actionType,
     String? audioId,
     Map<String, dynamic>? extraData,
   }) async {
-    return _postTracking(
+    await _postTracking(
       actionType: actionType,
       audioId: audioId,
       extraData: extraData,
@@ -22,7 +20,7 @@ class TrackingService {
   }
 
   /// 真实接口 - 提交追踪打点
-  static Future<ApiResponse<TrackingResponse>> _postTracking({
+  static Future<void> _postTracking({
     required String actionType,
     String? audioId,
     Map<String, dynamic>? extraData,
@@ -46,43 +44,37 @@ class TrackingService {
       );
 
       debugPrint('📍 [TRACKING] status: ${response.statusCode}');
-      final Map<String, dynamic> jsonData = json.decode(response.body);
-      debugPrint('📍 [TRACKING] errNo: ${jsonData['errNo']}');
-
-      return ApiResponse.fromJson<TrackingResponse>(
-        jsonData,
-        (dataJson) => TrackingResponse.fromMap(dataJson),
-      );
+      // 不再关心响应体，只要请求成功即可
     } catch (e) {
       debugPrint('📍 [TRACKING] request error: $e');
-      return ApiResponse.error(errNo: -1);
+      // 即使失败，也不向上抛出异常，避免影响主流程
     }
   }
 
   // ===================== 便捷方法与事件类型 =====================
-  static Future<ApiResponse<TrackingResponse>> trackMembershipOverlay({
+  static Future<void> trackMembershipOverlay({
     required String scene,
   }) async {
-    return track(
+    await track(
       actionType: TrackingEvents.membershipOverlayShow,
       extraData: {'scene': scene},
     );
   }
 
   // 登录触发（支持可选场景）
-  static Future<ApiResponse<TrackingResponse>> trackSubscribeClickLogin({String? scene}) async {
+  static Future<void> trackSubscribeClickLogin({String? scene}) async {
     final extra = <String, dynamic>{'trigger': 'login'};
     if (scene != null && scene.isNotEmpty) {
       extra['scene'] = scene;
     }
-    return track(
+    await track(
       actionType: TrackingEvents.subscribeClick,
       extraData: extra,
     );
   }
 
   // 支付触发（包含可选的基础计划/优惠）
-  static Future<ApiResponse<TrackingResponse>> trackSubscribeClickPayment({
+  static Future<void> trackSubscribeClickPayment({
     String? basePlanId,
     String? offerId,
   }) async {
@@ -93,17 +85,17 @@ class TrackingService {
     if (offerId != null && offerId.isNotEmpty) {
       extra['offer_id'] = offerId;
     }
-    return track(
+    await track(
       actionType: TrackingEvents.subscribeClick,
       extraData: extra,
     );
   }
 
   // 支付触发（支持场景）
-  static Future<ApiResponse<TrackingResponse>> trackSubscribeClickPay({
+  static Future<void> trackSubscribeClickPay({
     required String scene,
   }) async {
-    return track(
+    await track(
       actionType: TrackingEvents.subscribeClick,
       extraData: {
         'trigger': 'payment',
@@ -112,34 +104,73 @@ class TrackingService {
     );
   }
 
+  static Future<void> trackSubscribeFlowStart({
+    String? productId,
+    String? basePlanId,
+    String? offerId,
+    String? scene,
+  }) async {
+    final extra = {
+      'product_id': productId,
+      'base_plan_id': basePlanId,
+      'offer_id': offerId,
+      'scene': scene,
+    };
+    extra.removeWhere((key, value) => value == null);
+    await track(actionType: TrackingEvents.subscribeFlowStart, extraData: extra);
+  }
+
+  static Future<void> trackSubscribeResult({
+    required String status, // e.g. success, failed, canceled
+    String? productId,
+    String? basePlanId,
+    String? offerId,
+    String? purchaseToken,
+    String? currency,
+    String? price,
+    String? errorMessage,
+  }) async {
+    final extra = {
+      'status': status,
+      'product_id': productId,
+      'base_plan_id': basePlanId,
+      'offer_id': offerId,
+      'purchase_token': purchaseToken,
+      'currency': currency,
+      'price': price,
+      'error_message': errorMessage,
+    };
+    extra.removeWhere((key, value) => value == null);
+    await track(actionType: TrackingEvents.subscribeResult, extraData: extra);
+  }
   // 主页进入后台（改为：应用进入后台）
-  static Future<ApiResponse<TrackingResponse>> trackHomeBackground() async {
-    return track(actionType: TrackingEvents.appBackground);
+  static Future<void> trackHomeBackground() async {
+    await track(actionType: TrackingEvents.appBackground);
   }
 
   // 别名：与调用处命名一致
-  static Future<ApiResponse<TrackingResponse>> trackHomeToBackground() async {
-    return trackHomeBackground();
+  static Future<void> trackHomeToBackground() async {
+    await trackHomeBackground();
   }
 
   // 主页 Tab 点击
-  static Future<ApiResponse<TrackingResponse>> trackHomepageTabTap(String tabName) async {
-    return track(
+  static Future<void> trackHomepageTabTap(String tabName) async {
+    await track(
       actionType: TrackingEvents.homepageTabTap,
       extraData: {'tab': tabName},
     );
   }
 
   // 别名：与调用处命名一致（命名参数）
-  static Future<ApiResponse<TrackingResponse>> trackHomeTabTap({required String tabName}) async {
-    return trackHomepageTabTap(tabName);
+  static Future<void> trackHomeTabTap({required String tabName}) async {
+    await trackHomepageTabTap(tabName);
   }
 
   // 搜索输入（命名参数 keyword）
-  static Future<ApiResponse<TrackingResponse>> trackSearchInput({
+  static Future<void> trackSearchInput({
     required String keyword,
   }) async {
-    return track(
+    await track(
       actionType: TrackingEvents.searchInput,
       extraData: {
         'query': keyword,
@@ -149,19 +180,19 @@ class TrackingService {
   }
 
   // 搜索结果点击（仅 audioId）
-  static Future<ApiResponse<TrackingResponse>> trackSearchResultTap(String audioId) async {
-    return track(
+  static Future<void> trackSearchResultTap(String audioId) async {
+    await track(
       actionType: TrackingEvents.searchResultTap,
       audioId: audioId,
     );
   }
 
   // 搜索结果点击（包含 keyword 与 resultId）
-  static Future<ApiResponse<TrackingResponse>> trackSearchResultClick({
+  static Future<void> trackSearchResultClick({
     required String keyword,
     required String resultId,
   }) async {
-    return track(
+    await track(
       actionType: TrackingEvents.searchResultTap,
       audioId: resultId,
       extraData: {'query': keyword},
@@ -177,22 +208,6 @@ class TrackingEvents {
   static const String searchInput = 'search_input';
   static const String searchResultTap = 'search_result_tap';
   static const String homepageTabTap = 'homepage_tab_tap';
-}
-
-/// Tracking 响应模型
-class TrackingResponse {
-  final String message;
-
-  TrackingResponse({required this.message});
-
-  factory TrackingResponse.fromMap(Map<String, dynamic> map) {
-    return TrackingResponse(message: map['message'] ?? '');
-  }
-
-  Map<String, dynamic> toMap() {
-    return {'message': message};
-  }
-
-  @override
-  String toString() => 'TrackingResponse(message: $message)';
+  static const String subscribeFlowStart = 'subscribe_flow_start';
+  static const String subscribeResult = 'subscribe_result';
 }

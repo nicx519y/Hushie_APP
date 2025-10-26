@@ -19,20 +19,6 @@ import '../config/api_config.dart';
 import 'home_page_list_service.dart';
 import 'subscribe_privilege_manager.dart';
 
-// 权限违规事件类
-// 移除违规事件类定义与相关流
-// class PermissionViolationEvent {
-//   final AudioItem audio;
-//   final String reason;
-//   final DateTime timestamp;
-// 
-//   PermissionViolationEvent({
-//     required this.audio,
-//     required this.reason,
-//     DateTime? timestamp,
-//   }) : timestamp = timestamp ?? DateTime.now();
-// }
-
 class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
   static AudioManager get instance => _instance;
@@ -48,10 +34,6 @@ class AudioManager {
   // preloadAudio 流，用于推送预加载的音频信息
   final BehaviorSubject<AudioItem?> _preloadAudioSubject =
       BehaviorSubject<AudioItem?>.seeded(null);
-
-  // 权限违规事件流
-  // final BehaviorSubject<PermissionViolationEvent?> _permissionViolationSubject =
-  //     BehaviorSubject<PermissionViolationEvent?>.seeded(null);
 
   // 缓存本地状态，用于比对变化
   String? _lastAudioId;
@@ -92,7 +74,8 @@ class AudioManager {
     try {
       _audioService = await AudioService.init(
         builder: () => AudioPlayerService(),
-        config: const AudioServiceConfig( // 音频服务配置
+        config: const AudioServiceConfig(
+          // 音频服务配置
           // Android 通知渠道 ID，用于系统识别和管理通知
           androidNotificationChannelId: 'com.hushie.audio',
           // Android 通知渠道名称，用户在系统设置中看到的名称
@@ -129,7 +112,7 @@ class AudioManager {
   // 兼容性方法：保持原有的init接口，但改为延迟初始化
   Future<void> init() async {
     debugPrint('AudioManager.init() called');
-    
+
     // 先初始化音频历史管理器（确保数据库可用）
     await AudioHistoryManager.instance.initialize();
     debugPrint('AudioManager: AudioHistoryManager 初始化完成');
@@ -141,7 +124,6 @@ class AudioManager {
     await AudioPlaylist.instance.initialize();
     debugPrint('AudioManager: AudioPlaylist 初始化完成');
 
-
     // 监听认证状态变化事件
     _setupAuthStatusListener();
 
@@ -149,7 +131,8 @@ class AudioManager {
     await SubscribePrivilegeManager.instance.initialize();
     _setupPrivilegeStatusListener();
     // 初始化 _hasPremium 初始值
-    final cachedPrivilege = SubscribePrivilegeManager.instance.getCachedPrivilege();
+    final cachedPrivilege = SubscribePrivilegeManager.instance
+        .getCachedPrivilege();
     _hasPremium = cachedPrivilege?.hasPremium ?? false;
 
     // 使用统一的初始化方法，避免重复初始化
@@ -189,16 +172,17 @@ class AudioManager {
     // 监听统一的音频状态流
     _audioService!.audioStateStream.listen((audioState) async {
       // debugPrint('[checkWillOutPreview] AudioManager received audioState: isPlaying=${audioState.isPlaying}');
-      
+
       final audio = audioState.currentAudio;
       final currentAudioId = audio?.id;
       final isPlaying = audioState.isPlaying;
       final position = audioState.position;
-      
+
       // 检查音频是否发生变化
       bool audioChanged = _lastAudioId != currentAudioId;
       bool playingStateChanged = _lastIsPlaying != isPlaying;
-      bool positionChanged = (_lastPosition - position).abs() > const Duration(milliseconds: 200);
+      bool positionChanged =
+          (_lastPosition - position).abs() > const Duration(milliseconds: 200);
       // bool positionChanged = _lastPosition != position;
       // debugPrint('[checkWillOutPreview] positionChanged: $positionChanged; _lastPosition: $_lastPosition; position: $position');
       // 管理播放列表 - 只在音频ID发生变化时执行
@@ -212,7 +196,9 @@ class AudioManager {
         }
 
         try {
-          await _managePlaylist( audio.id ); // 管理播放列表，将当前音频添加到播放列表，如果当前音频是播放列表最后一条，则继续补充下面的播放列表
+          await _managePlaylist(
+            audio.id,
+          ); // 管理播放列表，将当前音频添加到播放列表，如果当前音频是播放列表最后一条，则继续补充下面的播放列表
         } catch (e) {
           debugPrint('管理播放列表失败: $e');
         }
@@ -221,36 +207,38 @@ class AudioManager {
       // 权限检查 - 当播放状态变化为播放时进行检查
       // if (playingStateChanged && isPlaying && audio != null) {
       //   if (!_checkAudioPermission(audio)) {
-      //     final reason = _hasPremium 
-      //         ? 'Unknown permission error' 
+      //     final reason = _hasPremium
+      //         ? 'Unknown permission error'
       //         : 'This audio requires premium membership, playback has been paused';
       //     _handlePermissionViolation(audio, reason);
       //   }
       // }
 
       // 检查播放是否完成并自动播放下一首
-      if(positionChanged && audioState.playerState.playing && position >= audioState.duration * 0.995 && _hasPremium) {
+      if (positionChanged &&
+          audioState.playerState.playing &&
+          position >= audioState.duration * 0.995 &&
+          _hasPremium) {
         _checkPlaybackCompletion();
       }
       // debugPrint('[checkWillOutPreview] 播放列表管理完成');
-      
+
       // 更新播放器状态 - 只在状态发生变化时更新
       if (playingStateChanged || audioChanged) {
         _playerStateSubject.add(audioState.playerState);
-        
       }
-      
+
       // 监听 preloadAudio 变化并推送到流
       final preloadAudio = audioState.preloadAudio;
       if (_preloadAudioSubject.value != preloadAudio) {
         _preloadAudioSubject.add(preloadAudio);
         debugPrint('PreloadAudio 状态更新: ${preloadAudio?.title ?? 'null'}');
       }
-      
+
       // 更新缓存的状态
       _lastAudioId = currentAudioId;
       _lastIsPlaying = isPlaying;
-      if(positionChanged) {
+      if (positionChanged) {
         _lastPosition = position;
       }
 
@@ -262,8 +250,6 @@ class AudioManager {
       }
     });
   }
-
-
 
   /// 检查播放是否完成并自动播放下一首
   void _checkPlaybackCompletion() {
@@ -294,18 +280,22 @@ class AudioManager {
     }
   }
 
-  
-
   // 重新加载当前播放状态缓存
   Future<void> reloadCurrentPlayStateCache() async {
     debugPrint('[AudioManager]: 重新加载当前播放状态缓存');
-    final currentPlayStateCache = await AudioHistoryManager.instance.getCurrentPlayStateCache();
+    final currentPlayStateCache = await AudioHistoryManager.instance
+        .getCurrentPlayStateCache();
     if (currentPlayStateCache != null) {
       try {
-        final audioItemMap = currentPlayStateCache['audioItem'] as Map<String, dynamic>;
+        final audioItemMap =
+            currentPlayStateCache['audioItem'] as Map<String, dynamic>;
         final audioItem = AudioItem.fromMap(audioItemMap);
-        final position = Duration(milliseconds: currentPlayStateCache['position'] as int);
-        debugPrint('[AudioManager]: 从当前播放状态缓存恢复: ${audioItem.title} 位置: $position');
+        final position = Duration(
+          milliseconds: currentPlayStateCache['position'] as int,
+        );
+        debugPrint(
+          '[AudioManager]: 从当前播放状态缓存恢复: ${audioItem.title} 位置: $position',
+        );
         await playAudio(audioItem, autoPlay: false, initialPosition: position);
         return;
       } catch (e) {
@@ -321,12 +311,16 @@ class AudioManager {
       return;
     }
     try {
-      final jsonStr = await rootBundle.loadString('assets/configs/default_audio_list.json');
+      final jsonStr = await rootBundle.loadString(
+        'assets/configs/default_audio_list.json',
+      );
       final List<dynamic> data = json.decode(jsonStr) as List<dynamic>;
       if (data.isNotEmpty) {
         final first = data.first;
         if (first is Map) {
-          final audioItem = AudioItem.fromMap(Map<String, dynamic>.from(first as Map));
+          final audioItem = AudioItem.fromMap(
+            Map<String, dynamic>.from(first as Map),
+          );
           debugPrint('[AudioManager]: 使用默认音频作为当前播放状态: ${audioItem.title}');
 
           // 持久化为 current_play_state_cache，方便下次直接恢复
@@ -338,12 +332,19 @@ class AudioManager {
               'timestamp': DateTime.now().toIso8601String(),
             };
             final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('current_play_state_cache', json.encode(playState));
+            await prefs.setString(
+              'current_play_state_cache',
+              json.encode(playState),
+            );
           } catch (e) {
             debugPrint('[AudioManager]: 写入默认当前播放状态缓存失败: $e');
           }
 
-          await playAudio(audioItem, autoPlay: false, initialPosition: Duration.zero);
+          await playAudio(
+            audioItem,
+            autoPlay: false,
+            initialPosition: Duration.zero,
+          );
           return;
         }
       } else {
@@ -355,62 +356,55 @@ class AudioManager {
   }
 
   Future<void> signedInit() async {
+
+    debugPrint('[AudioManager]: 登录初始化');
+
     AudioHistoryManager.instance.startListening(needRecord: true);
-    
-    // 首先尝试从当前播放状态缓存中恢复
-    
-    if(currentAudio != null) {
+
+    if (currentAudio != null) {
       return;
     }
+
+    late AudioItem? firstAudio;
+
     // 如果缓存恢复失败，从播放历史列表中获取最后一条播放记录
     final lastHistory = await AudioHistoryManager.instance.getAudioHistory();
-    if (lastHistory.isNotEmpty) {
-      debugPrint('AudioManager: 最后一条播放记录: ${lastHistory.first.title}');
-      try {
-        await playAudio(lastHistory.first, autoPlay: false);
-      } catch (e) {
-        debugPrint('AudioManager: 从历史播放恢复失败: $e');
-      }
+
+    if(lastHistory.isNotEmpty){
+      firstAudio = lastHistory.first;
     } else {
-      debugPrint('AudioManager: 没有播放历史记录');
-      await _supplementPlaylist();
-      final playlist = AudioPlaylist.instance;
-      if(playlist.playlistSize > 0) {
-        final firstAudio = playlist.getFirstAudio();
-        if(firstAudio != null) {
-          try {
-            await playAudio(firstAudio, autoPlay: false);
-          } catch (e) {
-            debugPrint('AudioManager: 从播放列表恢复失败: $e');
-          }
-        }
+      firstAudio = await _getFirstAudioFromHomePage();
+    }
+
+    if(firstAudio != null) {
+      try {
+        await playAudio(firstAudio, autoPlay: false);
+      } catch (e) {
+        debugPrint('AudioManager: 从首页for_you恢复失败: $e');
       }
     }
   }
 
   Future<void> signedOutInit() async {
+
+    debugPrint('[AudioManager]: 未登录初始化');
+
     AudioHistoryManager.instance.startListening(needRecord: true);
-    
-    if(currentAudio != null) {
+
+    if (currentAudio != null) {
       return;
     }
-    
-    // 如果缓存恢复失败，从播放列表获取音频
-    final playlist = AudioPlaylist.instance;
-    if(playlist.playlistSize <= 0) {
-      await _supplementPlaylist();
-      final playlist = AudioPlaylist.instance;
-      if(playlist.playlistSize > 0) {
-        final firstAudio = playlist.getFirstAudio();
-        if(firstAudio != null) {
-          try {
-            await playAudio(firstAudio, autoPlay: false);
-          } catch (e) {
-            debugPrint('AudioManager: 未登录初始化播放失败: $e');
-          }
-        }
+
+    AudioItem? firstAudio = await _getFirstAudioFromHomePage();
+
+    if(firstAudio != null) {
+      try {
+        await playAudio(firstAudio, autoPlay: false);
+      } catch (e) {
+        debugPrint('AudioManager: 从首页for_you恢复失败: $e');
       }
     }
+    
   }
 
   // 获取音频服务实例
@@ -419,8 +413,11 @@ class AudioManager {
   }
 
   // 播放音频
-  Future<void> playAudio(AudioItem audio, {bool? autoPlay = true, Duration? initialPosition} ) async {
-
+  Future<void> playAudio(
+    AudioItem audio, {
+    bool? autoPlay = true,
+    Duration? initialPosition,
+  }) async {
     // 1. 如果 audio 和当前在播放的 audio id 相同，则直接 return
     final currentAudio = this.currentAudio;
     final bool auto = autoPlay ?? true;
@@ -434,7 +431,7 @@ class AudioManager {
     }
 
     // 如果是不同的音频，先停止之前的播放
-    if(currentAudio != null && currentAudio.id != audio.id) {
+    if (currentAudio != null && currentAudio.id != audio.id) {
       await stop();
     }
 
@@ -442,27 +439,23 @@ class AudioManager {
 
     late Duration position;
 
-    if(initialPosition == null || initialPosition <= Duration.zero) {
+    if (initialPosition == null || initialPosition <= Duration.zero) {
       position = AudioHistoryManager.instance.getPlaybackPosition(audio.id);
     } else {
       position = initialPosition;
     }
-    
+
     try {
       // await _ensureInitialized();
-      debugPrint('[playAudio]: _audioService != null : ${_audioService != null}; auto : $auto');
+      debugPrint(
+        '[playAudio]: _audioService != null : ${_audioService != null}; auto : $auto',
+      );
 
       if (_audioService != null) {
         if (auto == true && _checkAudioPermission(audio)) {
-          await _audioService!.playAudio(
-            audio,
-            initialPosition: position,
-          );
+          await _audioService!.playAudio(audio, initialPosition: position);
         } else {
-          await _audioService!.loadAudio(
-            audio,
-            initialPosition: position,
-          );
+          await _audioService!.loadAudio(audio, initialPosition: position);
         }
       } else {
         debugPrint('音频服务未初始化，无法播放音频');
@@ -481,12 +474,13 @@ class AudioManager {
     }
   }
 
-
   /// 管理播放列表（清理和补充）
   Future<void> _managePlaylist(String currentAudioId) async {
     // 防止频繁触发：如果正在管理播放列表或者是同一个音频ID，直接返回
     if (_isManagingPlaylist || _lastManagedAudioId == currentAudioId) {
-      debugPrint('_managePlaylist: 跳过重复操作 - isManaging: $_isManagingPlaylist, lastManagedId: $_lastManagedAudioId, currentId: $currentAudioId');
+      debugPrint(
+        '_managePlaylist: 跳过重复操作 - isManaging: $_isManagingPlaylist, lastManagedId: $_lastManagedAudioId, currentId: $currentAudioId',
+      );
       return;
     }
 
@@ -514,36 +508,37 @@ class AudioManager {
     }
   }
 
+  Future<AudioItem?> _getFirstAudioFromHomePage() async {
+    // 从首页for you获取列表第一个音频作为补充
+    try {
+      final listService = HomePageListService();
+      await listService.initialize();
+      List<AudioItem> items = listService.getTabData('for_you');
+      if (items.isEmpty) {
+        try {
+          await listService.preloadTabData('for_you');
+
+          if (items.isNotEmpty) {
+            return items.first;
+          }
+        } catch (_) {
+          debugPrint('从首页for_you获取数据失败，回退到API');
+          return null;
+        }
+      } else {
+        return items.first;
+      }
+    } catch (e) {
+      debugPrint('从首页for_you获取数据失败，回退到API: $e');
+      return null;
+    }
+  }
+
   /// 补充播放列表
   Future<void> _supplementPlaylist() async {
     try {
       final playlist = AudioPlaylist.instance;
       final currentAudio = playlist.getCurrentAudio();
-
-      // 从首页for you获取列表第一个音频作为补充
-      try {
-        final listService = HomePageListService();
-        await listService.initialize();
-        List<AudioItem> items = listService.getTabData('for_you');
-        if (items.isEmpty) {
-          try {
-            await listService.preloadTabData('for_you');
-
-            if (items.isNotEmpty) {
-              playlist.addAudio(items.first);
-              debugPrint('成功补充播放列表(for_you): 写入首音频');
-              return;
-            }
-
-          } catch (_) {}
-          items = listService.getTabData('for_you');
-        }
-        
-      } catch (e) {
-        debugPrint('从首页for_you获取数据失败，回退到API: $e');
-      }
-      
-
 
       // 从API获取更多音频数据
       final response = await AudioListService.getAudioList(
@@ -673,17 +668,22 @@ class AudioManager {
   }
 
   Duration get duration {
-    final playerDuration = _audioService?.currentState.duration ?? Duration.zero;
+    final playerDuration =
+        _audioService?.currentState.duration ?? Duration.zero;
     final apiDuration = currentAudio?.duration;
-    
+
     // 数据一致性检查和日志记录
     if (playerDuration != Duration.zero && apiDuration != null) {
-      final diffSeconds = (playerDuration.inSeconds - apiDuration.inSeconds).abs();
-      if (diffSeconds > 5) { // 差异超过5秒认为异常
-        debugPrint('[AudioManager] Duration数据不一致 - 播放器:${playerDuration.inSeconds}s, API:${apiDuration.inSeconds}s, 差异:${diffSeconds}s');
+      final diffSeconds = (playerDuration.inSeconds - apiDuration.inSeconds)
+          .abs();
+      if (diffSeconds > 5) {
+        // 差异超过5秒认为异常
+        debugPrint(
+          '[AudioManager] Duration数据不一致 - 播放器:${playerDuration.inSeconds}s, API:${apiDuration.inSeconds}s, 差异:${diffSeconds}s',
+        );
       }
     }
-    
+
     // 优先返回播放器的真实时长
     return playerDuration;
   }
@@ -700,21 +700,23 @@ class AudioManager {
     return _audioService?.currentState.bufferedPosition ?? Duration.zero;
   }
 
-
   /// 设置权限状态监听器
   void _setupPrivilegeStatusListener() {
-    _premiumStatusSubscription = SubscribePrivilegeManager.instance.privilegeChanges.listen(
-      (event) {
-        final newHasPremium = event.hasPremium;
-        if (_hasPremium != newHasPremium) {
-          _hasPremium = newHasPremium;
-          debugPrint('AudioManager: 权限状态更新 - hasPremium=$_hasPremium');
-        }
-      },
-      onError: (error) {
-        debugPrint('AudioManager: 权限状态监听异常: $error');
-      },
-    );
+    _premiumStatusSubscription = SubscribePrivilegeManager
+        .instance
+        .privilegeChanges
+        .listen(
+          (event) {
+            final newHasPremium = event.hasPremium;
+            if (_hasPremium != newHasPremium) {
+              _hasPremium = newHasPremium;
+              debugPrint('AudioManager: 权限状态更新 - hasPremium=$_hasPremium');
+            }
+          },
+          onError: (error) {
+            debugPrint('AudioManager: 权限状态监听异常: $error');
+          },
+        );
     debugPrint('AudioManager: 权限状态监听器已设置');
   }
 
@@ -735,7 +737,7 @@ class AudioManager {
   /// 处理认证状态变化
   void _handleAuthStatusChange(AuthStatus status) {
     debugPrint('AudioManager: 处理认证状态变化 - status: $status');
-    
+
     if (status == AuthStatus.authenticated) {
       // 登录时开始监听播放历史
       signedInit();
@@ -757,11 +759,10 @@ class AudioManager {
     if (_hasPremium) {
       return true;
     }
-    
+
     // 如果用户没有会员权限，只能播放免费音频
     return audio.isFree;
   }
-
 
   /// 获取权限违规事件流
   // 已移除：权限违规事件流
@@ -769,14 +770,12 @@ class AudioManager {
   //   return _permissionViolationSubject.stream;
   // }
 
-
   // 清理资源
   Future<void> dispose() async {
     // 在销毁前记录最后的播放停止
     if (_audioService != null) {
       await _audioService!.dispose();
     }
-
 
     // 清理认证状态监听
     await _authStatusSubscription?.cancel();

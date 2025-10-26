@@ -6,6 +6,7 @@ class ApiConfig {
   static const String testHost = 'https://testenv.hushie.ai'; //test env
   static const String baseHost = 'https://api.hushie.ai';
   // 动态当前域名（默认生产环境）
+  static bool defaultUseTestEnv = true;     // 线下包指向测试环境 时默认使用测试环境，打线上包的时候需要改成false
   static String _currentHost = baseHost;
   static const String _envKey = 'api_env_is_test';
   static bool _useTestEnv = false;
@@ -67,7 +68,7 @@ class ApiConfig {
   static Future<void> _initializeEnvironment() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final isTest = prefs.getBool(_envKey) ?? true;
+      final isTest = prefs.getBool(_envKey) ?? defaultUseTestEnv;
       _useTestEnv = isTest;
       _currentHost = _useTestEnv ? testHost : baseHost;
       debugPrint('🌐 [ApiConfig] 当前环境: ${_useTestEnv ? '测试' : '生产'} -> host=$_currentHost');

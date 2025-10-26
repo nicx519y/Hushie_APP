@@ -183,6 +183,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _currentTabIndex = pageIndex;
     });
 
+    // 记录 Tab 切换事件（手势滑动切换场景）
+    if (pageIndex >= 0 && pageIndex < _tabItems.length) {
+      final tab = _tabItems[pageIndex].id;
+      try {
+        TrackingService.trackHomeTabTap(tabName: tab);
+      } catch (e) {
+        debugPrint('📍 [TRACKING] home_tab_tap (swipe) error: $e');
+      }
+    }
+
     // 同步TabController到当前页面（仅在手动滑动PageView时）
     if (_tabController.index != pageIndex) {
       _tabController.animateTo(pageIndex);
