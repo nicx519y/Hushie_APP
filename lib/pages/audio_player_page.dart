@@ -643,7 +643,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 构建音频信息
   Widget _buildAudioInfo() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 55),
+      padding: EdgeInsets.symmetric(horizontal: 65),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [

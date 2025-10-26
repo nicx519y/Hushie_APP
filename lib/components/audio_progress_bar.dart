@@ -241,25 +241,27 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                   value: progress.clamp(0.0, 1.0),
                   onChanged: _disabled
                       ? null
-                      : (value) async {
+                      : (value) {
                           setState(() {
                             _isDragging = true;
                             _dragValue = value;
                           });
-
+                        },
+                  onChangeEnd: _disabled
+                      ? null
+                      : (value) async {
                           final renderPosition = Duration(
                             milliseconds:
                                 (value * _renderDuration.inMilliseconds)
                                     .round(),
                           );
-
+                          setState(() {
+                            _isDragging = false;
+                            _renderPosition = renderPosition;
+                            _dragValue = value;
+                          });
                           await _onSeek(renderPosition);
                         },
-                  onChangeEnd: (value) {
-                    setState(() {
-                      _isDragging = false;
-                    });
-                  },
                 ),
               ),
             ),

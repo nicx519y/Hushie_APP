@@ -167,11 +167,7 @@ class _SrtBrowserState extends State<SrtBrowser> {
     final int lastIndex = paragraphTimes.length - 1;
     int targetIndex;
     if (positionSeconds <= paragraphTimes.first) {
-      int i = 0;
-      while (i + 1 <= lastIndex && paragraphTimes[i + 1] == paragraphTimes[i]) {
-        i++;
-      }
-      targetIndex = i;
+      targetIndex = 0; // 优先选择同一时间的第一个段（通常为标题）
     } else if (positionSeconds >= paragraphTimes[lastIndex]) {
       targetIndex = lastIndex;
     } else {
@@ -193,13 +189,14 @@ class _SrtBrowserState extends State<SrtBrowser> {
         while (i > 0 && paragraphTimes[i] > positionSeconds) {
           i--;
         }
-        while (i + 1 <= lastIndex &&
-            paragraphTimes[i + 1] <= positionSeconds &&
-            paragraphTimes[i + 1] == paragraphTimes[i]) {
-          i++;
-        }
         targetIndex = i;
       }
+    }
+
+    // 调整重复时间：当多个段落共享同一开始时间时，始终选择该时间的第一个段（优先标题）
+    final int targetTime = paragraphTimes[targetIndex];
+    while (targetIndex > 0 && paragraphTimes[targetIndex - 1] == targetTime) {
+      targetIndex--;
     }
 
     // 索引钳制
