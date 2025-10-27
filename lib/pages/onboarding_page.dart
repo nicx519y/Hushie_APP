@@ -6,6 +6,7 @@ import '../pages/subscribe_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/custom_icons.dart';
 import '../pages/app_root.dart';
+import '../services/api/tracking_service.dart';
 
 /// 新手引导页面
 /// 包含3个步骤：场景选择 -> 性别选择 -> 语调选择
@@ -24,6 +25,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _isSubmitting = false; // 提交状态
   OnboardingGuideData? _guideData;
 
+  // 记录已打点的步骤，避免重复上报
+  final Set<int> _trackedSteps = {};
+
   // 用户选择的偏好 - 改为多选
   final List<String> _selectedScenes = [];
   final List<String> _selectedGenders = [];
@@ -34,7 +38,30 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.initState();
     // 页面初始化即加载引导数据
     _isLoading = true;
+    // 进入页面打点：type = onboarding
+    TrackingService.trackOnboarding(action: 'enter');
     _loadGuideData();
+  }
+
+  // 当前步骤打点：type=onboarding, extra.step=step1/step2/step3
+  void _trackCurrentStepIfNeeded() {
+    if (_trackedSteps.contains(_currentStep)) return;
+    String stepLabel;
+    switch (_currentStep) {
+      case 0:
+        stepLabel = 'step1';
+        break;
+      case 1:
+        stepLabel = 'step2';
+        break;
+      case 2:
+        stepLabel = 'step3';
+        break;
+      default:
+        stepLabel = 'unknown';
+    }
+    _trackedSteps.add(_currentStep);
+    TrackingService.trackOnboarding(action: stepLabel);
   }
 
   Future<void> _enterMain() async {
@@ -72,6 +99,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
         _guideData = data;
         _isLoading = false;
       });
+
+      // 数据加载完成，进入当前步骤（通常为step1）时打点
+      _trackCurrentStepIfNeeded();
     } catch (e) {
       debugPrint('加载引导数据失败: $e');
       if (!mounted) return;
@@ -86,6 +116,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
       setState(() {
         _currentStep++;
       });
+      // 进入下一步后打点
+      _trackCurrentStepIfNeeded();
     } else {
       _submitPreferences();
     }
@@ -107,6 +139,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     });
 
     try {
+      // 提交打点：type=onboarding, action=submit
+      TrackingService.trackOnboarding(action: 'submit');
       final request = UserPreferencesRequest(
         tagGender: List<String>.from(_selectedGenders),
         tagTone: List<String>.from(_selectedTones),
@@ -538,7 +572,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         left: 14,
         right: 14,
         top: 14,
-        bottom: 26 - MediaQuery.of(context).padding.bottom,
+        bottom: MediaQuery.of(context).padding.bottom,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -546,6 +580,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
           TextButton(
             onPressed: () async {
               // 跳过时也标记为已完成并跳转到订阅页面
+              // 跳转打点：type=onboarding, action=returning_user
+              TrackingService.trackOnboarding(action: 'returning_user');
               await OnboardingManager().markOnboardingCompleted();
               _enterMain();
             },

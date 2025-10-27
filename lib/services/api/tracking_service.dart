@@ -198,6 +198,15 @@ class TrackingService {
       extraData: {'query': keyword},
     );
   }
+
+  static Future<void> trackOnboarding({
+    required String action,
+  }) async {
+    await track(
+      actionType: TrackingEvents.onboarding,
+      extraData: {'action': action},
+    );
+  }
 }
 
 /// Tracking 事件常量
@@ -210,4 +219,5 @@ class TrackingEvents {
   static const String homepageTabTap = 'homepage_tab_tap';
   static const String subscribeFlowStart = 'subscribe_flow_start';
   static const String subscribeResult = 'subscribe_result';
+  static const String onboarding = 'onboarding';
 }
