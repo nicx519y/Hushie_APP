@@ -12,6 +12,7 @@ import '../utils/webview_navigator.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../services/analytics_service.dart';
 import '../services/api/tracking_service.dart';
+import 'dart:async';
 
 // 订阅成功提示的复用方法
 void openSubscribeSuccessNotification(BuildContext context) {
@@ -43,12 +44,288 @@ class SubscribeOptions extends StatefulWidget {
   State<SubscribeOptions> createState() => _SubscribeOptionsState();
 }
 
-class _SubscribeOptionsState extends State<SubscribeOptions> {
+class _SubscribeOptionsState extends State<SubscribeOptions> with WidgetsBindingObserver {
   bool _isPurchasing = false;
+  bool _isInPaymentProcess = false; // 明确标识是否在支付进程中
+  StreamSubscription<PurchaseEvent>? _purchaseEventSubscription;
 
   @override
   void initState() {
     super.initState();
+    // 添加应用生命周期监听
+    WidgetsBinding.instance.addObserver(this);
+    
+    // 监听购买事件流
+    _purchaseEventSubscription = GooglePlayBillingService.instance.purchaseEventStream.listen(
+      _handlePurchaseEvent,
+      onError: (error) {
+        debugPrint('❌ 购买事件流监听错误: $error');
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    // 移除应用生命周期监听
+    WidgetsBinding.instance.removeObserver(this);
+    // 取消购买事件流监听
+    _purchaseEventSubscription?.cancel();
+    super.dispose();
+  }
+
+  // 处理购买事件
+  void _handlePurchaseEvent(PurchaseEvent event) {
+    debugPrint('📦 收到购买事件: ${event.type} - ${event.productId}');
+    
+    // 只处理当前产品的事件
+    if (event.productId != widget.product?.googlePlayProductId) {
+      return;
+    }
+    
+    switch (event.type) {
+      case PurchaseEventType.purchaseStarted:
+        debugPrint('🛒 购买开始: ${event.productId}');
+        // 显示加载状态
+        ToastHelper.showInfo(ToastMessages.subscriptionProcessing);
+        
+        // 标记进入支付进程和购买状态
+        if (mounted) {
+          setState(() {
+            _isInPaymentProcess = true;
+            _isPurchasing = true;
+          });
+        }
+        
+        // 打点统计 - 购买流程开始
+        try {
+          TrackingService.trackSubscribeFlowStart(
+            productId: event.productId,
+            basePlanId: event.basePlanId,
+            scene: widget.scene ?? 'unknown',
+          );
+        } catch (e) {
+          debugPrint('📍 [TRACKING] subscribe_flow_start error: $e');
+        }
+        break;
+        
+      case PurchaseEventType.purchasePending:
+        debugPrint('⏳ 购买待处理: ${event.productId}');
+        ToastHelper.showInfo(ToastMessages.subscriptionPending);
+        
+        // 支付进程结束，但保持购买状态
+        if (mounted) {
+          setState(() {
+            _isInPaymentProcess = false;
+            // _isPurchasing 保持 true，因为还在等待最终结果
+          });
+        }
+        break;
+        
+      case PurchaseEventType.purchaseSuccess:
+        debugPrint('✅ 购买成功: ${event.productId}');
+        _handlePurchaseSuccess(event);
+        break;
+        
+      case PurchaseEventType.purchaseFailed:
+        debugPrint('❌ 购买失败: ${event.productId} - ${event.message}');
+        _handlePurchaseFailure(event);
+        break;
+        
+      case PurchaseEventType.purchaseCanceled:
+        debugPrint('❌ 购买取消: ${event.productId}');
+        _handlePurchaseCanceled(event);
+        break;
+        
+      case PurchaseEventType.purchaseError:
+        debugPrint('❌ 购买错误: ${event.productId} - ${event.message}');
+        _handlePurchaseError(event);
+        break;
+    }
+  }
+  
+  // 处理购买成功
+  void _handlePurchaseSuccess(PurchaseEvent event) {
+    // 支付进程结束，重置状态
+    if (mounted) {
+      setState(() {
+        _isInPaymentProcess = false;
+        _isPurchasing = false;
+      });
+    }
+    
+    try {
+      // 手动上报 in_app_purchase 事件（Android 手动补充）
+      final purchaseDetails = event.purchaseDetails;
+      // 原始字段
+      final rawProductId = widget.product?.googlePlayProductId ?? '';
+      final rawCurrency = _selectedPlanAvailableOffer?.currency ?? widget.product?.basePlans[widget.selectedPlan].currency;
+      final rawValue = _selectedPlanAvailableOffer?.price ?? widget.product?.basePlans[widget.selectedPlan].price ?? 0.0;
+      final offerId = _selectedPlanAvailableOffer?.offerId;
+      final purchaseToken = purchaseDetails?.verificationData.serverVerificationData;
+
+      // 规范化：确保 GA4 所需类型与格式
+      final String productId = rawProductId.isNotEmpty ? rawProductId : 'unknown_product';
+      final String currency = (rawCurrency != null && rawCurrency.length == 3)
+          ? rawCurrency
+          : 'USD';
+      final double value = double.tryParse('$rawValue') ?? 0.0;
+      final String itemName = _selectedPlanAvailableOffer?.name ?? widget.product?.basePlans[widget.selectedPlan].name ?? widget.product?.name ?? 'subscription';
+      const int quantity = 1;
+
+      // 使用 FirebaseAnalytics 的标准 purchase 事件
+      FirebaseAnalytics.instance.logPurchase(
+        currency: currency,
+        value: value,
+        transactionId: (purchaseToken != null && purchaseToken.isNotEmpty)
+            ? purchaseToken
+            : null,
+        items: [
+          AnalyticsEventItem(
+            itemId: productId,
+            itemName: itemName,
+            price: value,
+            quantity: quantity,
+          ),
+        ],
+      );
+
+      // 保留自定义 in_app_purchase 事件的手动上报（用于 DebugView 可见性与核对）
+      AnalyticsService().logCustomEvent(
+        eventName: 'in_app_purchase',
+        parameters: {
+          'value': value,
+          'currency': currency,
+          'price': value,
+          'quantity': quantity,
+          if (purchaseToken != null && purchaseToken.isNotEmpty)
+            'transaction_id': purchaseToken,
+          'items': [
+            {
+              'item_id': productId,
+              'item_name': itemName,
+              'price': value,
+              'quantity': quantity,
+            }
+          ],
+          'product_id': productId,
+          'base_plan_id': event.basePlanId,
+          if (offerId != null) 'offer_id': offerId,
+          'source': 'client_manual',
+        },
+      );
+
+      // 订阅结果打点（成功）
+      try {
+        TrackingService.trackSubscribeResult(
+          status: 'success',
+          productId: productId,
+          basePlanId: event.basePlanId,
+          offerId: offerId,
+          purchaseToken: purchaseToken,
+          currency: currency,
+          price: '$value',
+        );
+      } catch (e) {
+        debugPrint('📍 [TRACKING] subscribe_result success error: $e');
+      }
+    } catch (e) {
+      debugPrint('📊 [ANALYTICS] 手动上报 in_app_purchase 失败: $e');
+    }
+
+    // 购买成功，调用成功回调
+    widget.onSubscribeSuccess();
+  }
+  
+  // 处理购买失败
+  void _handlePurchaseFailure(PurchaseEvent event) {
+    // 支付进程结束，重置状态
+    if (mounted) {
+      setState(() {
+        _isInPaymentProcess = false;
+        _isPurchasing = false;
+      });
+    }
+    
+    ToastHelper.showError(event.message ?? ToastMessages.subscriptionFailed);
+    
+    // 订阅结果打点（失败）
+    try {
+      TrackingService.trackSubscribeResult(
+        status: 'failed',
+        productId: event.productId,
+        basePlanId: event.basePlanId,
+        offerId: _selectedPlanAvailableOffer?.offerId,
+        errorMessage: event.message,
+      );
+    } catch (e) {
+      debugPrint('📍 [TRACKING] subscribe_result failed error: $e');
+    }
+  }
+  
+  // 处理购买取消
+  void _handlePurchaseCanceled(PurchaseEvent event) {
+    // 支付进程结束，重置状态
+    if (mounted) {
+      setState(() {
+        _isInPaymentProcess = false;
+        _isPurchasing = false;
+      });
+    }
+    
+    ToastHelper.showInfo(ToastMessages.subscriptionCanceled);
+    
+    // 订阅结果打点（取消）
+    try {
+      TrackingService.trackSubscribeResult(
+        status: 'canceled',
+        productId: event.productId,
+        basePlanId: event.basePlanId,
+        offerId: _selectedPlanAvailableOffer?.offerId,
+      );
+    } catch (e) {
+      debugPrint('📍 [TRACKING] subscribe_result canceled error: $e');
+    }
+  }
+  
+  // 处理购买错误
+  void _handlePurchaseError(PurchaseEvent event) {
+    // 支付进程结束，重置状态
+    if (mounted) {
+      setState(() {
+        _isInPaymentProcess = false;
+        _isPurchasing = false;
+      });
+    }
+    
+    ToastHelper.showError(event.message ?? ToastMessages.subscriptionFailed);
+    
+    // 订阅结果打点（错误归为失败）
+    try {
+      TrackingService.trackSubscribeResult(
+        status: 'failed',
+        productId: event.productId,
+        basePlanId: event.basePlanId,
+        offerId: _selectedPlanAvailableOffer?.offerId,
+        errorMessage: event.message,
+      );
+    } catch (e) {
+      debugPrint('📍 [TRACKING] subscribe_result error error: $e');
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // 当应用从后台恢复到前台时，只有在非支付进程中才重置购买状态
+    if (state == AppLifecycleState.resumed && _isPurchasing && !_isInPaymentProcess) {
+      debugPrint('🔄 应用恢复到前台，用户可能取消了支付，重置购买状态');
+      if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+        });
+      }
+    }
   }
 
   void _onSubscribe() async {
@@ -109,19 +386,12 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
       return;
     }
 
-    // 设置购买状态为进行中，禁用订阅按钮
-    if (mounted) {
-      setState(() {
-        _isPurchasing = true;
-      });
-    }
-
     try {
       // 显示加载状态
       ToastHelper.showInfo(ToastMessages.subscriptionInitializing);
 
       // 获取Google Play Billing服务实例
-      final billingService = GooglePlayBillingService();
+      final billingService = GooglePlayBillingService.instance;
 
       // 初始化服务
       final isInitialized = await billingService.initialize();
@@ -163,17 +433,7 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
         return;
       }
 
-      // 订阅流程开始打点
-      try {
-        TrackingService.trackSubscribeFlowStart(
-          productId: widget.product?.googlePlayProductId,
-          basePlanId: basePlanId,
-          offerId: availableOffer?.offerId,
-          scene: widget.scene ?? 'unknown',
-        );
-      } catch (e) {
-        debugPrint('📍 [TRACKING] subscribe_flow_start error: $e');
-      }
+
 
       try {
         // 显示加载状态
@@ -184,135 +444,32 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
           '  - 最终购买参数: basePlanId="$basePlanId", offerToken="$offerToken"',
         );
 
-        final purchaseResult = await billingService.purchaseProduct(
+        final purchaseStarted = await billingService.purchaseProduct(
           basePlanId,
           offerToken: offerToken,
         );
 
-        // 根据购买结果处理不同情况
-        switch (purchaseResult.result) {
-          case PurchaseResult.success:
-            // 手动上报 in_app_purchase 事件（Android 手动补充）
-            try {
-              final purchaseDetails = purchaseResult.purchaseDetails;
-              // 原始字段
-              final rawProductId = widget.product?.googlePlayProductId ?? '';
-              final rawCurrency = _selectedPlanAvailableOffer?.currency ?? widget.product?.basePlans[widget.selectedPlan].currency;
-              final rawValue = _selectedPlanAvailableOffer?.price ?? widget.product?.basePlans[widget.selectedPlan].price ?? 0.0;
-              final offerId = _selectedPlanAvailableOffer?.offerId;
-              final purchaseToken = purchaseDetails?.verificationData.serverVerificationData;
-
-              // 规范化：确保 GA4 所需类型与格式
-              final String productId = rawProductId.isNotEmpty ? rawProductId : 'unknown_product';
-              final String currency = (rawCurrency != null && rawCurrency.length == 3)
-                  ? rawCurrency
-                  : 'USD';
-              final double value = double.tryParse('$rawValue') ?? 0.0;
-              final String itemName = _selectedPlanAvailableOffer?.name ?? widget.product?.basePlans[widget.selectedPlan].name ?? widget.product?.name ?? 'subscription';
-              const int quantity = 1;
-
-              // 使用 FirebaseAnalytics 的标准 purchase 事件
-              FirebaseAnalytics.instance.logPurchase(
-                currency: currency,
-                value: value,
-                transactionId: (purchaseToken != null && purchaseToken.isNotEmpty)
-                    ? purchaseToken
-                    : null,
-                items: [
-                  AnalyticsEventItem(
-                    itemId: productId,
-                    itemName: itemName,
-                    price: value,
-                    quantity: quantity,
-                  ),
-                ],
-              );
-
-              // 保留自定义 in_app_purchase 事件的手动上报（用于 DebugView 可见性与核对）
-              AnalyticsService().logCustomEvent(
-                eventName: 'in_app_purchase',
-                parameters: {
-                  'value': value,
-                  'currency': currency,
-                  'price': value,
-                  'quantity': quantity,
-                  if (purchaseToken != null && purchaseToken.isNotEmpty)
-                    'transaction_id': purchaseToken,
-                  'items': [
-                    {
-                      'item_id': productId,
-                      'item_name': itemName,
-                      'price': value,
-                      'quantity': quantity,
-                    }
-                  ],
-                  'product_id': productId,
-                  'base_plan_id': basePlanId,
-                  if (offerId != null) 'offer_id': offerId,
-                  'source': 'client_manual',
-                },
-              );
-
-              // 订阅结果打点（成功）- 移到变量作用域内
-              try {
-                TrackingService.trackSubscribeResult(
-                  status: 'success',
-                  productId: productId,
-                  basePlanId: basePlanId,
-                  offerId: offerId,
-                  purchaseToken: purchaseToken,
-                  currency: currency,
-                  price: '$value',
-                );
-              } catch (e) {
-                debugPrint('📍 [TRACKING] subscribe_result success error: $e');
-              }
-            } catch (e) {
-              debugPrint('📊 [ANALYTICS] 手动上报 in_app_purchase 失败: $e');
-            }
-
-            // 购买成功，调用成功回调
-            widget.onSubscribeSuccess();
-            
-            break;
-          case PurchaseResult.pending:
-            ToastHelper.showInfo(ToastMessages.subscriptionPending);
-            break;
-          case PurchaseResult.canceled:
-            ToastHelper.showInfo(ToastMessages.subscriptionCanceled);
-            // 订阅结果打点（取消）
-            try {
-              TrackingService.trackSubscribeResult(
-                status: 'canceled',
-                productId: widget.product?.googlePlayProductId ?? 'unknown_product',
-                basePlanId: basePlanId,
-                offerId: _selectedPlanAvailableOffer?.offerId,
-              );
-            } catch (e) {
-              debugPrint('📍 [TRACKING] subscribe_result canceled error: $e');
-            }
-            break;
-          case PurchaseResult.error:
-          case PurchaseResult.failed:
-            ToastHelper.showError(
-              purchaseResult.message ?? ToastMessages.subscriptionFailed,
-            );
-            // 订阅结果打点（失败）
-            try {
-              TrackingService.trackSubscribeResult(
-                status: 'failed',
-                productId: widget.product?.googlePlayProductId ?? 'unknown_product',
-                basePlanId: basePlanId,
-                offerId: _selectedPlanAvailableOffer?.offerId,
-                errorMessage: purchaseResult.message,
-              );
-            } catch (e) {
-              debugPrint('📍 [TRACKING] subscribe_result failed error: $e');
-            }
-            break;
+        if (!purchaseStarted) {
+          debugPrint('❌ 购买流程启动失败');
+          // 如果购买流程启动失败，重置状态
+          if (mounted) {
+            setState(() {
+              _isInPaymentProcess = false;
+              _isPurchasing = false;
+            });
+          }
         }
+        // 注意：购买结果现在通过 Stream 事件处理，不需要在这里处理结果
       } catch (e) {
         debugPrint('Google Play Billing购买异常: $e');
+        // 支付进程结束，重置状态
+        // 如果购买流程启动失败，重置状态
+        if (mounted) {
+          setState(() {
+            _isInPaymentProcess = false;
+            _isPurchasing = false;
+          });
+        }
         ToastHelper.showError(ToastMessages.subscriptionException);
         // 订阅结果打点（异常归为失败）
         try {
@@ -330,28 +487,18 @@ class _SubscribeOptionsState extends State<SubscribeOptions> {
     } catch (e) {
       debugPrint('Google Play Billing购买失败: $e');
 
-      // 使用统一的错误消息处理
-      final errorMessage = ToastMessages.getBillingErrorMessage(e);
-      ToastHelper.showError(errorMessage);
-      // 订阅结果打点（外层失败）
-      try {
-        TrackingService.trackSubscribeResult(
-          status: 'failed',
-          productId: widget.product?.googlePlayProductId ?? 'unknown_product',
-          basePlanId: 'unknown_base_plan',
-          offerId: _selectedPlanAvailableOffer?.offerId,
-          errorMessage: errorMessage,
-        );
-      } catch (e) {
-        debugPrint('📍 [TRACKING] subscribe_result outer failed error: $e');
-      }
-    } finally {
-      // 恢复订阅按钮状态
+      // 如果购买流程启动失败，重置状态
       if (mounted) {
         setState(() {
+          _isInPaymentProcess = false;
           _isPurchasing = false;
         });
       }
+
+      // 使用统一的错误消息处理
+      final errorMessage = ToastMessages.getBillingErrorMessage(e);
+      ToastHelper.showError(errorMessage);
+      
     }
   }
 

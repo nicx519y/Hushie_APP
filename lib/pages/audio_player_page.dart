@@ -22,48 +22,9 @@ import '../models/srt_model.dart';
 import '../components/srt_browser.dart';
 import '../components/audio_free_tag.dart';
 
-/// 音频播放器页面专用的上滑过渡效果
-class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
-
-  SlideUpPageRoute({required this.page})
-    : super(
-        pageBuilder: (context, animation, secondaryAnimation) => page,
-        transitionDuration: const Duration(milliseconds: 300),
-        reverseTransitionDuration: const Duration(milliseconds: 300),
-        maintainState: true,
-        fullscreenDialog: true,
-        opaque: false,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(0.0, 1.0); // 从底部开始
-          const end = Offset.zero; // 到正常位置
-          const curve = Curves.easeInOut;
-
-          var tween = Tween(
-            begin: begin,
-            end: end,
-          ).chain(CurveTween(curve: curve));
-
-          return SlideTransition(
-            position: animation.drive(tween),
-            child: child,
-          );
-        },
-      );
-
-  @override
-  bool get popGestureEnabled => false;
-
-  @override
-  Future<RoutePopDisposition> willPop() async {
-    return RoutePopDisposition.pop;
-  }
-}
-
 class AudioPlayerPage extends StatefulWidget {
-  final AudioItem? initialAudio;
 
-  const AudioPlayerPage({super.key, this.initialAudio});
+  const AudioPlayerPage({super.key});
 
   /// 使用标准上滑动画打开播放器页面
 
@@ -71,7 +32,8 @@ class AudioPlayerPage extends StatefulWidget {
   State<AudioPlayerPage> createState() => _AudioPlayerPageState();
 }
 
-class _AudioPlayerPageState extends State<AudioPlayerPage> {
+class _AudioPlayerPageState extends State<AudioPlayerPage>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   bool _isPlaying = false;
   bool _hasPremium = false;
   // 删除预览模式标志，统一使用非预览逻辑
@@ -106,25 +68,21 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // 本地状态缓存，用于差异对比
   AudioPlayerState? _lastAudioState;
 
+  // 新增：内部状态跟踪，记录已处理过详情的音频ID
+  String? _lastProcessedAudioId;
+
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _audioManager = AudioManager.instance;
     _srtController = SrtBrowserController();
 
-    // 用初始音频初始化状态
-    if (widget.initialAudio != null) {
-      setState(() {
-        _currentAudio = widget.initialAudio;
-        _isAudioLoading = true;
-        _isLikeButtonVisible = false; // 初始化时隐藏点赞按钮
-        // 获取音频详情并更新点赞状态
-        final initialAudio = widget.initialAudio;
-        if (initialAudio != null) {
-          _fetchAudioDetail(initialAudio.id);
-        }
-      });
-    }
+    // 从AudioManager获取当前音频进度并同步到_srtController
+    // _syncCurrentAudioProgressToSrtController();
 
     SubscribePrivilegeManager.instance
         .hasValidPremium(forceRefresh: false)
@@ -136,353 +94,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         });
   }
 
-  bool _canPlay() {
-    if (_currentAudio != null) {
-      return _hasPremium || (_currentAudio?.isFree ?? false);
-    } else {
-      return false;
-    }
-  }
-
-  void _onScrollStateChanged(bool isUserScrolling) {
-    setState(() {
-      _isUserScrolling = isUserScrolling;
-    });
-  }
-
-  void _onReturnButtonPressed() {
-    _srtController.resetToAutoScroll();
-  }
-
-  void _listenToAudioState() {
-    // 直接监听原始音频状态流，使用真实 position/duration
-    _subscriptions.add(
-      _audioManager.audioStateStream.listen((audioState) {
-        if (mounted) {
-          // 如果是第一次接收状态或状态发生变化，才进行处理
-          if (_lastAudioState == null ||
-              _hasStateChanged(_lastAudioState!, audioState)) {
-            bool needsUpdate = false;
-
-            // 检查当前音频是否变化
-            if (_lastAudioState?.currentAudio?.id !=
-                audioState.currentAudio?.id) {
-              _currentAudio = audioState.currentAudio;
-              _isLiked = _currentAudio?.isLiked ?? false;
-              // 初始化本地状态
-              _localIsLiked = _isLiked;
-              _localLikesCount = _currentAudio?.likesCount ?? 0;
-              _isLikeButtonVisible = false; // 音频变化时隐藏点赞按钮
-              needsUpdate = true;
-
-              // 切换音频后先清空字幕列表
-              _srtParagraphs = [];
-
-              // 获取音频详情并更新点赞状态
-              if (_currentAudio != null) {
-                final audioId = _currentAudio?.id;
-                if (audioId != null) {
-                  _fetchAudioDetail(audioId);
-                }
-              }
-            }
-
-            // 检查播放状态是否变化
-            if (_lastAudioState?.isPlaying != audioState.isPlaying) {
-              _isPlaying = audioState.isPlaying;
-
-              // 记录播放/暂停事件
-              if (_currentAudio != null) {
-                final audio = _currentAudio;
-                if (audio != null) {
-                  if (audioState.isPlaying) {
-                    AnalyticsService().logAudioPlay(
-                      audioId: audio.id,
-                      audioTitle: audio.title,
-                      category: 'audio_player',
-                      duration: audioState.duration?.inSeconds,
-                    );
-                  } else {
-                    AnalyticsService().logAudioPause(
-                      audioId: audio.id,
-                      audioTitle: audio.title,
-                      position: audioState.position.inSeconds,
-                    );
-                  }
-                }
-              }
-
-              needsUpdate = true;
-            }
-
-            // 检查播放器状态是否变化
-            if (_lastAudioState?.playerState.processingState !=
-                audioState.playerState.processingState) {
-              final playerState = audioState.playerState;
-              if (playerState != null) {
-                if (playerState.processingState == ProcessingState.loading ||
-                    playerState.processingState == ProcessingState.buffering) {
-                  _isAudioLoading = true;
-                } else {
-                  _isAudioLoading = false;
-                }
-              }
-              needsUpdate = true;
-            }
-
-            // 检查播放位置是否变化，驱动字幕高亮
-            if (_lastAudioState?.position != audioState.position) {
-              final duration = audioState.duration;
-              // debugPrint('[audio_player_page: _listenToAudioState]  position: ${audioState.position}');
-              if (duration != null && duration.inMilliseconds > 0) {
-                // 改为按具体时间定位字幕
-                _srtController.setActiveByProgress(
-                  audioState.position,
-                  !_isUserScrolling, // 用户滚动时不使用动画
-                );
-              }
-              needsUpdate = true;
-            }
-
-            // 只有在需要更新时才调用setState
-            if (needsUpdate) {
-              setState(() {});
-            }
-
-            // 更新本地状态缓存
-            _lastAudioState = audioState;
-          }
-        }
-      }),
-    );
-
-    _subscriptions.add(
-      SubscribePrivilegeManager.instance.privilegeChanges.listen((event) {
-        if (mounted) {
-          setState(() {
-            _hasPremium = event.hasPremium;
-          });
-        }
-      }),
-    );
-
-    // 监听权限违规事件（已移除）
-    // _subscriptions.add(
-    //   _audioManager.permissionViolationStream.listen((violationEvent) {
-    //     if (mounted && violationEvent != null) {
-    //       debugPrint('🚫 [PLAYER] 检测到权限违规: ${violationEvent.reason}');
-    //       // 显示订阅对话框
-    //       showSubscribeDialog(context, scene: 'player');
-    //     }
-    //   }),
-    // );
-  }
-
-  void _playAndPauseBtnPress() {
-    // 如果正在加载metadata，不允许播放
-    debugPrint(
-      '点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id',
-    );
-    if (_isAudioLoading) return;
-
-    if (!_isPlaying) {
-      // 如果当前没有播放，或者播放的不是当前音频，则开始播放当前音频
-      final currentAudio = _audioManager.currentAudio;
-      final currentAudioId = (_currentAudio?.id ?? 'unknown');
-
-      if (currentAudio != null && !_canPlay()) {
-        // 检查是否可以播放 如果不能播放 则显示订阅对话框
-        showSubscribeDialog(context, scene: 'player');
-        return;
-      }
-
-      if (currentAudio == null || currentAudio.id != currentAudioId) {
-        // 如果没有当前音频信息，无法播放
-        if (_currentAudio == null) return;
-
-        // 创建音频模型并播放
-        final audioToPlay = _currentAudio;
-        if (audioToPlay != null) {
-          _audioManager.playAudio(audioToPlay);
-        }
-      } else {
-        // 如果是同一首音频，直接恢复播放（不再检查预览区间）
-        _audioManager.togglePlayPause();
-      }
-    } else {
-      // 暂停播放
-      _audioManager.togglePlayPause();
-    }
-  }
-
-  void _onLikeButtonPressed() async {
-    if (_isLikeRequesting == true) {
-      return;
-    }
-
-    final isLogin = await AuthManager.instance.isSignedIn();
-    if (!isLogin) {
-      // 打开登录页
-      NavigationUtils.navigateToLogin(context);
-      return;
-    }
-
-    // 如果正在请求中，直接返回
-    if (_isLikeRequesting) return;
-
-    // 捕获当前音频引用，避免在异步期间发生变化导致空断言崩溃
-    final audio = _currentAudio;
-    if (audio == null) return;
-
-    // 先立即更新本地状态
-    final newIsLiked = !_localIsLiked;
-    final newLikesCount = newIsLiked
-        ? _localLikesCount + 1
-        : _localLikesCount - 1;
-
-    setState(() {
-      _localIsLiked = newIsLiked;
-      _localLikesCount = newLikesCount;
-      _isLikeRequesting = true; // 设置请求状态
-    });
-
-    // 记录点赞事件
-    AnalyticsService().logAudioLike(
-      audioId: audio.id,
-      audioTitle: audio.title,
-      isLiked: newIsLiked,
-    );
-
-    try {
-      // 调用API
-      await AudioLikesManager.instance.setLike(audio, newIsLiked);
-
-      // 请求成功，不需要再更改本地状态，保持当前状态
-    } catch (e) {
-      // 网络异常，回滚本地状态
-      debugPrint('点赞操作异常: $e');
-    } finally {
-      // 重置请求状态
-      if (mounted) {
-        setState(() {
-          _isLikeRequesting = false;
-        });
-      }
-    }
-  }
-
-  /// 获取音频详情并更新点赞状态
-  Future<void> _fetchAudioDetail(String audioId) async {
-    if (mounted) {
-      setState(() {
-        _isDetailLoading = true;
-      });
-    }
-    try {
-      debugPrint('🎵 [PLAYER] 开始获取音频详情: $audioId');
-
-      // 获取最新的音频详情
-      final audioDetail = await AudioDetailService.getAudioDetail(audioId);
-
-      if (mounted && _currentAudio?.id == audioId) {
-        // 只有当前音频ID匹配时才更新状态
-        setState(() {
-          _localIsLiked = audioDetail.isLiked ?? false;
-          _localLikesCount = audioDetail.likesCount ?? 0;
-          _isLikeButtonVisible = true; // 获取成功后显示点赞按钮
-          _srtParagraphs = audioDetail.srtParagraphs ?? [];
-          _isDetailLoading = false; // 详情加载完成
-        });
-
-        debugPrint(
-          '🎵 [PLAYER] 音频详情获取成功，更新点赞状态: isLiked=${audioDetail.isLiked}, likesCount=${audioDetail.likesCount}',
-        );
-      }
-    } catch (e) {
-      debugPrint('🎵 [PLAYER] 获取音频详情失败: $e');
-
-      if (mounted) {
-        // 获取失败时也要显示点赞按钮，使用当前的状态
-        setState(() {
-          _isLikeButtonVisible = true;
-          _isDetailLoading = false; // 失败也结束加载状态
-        });
-      }
-    }
-  }
-
-  void _onPlaylistButtonTap() async {
-    // 如果正在显示播放列表，直接返回
-    if (_isShowingPlaylist) return;
-
-    final isLogin = await AuthManager.instance.isSignedIn();
-    if (!isLogin) {
-      // 打开登录页
-      NavigationUtils.navigateToLogin(context);
-      return;
-    }
-
-    // 设置标志位
-    setState(() {
-      _isShowingPlaylist = true;
-    });
-
-    await showAudioHistoryDialog(
-      context,
-      onItemTap: (audio) {
-        _audioManager.playAudio(audio);
-      },
-      onClose: () {
-        // 播放列表关闭时重置标志位
-        if (mounted) {
-          setState(() {
-            _isShowingPlaylist = false;
-          });
-        }
-      },
-    );
-  }
-
-  void _closePage() {
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  // 移除_createDurationProxy和_onSeek方法，现在由AudioProgressBar内部处理
-
-  // 解锁全功能提示点击事件
-  void _onUnlockFullAccessTap() async {
-    showSubscribeDialog(context);
-  }
-
-  @override
-  void dispose() {
-    // 手动取消所有StreamSubscription以避免内存泄漏
-    for (final subscription in _subscriptions) {
-      subscription.cancel();
-    }
-    _subscriptions.clear();
-    _lastAudioState = null; // 清空状态缓存
-    super.dispose();
-  }
-
-  /// 检查音频状态是否发生实质性变化
-  bool _hasStateChanged(AudioPlayerState oldState, AudioPlayerState newState) {
-    return oldState.currentAudio?.id != newState.currentAudio?.id ||
-        oldState.isPlaying != newState.isPlaying ||
-        oldState.position != newState.position ||
-        oldState.duration != newState.duration ||
-        oldState.speed != newState.speed ||
-        oldState.playerState.processingState !=
-            newState.playerState.processingState;
-    // 预览相关比较已移除
-    // oldState.renderPreviewStart != newState.renderPreviewStart ||
-    // oldState.renderPreviewEnd != newState.renderPreviewEnd;
-  }
-
   @override
   Widget build(BuildContext context) {
+    super.build(context); // 必须调用以支持AutomaticKeepAliveClientMixin
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -494,6 +108,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       child: SwipeToCloseContainer(
         onClose: _closePage,
         showDragIndicator: false,
+        backgroundColor: Colors.transparent,
         child: Scaffold(
           backgroundColor: Colors.black,
           body: Stack(
@@ -516,12 +131,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                               ? const SizedBox.expand()
                               : _srtParagraphs.isEmpty
                               ? _buildDesc()
-                              : SrtBrowser(
-                                  paragraphs: _srtParagraphs,
-                                  controller: _srtController,
-                                  onScrollStateChanged: _onScrollStateChanged,
-                                  onParagraphTap: _onParagraphTap,
-                                  canViewAllText: _canPlay(),
+                              : RepaintBoundary(
+                                  child: SrtBrowser(
+                                    key: ValueKey('srt_browser_${_currentAudio?.id}'), // 使用音频ID作为key
+                                    paragraphs: _srtParagraphs,
+                                    controller: _srtController,
+                                    onScrollStateChanged: _onScrollStateChanged,
+                                    onParagraphTap: _onParagraphTap,
+                                    canViewAllText: _hasPremium || (_currentAudio?.isFree ?? false), // 直接计算避免方法调用
+                                    initProgress: _audioManager.position,
+                                  ),
                                 ),
                         ), // 字幕组件
                         _hasPremium
@@ -1013,4 +632,363 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
       return Duration.zero;
     }
   }
+
+  bool _canPlay() {
+    if (_currentAudio != null) {
+      return _hasPremium || (_currentAudio?.isFree ?? false);
+    } else {
+      return false;
+    }
+  }
+
+  void _onScrollStateChanged(bool isUserScrolling) {
+    setState(() {
+      _isUserScrolling = isUserScrolling;
+    });
+  }
+
+  void _onReturnButtonPressed() {
+    _srtController.resetToAutoScroll();
+  }
+
+  void _listenToAudioState() {
+    // 直接监听原始音频状态流，使用真实 position/duration
+    _subscriptions.add(
+      _audioManager.audioStateStream.listen((audioState) {
+        if (mounted) {
+          // 如果是第一次接收状态或状态发生变化，才进行处理
+          if (_lastAudioState == null ||
+              _hasStateChanged(_lastAudioState!, audioState)) {
+            bool needsUpdate = false;
+
+            // 检查当前音频是否变化
+            if (_lastAudioState?.currentAudio?.id !=
+                audioState.currentAudio?.id) {
+              _currentAudio = audioState.currentAudio;
+              _isLiked = _currentAudio?.isLiked ?? false;
+              // 初始化本地状态
+              _localIsLiked = _isLiked;
+              _localLikesCount = _currentAudio?.likesCount ?? 0;
+              _isLikeButtonVisible = false; // 音频变化时隐藏点赞按钮
+              _isUserScrolling = false; // 音频更换时重置手动滚动状态
+              _srtController.resetToAutoScroll(); // 同步重置字幕控制器为自动滚动
+              needsUpdate = true;
+
+              // 切换音频后先清空字幕列表
+              _srtParagraphs = [];
+
+              // 获取音频详情并更新点赞状态
+              if (_currentAudio != null) {
+                final audioId = _currentAudio?.id;
+                if (audioId != null && _lastProcessedAudioId != audioId) {
+                  _fetchAudioDetail(audioId);
+                }
+              }
+            }
+
+            // 检查播放状态是否变化
+            if (_lastAudioState?.isPlaying != audioState.isPlaying) {
+              _isPlaying = audioState.isPlaying;
+
+              // 记录播放/暂停事件
+              if (_currentAudio != null) {
+                final audio = _currentAudio;
+                if (audio != null) {
+                  if (audioState.isPlaying) {
+                    AnalyticsService().logAudioPlay(
+                      audioId: audio.id,
+                      audioTitle: audio.title,
+                      category: 'audio_player',
+                      duration: audioState.duration?.inSeconds,
+                    );
+                  } else {
+                    AnalyticsService().logAudioPause(
+                      audioId: audio.id,
+                      audioTitle: audio.title,
+                      position: audioState.position.inSeconds,
+                    );
+                  }
+                }
+              }
+
+              needsUpdate = true;
+            }
+
+            // 检查播放器状态是否变化
+            if (_lastAudioState?.playerState.processingState !=
+                audioState.playerState.processingState) {
+              final playerState = audioState.playerState;
+              if (playerState != null) {
+                if (playerState.processingState == ProcessingState.loading ||
+                    playerState.processingState == ProcessingState.buffering) {
+                  _isAudioLoading = true;
+                } else {
+                  _isAudioLoading = false;
+                }
+              }
+              needsUpdate = true;
+            }
+
+            // 检查播放位置是否变化，驱动字幕高亮
+            if (_lastAudioState?.position != audioState.position) {
+              final duration = audioState.duration;
+              // debugPrint('[audio_player_page: _listenToAudioState]  position: ${audioState.position}');
+              if (duration != null && duration.inMilliseconds > 0) {
+                // 改为按具体时间定位字幕
+                _srtController.setActiveByProgress(
+                  audioState.position,
+                  !_isUserScrolling, // 用户滚动时不使用动画
+                );
+              }
+              needsUpdate = true;
+            }
+
+            // 只有在需要更新时才调用setState
+            if (needsUpdate) {
+              setState(() {});
+            }
+
+            // 更新本地状态缓存
+            _lastAudioState = audioState;
+          }
+        }
+      }),
+    );
+
+    _subscriptions.add(
+      SubscribePrivilegeManager.instance.privilegeChanges.listen((event) {
+        if (mounted) {
+          setState(() {
+            _hasPremium = event.hasPremium;
+          });
+        }
+      }),
+    );
+  }
+
+  void _playAndPauseBtnPress() {
+    // 如果正在加载metadata，不允许播放
+    debugPrint(
+      '点击了播放/暂停按钮 isAudioLoading: $_isAudioLoading $_isPlaying $_currentAudio.id',
+    );
+    if (_isAudioLoading) return;
+
+    if (!_isPlaying) {
+      // 如果当前没有播放，或者播放的不是当前音频，则开始播放当前音频
+      final currentAudio = _audioManager.currentAudio;
+      final currentAudioId = (_currentAudio?.id ?? 'unknown');
+
+      if (currentAudio != null && !_canPlay()) {
+        // 检查是否可以播放 如果不能播放 则显示订阅对话框
+        showSubscribeDialog(context, scene: 'player');
+        return;
+      }
+
+      if (currentAudio == null || currentAudio.id != currentAudioId) {
+        // 如果没有当前音频信息，无法播放
+        if (_currentAudio == null) return;
+
+        // 创建音频模型并播放
+        final audioToPlay = _currentAudio;
+        if (audioToPlay != null) {
+          _audioManager.playAudio(audioToPlay);
+        }
+      } else {
+        // 如果是同一首音频，直接恢复播放（不再检查预览区间）
+        _audioManager.togglePlayPause();
+      }
+    } else {
+      // 暂停播放
+      _audioManager.togglePlayPause();
+    }
+  }
+
+  void _onLikeButtonPressed() async {
+    if (_isLikeRequesting == true) {
+      return;
+    }
+
+    final isLogin = await AuthManager.instance.isSignedIn();
+    if (!isLogin) {
+      // 打开登录页
+      NavigationUtils.navigateToLogin(context);
+      return;
+    }
+
+    // 如果正在请求中，直接返回
+    if (_isLikeRequesting) return;
+
+    // 捕获当前音频引用，避免在异步期间发生变化导致空断言崩溃
+    final audio = _currentAudio;
+    if (audio == null) return;
+
+    // 先立即更新本地状态
+    final newIsLiked = !_localIsLiked;
+    final newLikesCount = newIsLiked
+        ? _localLikesCount + 1
+        : _localLikesCount - 1;
+
+    setState(() {
+      _localIsLiked = newIsLiked;
+      _localLikesCount = newLikesCount;
+      _isLikeRequesting = true; // 设置请求状态
+    });
+
+    // 记录点赞事件
+    AnalyticsService().logAudioLike(
+      audioId: audio.id,
+      audioTitle: audio.title,
+      isLiked: newIsLiked,
+    );
+
+    try {
+      // 调用API
+      await AudioLikesManager.instance.setLike(audio, newIsLiked);
+
+      // 请求成功，不需要再更改本地状态，保持当前状态
+    } catch (e) {
+      // 网络异常，回滚本地状态
+      debugPrint('点赞操作异常: $e');
+    } finally {
+      // 重置请求状态
+      if (mounted) {
+        setState(() {
+          _isLikeRequesting = false;
+        });
+      }
+    }
+  }
+
+  /// 获取音频详情并更新点赞状态
+  Future<void> _fetchAudioDetail(String audioId) async {
+    if (mounted) {
+      setState(() {
+        _isDetailLoading = true;
+      });
+    }
+    try {
+      debugPrint('🎵 [PLAYER] 开始获取音频详情: $audioId');
+
+      // 获取最新的音频详情
+      final audioDetail = await AudioDetailService.getAudioDetail(audioId);
+
+      if (mounted && _currentAudio?.id == audioId) {
+        // 只有当前音频ID匹配时才更新状态
+        setState(() {
+          _localIsLiked = audioDetail.isLiked ?? false;
+          _localLikesCount = audioDetail.likesCount ?? 0;
+          _isLikeButtonVisible = true; // 获取成功后显示点赞按钮
+          _srtParagraphs = audioDetail.srtParagraphs ?? [];
+          _isDetailLoading = false; // 详情加载完成
+        });
+
+        // 更新已处理的音频ID
+        _lastProcessedAudioId = audioId;
+
+        debugPrint(
+          '🎵 [PLAYER] 音频详情获取成功，更新点赞状态: isLiked=${audioDetail.isLiked}, likesCount=${audioDetail.likesCount}',
+        );
+      }
+    } catch (e) {
+      debugPrint('🎵 [PLAYER] 获取音频详情失败: $e');
+
+      if (mounted) {
+        // 获取失败时也要显示点赞按钮，使用当前的状态
+        setState(() {
+          _isLikeButtonVisible = true;
+          _isDetailLoading = false; // 失败也结束加载状态
+        });
+      }
+    }
+  }
+
+  void _onPlaylistButtonTap() async {
+    // 如果正在显示播放列表，直接返回
+    if (_isShowingPlaylist) return;
+
+    final isLogin = await AuthManager.instance.isSignedIn();
+    if (!isLogin) {
+      // 打开登录页
+      NavigationUtils.navigateToLogin(context);
+      return;
+    }
+
+    // 设置标志位
+    setState(() {
+      _isShowingPlaylist = true;
+    });
+
+    showAudioHistoryDialog(
+      context,
+      onItemTap: (audio) {
+        _audioManager.playAudio(audio);
+      },
+      onClose: () {
+        // 播放列表关闭时重置标志位
+        if (mounted) {
+          setState(() {
+            _isShowingPlaylist = false;
+          });
+        }
+      },
+    );
+  }
+
+  void _closePage() {
+    // 使用标准的Navigator.pop关闭页面
+    Navigator.of(context).pop();
+  }
+
+  // 解锁全功能提示点击事件
+  void _onUnlockFullAccessTap() async {
+    showSubscribeDialog(context);
+  }
+
+  @override
+  Future<bool> didPopRoute() async {
+    // 拦截系统返回键，使用标准Navigator.pop关闭页面
+    Navigator.of(context).pop();
+    return true; // 表示已处理返回键事件
+  }
+
+  @override
+  void dispose() {
+    // 取消系统事件观察者
+    WidgetsBinding.instance.removeObserver(this);
+    // 手动取消所有StreamSubscription以避免内存泄漏
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    _lastAudioState = null; // 清空状态缓存
+    super.dispose();
+  }
+
+  /// 检查音频状态是否发生实质性变化
+  bool _hasStateChanged(AudioPlayerState oldState, AudioPlayerState newState) {
+    return oldState.currentAudio?.id != newState.currentAudio?.id ||
+        oldState.isPlaying != newState.isPlaying ||
+        oldState.position != newState.position ||
+        oldState.duration != newState.duration ||
+        oldState.speed != newState.speed ||
+        oldState.playerState.processingState !=
+            newState.playerState.processingState;
+  }
+
+  // 从AudioManager获取当前音频进度并同步到_srtController
+  void _syncCurrentAudioProgressToSrtController() {
+    // 直接获取当前播放进度，不使用流监听
+    final currentPosition = _audioManager.position;
+    debugPrint('🎵 [PLAYER] 当前播放进度: $currentPosition');
+    if (mounted && _audioManager.currentAudio != null) {
+      // 使用setActiveByProgress方法根据当前播放位置定位字幕
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _srtController.setActiveByProgress(
+          currentPosition,
+          false, // 初始化时不使用动画
+        );
+      });
+    }
+  }
+
 }

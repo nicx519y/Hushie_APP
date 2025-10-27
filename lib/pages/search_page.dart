@@ -301,7 +301,7 @@ class _SearchPageState extends State<SearchPage> {
       _saveSearchHistory(_searchController.text);
       // 播放音频并进入播放页
       _playAudio(audio);
-      NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
+      NavigationUtils.navigateToAudioPlayer(context);
     } else {
       // 没有权限，提示订阅
       showSubscribeDialog(context, scene: 'search');

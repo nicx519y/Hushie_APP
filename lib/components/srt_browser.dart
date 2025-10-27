@@ -33,7 +33,7 @@ class SrtBrowser extends StatefulWidget {
     super.key,
     required this.paragraphs,
     this.controller,
-    this.initPorgress,
+    this.initProgress,
     this.onScrollStateChanged,
     this.onParagraphTap,
     this.canViewAllText = false,
@@ -41,7 +41,7 @@ class SrtBrowser extends StatefulWidget {
 
   final List<SrtParagraphModel> paragraphs;
   final SrtBrowserController? controller;
-  final double? initPorgress; // 0.0 ~ 1.0 的初始进度
+  final Duration? initProgress; // 初始播放进度
   final Function(bool isUserScrolling)? onScrollStateChanged; // 滚动状态变化回调
   final Function(SrtParagraphModel paragraph)? onParagraphTap; // 段落点击回调
   final bool canViewAllText; // 是否可查看完整文本
@@ -50,7 +50,7 @@ class SrtBrowser extends StatefulWidget {
   State<SrtBrowser> createState() => _SrtBrowserState();
 }
 
-class _SrtBrowserState extends State<SrtBrowser> {
+class _SrtBrowserState extends State<SrtBrowser> with AutomaticKeepAliveClientMixin {
   // 替换为按索引滚动的控制器
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
@@ -66,22 +66,14 @@ class _SrtBrowserState extends State<SrtBrowser> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[SrtBrowser] initState called - 组件初始化');
     widget.controller?._attach(this);
     _rebuildVisibleParagraphs();
-
-    // 根据入参 initPorgress 设置初始 activeIndex（基于可见列表）
-    if (widget.initPorgress != null && _visibleParagraphs.isNotEmpty) {
-      final p = widget.initPorgress!.clamp(0.0, 1.0);
-      final idx = (p * (_visibleParagraphs.length - 1)).round();
-      _activeIndex = idx;
+    
+    // 根据入参 initProgress 设置初始 activeIndex（基于可见列表）
+    if (widget.initProgress != null && _visibleParagraphs.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _isAutoScrolling = true;
-        _scrollWhenReady(
-          idx,
-          const Duration(milliseconds: 300),
-          Curves.easeInOut,
-          0.0,
-        ).whenComplete(() => _isAutoScrolling = false);
+        _setActiveByProgress(widget.initProgress!, false);
       });
     }
   }
@@ -89,22 +81,32 @@ class _SrtBrowserState extends State<SrtBrowser> {
   @override
   void didUpdateWidget(covariant SrtBrowser oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // debugPrint('[SrtBrowser] didUpdateWidget called - 检查是否需要重建');
+    
+    // 只有在控制器真正改变时才重新绑定
     if (oldWidget.controller != widget.controller) {
+      debugPrint('[SrtBrowser] Controller changed - 重新绑定控制器');
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
     }
 
-    // 重新计算可见段落列表
-    _rebuildVisibleParagraphs();
+    // 只有在段落数据真正改变时才重新计算
+    if (oldWidget.paragraphs != widget.paragraphs || 
+        oldWidget.canViewAllText != widget.canViewAllText) {
+      debugPrint('[SrtBrowser] Data changed - 重新计算可见段落');
+      _rebuildVisibleParagraphs();
 
-    // 钳制当前 activeIndex 到可见列表合法范围
-    if (_visibleParagraphs.isNotEmpty) {
-      final lastIndex = _visibleParagraphs.length - 1;
-      if (_activeIndex < 0 || _activeIndex > lastIndex) {
-        _activeIndex = _activeIndex < 0 ? 0 : lastIndex;
+      // 钳制当前 activeIndex 到可见列表合法范围
+      if (_visibleParagraphs.isNotEmpty) {
+        final lastIndex = _visibleParagraphs.length - 1;
+        if (_activeIndex < 0 || _activeIndex > lastIndex) {
+          _activeIndex = _activeIndex < 0 ? 0 : lastIndex;
+        }
+      } else {
+        _activeIndex = 0;
       }
     } else {
-      _activeIndex = 0;
+      // debugPrint('[SrtBrowser] No data change - 跳过重建');
     }
   }
 
@@ -145,9 +147,9 @@ class _SrtBrowserState extends State<SrtBrowser> {
       _isAutoScrolling = true;
       _scrollWhenReady(
         index,
-        animate ? const Duration(seconds: 1) : Duration.zero,
+        animate ? const Duration(seconds: 1) : const Duration(milliseconds: 1),
         Curves.easeInOut,
-        0.0,
+        0.10,
       ).whenComplete(() => _isAutoScrolling = false);
     });
   }
@@ -193,10 +195,10 @@ class _SrtBrowserState extends State<SrtBrowser> {
       }
     }
 
-    // 调整重复时间：当多个段落共享同一开始时间时，始终选择该时间的第一个段（优先标题）
+    // 调整重复时间：当多个段落共享同一开始时间时，选择该时间的最后一个段（优先正文）
     final int targetTime = paragraphTimes[targetIndex];
-    while (targetIndex > 0 && paragraphTimes[targetIndex - 1] == targetTime) {
-      targetIndex--;
+    while (targetIndex < lastIndex && paragraphTimes[targetIndex + 1] == targetTime) {
+      targetIndex++;
     }
 
     // 索引钳制
@@ -255,7 +257,7 @@ class _SrtBrowserState extends State<SrtBrowser> {
           idx,
           const Duration(milliseconds: 500),
           Curves.easeInOut,
-          0.0,
+          0.1,
         ).whenComplete(() => _isAutoScrolling = false);
       });
     }
@@ -282,7 +284,12 @@ class _SrtBrowserState extends State<SrtBrowser> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // 必须调用以启用AutomaticKeepAliveClientMixin
+    // debugPrint('[SrtBrowser] build called - 重新构建UI');
     // 用滚动通知检测用户手动滚动
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {

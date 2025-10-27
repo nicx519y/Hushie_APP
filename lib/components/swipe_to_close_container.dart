@@ -75,6 +75,13 @@ class _SwipeToCloseContainerState extends State<SwipeToCloseContainer> {
     if (_dragOffset > widget.dragThreshold) {
       // 超过阈值，关闭页面
       widget.onClose();
+      // 关键：延迟重置拖拽偏移，保证下次打开从顶部开始
+      Future.delayed(widget.animationDuration, () {
+        if (!mounted) return;
+        setState(() {
+          _dragOffset = 0.0;
+        });
+      });
     } else {
       // 未超过阈值，平滑回弹到原位置
       _animateToPosition(0.0);

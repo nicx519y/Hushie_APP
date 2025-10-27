@@ -4,6 +4,7 @@ import '../components/bottom_navigation_bar.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../services/app_operations_service.dart';
+import '../router/navigation_utils.dart';
 
 // 全局路由观察者
 final RouteObserver<ModalRoute<void>> globalRouteObserver =
@@ -54,6 +55,9 @@ class _MainLayoutState extends State<MainLayout> {
   /// 处理返回按键事件
   Future<void> _onWillPop() async {
     final now = DateTime.now();
+    
+    // 由于改用标准Navigator管理AudioPlayerPage，不再需要特殊处理
+    // AudioPlayerPage会通过自身的didPopRoute方法处理返回键
     
     // 检查是否在2秒内连续按下返回键
     if (_lastPressedAt == null || now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {

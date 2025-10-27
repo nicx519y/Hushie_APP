@@ -274,7 +274,15 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                 children: [
                   // _realDuration > Duration.zero
                       Text(
-                          _realDuration > Duration.zero ? _formatDuration(_realPosition) : '00:00',
+                          (_isDragging && _renderDuration > Duration.zero)
+                              ? _formatDuration(Duration(
+                                  milliseconds:
+                                      (_dragValue * _renderDuration.inMilliseconds)
+                                          .round(),
+                                ))
+                              : (_realDuration > Duration.zero
+                                  ? _formatDuration(_realPosition)
+                                  : '00:00'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,

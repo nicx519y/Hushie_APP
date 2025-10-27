@@ -530,12 +530,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   /// 构建底部导航
   Widget _buildBottomNavigation() {
+
+    debugPrint('BottomNavPadding: ${MediaQuery.of(context).padding.bottom}');
+
     return Padding(
       padding: EdgeInsets.only(
         left: 14,
         right: 14,
         top: 14,
-        bottom: MediaQuery.of(context).padding.bottom == 0 ? 26 : MediaQuery.of(context).padding.bottom,
+        bottom: 26 - MediaQuery.of(context).padding.bottom,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -10,9 +10,39 @@ class AudioDetailService {
 
   // 已移除假SRT数据构造函数，统一使用接口返回的真实数据。
 
-  /// 获取音频详情
+  // 新增：音频详情内存缓存
+  static final Map<String, AudioItem> _detailCache = {};
+  // 新增：缓存条目最大数量限制
+  static const int _maxCacheEntries = 10;
+
+  // 新增：溢出时移除最早插入的条目（近似 FIFO）
+  static void _enforceCacheLimit() {
+    if (_detailCache.length <= _maxCacheEntries) return;
+    final overflow = _detailCache.length - _maxCacheEntries;
+    for (int i = 0; i < overflow; i++) {
+      final String firstKey = _detailCache.keys.first;
+      _detailCache.remove(firstKey);
+    }
+  }
+
+  /// 获取缓存的音频详情（若存在）
+  static AudioItem? getCachedDetail(String audioId) {
+    return _detailCache[audioId];
+  }
+
+  /// 获取音频详情（优先返回缓存）
   static Future<AudioItem> getAudioDetail(String audioId) async {
-    return _getRealAudioDetail(audioId);
+    final cached = _detailCache[audioId];
+    if (cached != null) {
+      // 命中缓存时，移除并重新插入，保持较新的插入顺序（近似 LRU）
+      _detailCache.remove(audioId);
+      _detailCache[audioId] = cached;
+      return cached;
+    }
+    final item = await _getRealAudioDetail(audioId);
+    _detailCache[audioId] = item;
+    _enforceCacheLimit();
+    return item;
   }
 
   /// 真实接口 - 获取音频详情

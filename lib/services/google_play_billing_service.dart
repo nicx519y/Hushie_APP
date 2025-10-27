@@ -30,10 +30,40 @@ class PurchaseResultData {
   });
 }
 
+// 购买事件类型枚举
+enum PurchaseEventType {
+  purchaseStarted,    // 购买开始
+  purchasePending,    // 购买待处理
+  purchaseSuccess,    // 购买成功
+  purchaseFailed,     // 购买失败
+  purchaseCanceled,   // 购买取消
+  purchaseError,      // 购买错误
+}
+
+// 购买事件数据类
+class PurchaseEvent {
+  final PurchaseEventType type;
+  final String productId;
+  final String basePlanId;
+  final String? message;
+  final PurchaseDetails? purchaseDetails;
+  final Map<String, dynamic>? metadata;
+
+  PurchaseEvent({
+    required this.type,
+    required this.productId,
+    required this.basePlanId,
+    this.message,
+    this.purchaseDetails,
+    this.metadata,
+  });
+}
+
 class GooglePlayBillingService {
   // 单例模式
   static final GooglePlayBillingService _instance = GooglePlayBillingService._internal();
   factory GooglePlayBillingService() => _instance;
+  static GooglePlayBillingService get instance => _instance;
   GooglePlayBillingService._internal();
   
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
@@ -41,8 +71,11 @@ class GooglePlayBillingService {
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   bool _isInitialized = false;
   
-  // 购买结果的Completer，用于将购买流监听结果封装成Future
-  final Map<String, Completer<PurchaseResultData>> _purchaseCompleters = {};
+  // 购买事件流控制器
+  final StreamController<PurchaseEvent> _purchaseEventController = StreamController<PurchaseEvent>.broadcast();
+  
+  // 对外暴露的购买事件流
+  Stream<PurchaseEvent> get purchaseEventStream => _purchaseEventController.stream;
   
   // 存储每个产品对应的basePlanId，用于验证时传递
   final Map<String, String> _productBasePlanIds = {};
@@ -124,8 +157,8 @@ class GooglePlayBillingService {
     }
   }
   
-  // 购买产品 - 返回Future<PurchaseResultData>
-  Future<PurchaseResultData> purchaseProduct(String basePlanId, {String? offerToken, String? offerId}) async {
+  // 购买产品 - 发送事件到Stream，不再返回Future
+  Future<bool> purchaseProduct(String basePlanId, {String? offerToken, String? offerId}) async {
     // 这些变量需在 try 块之外声明，便于在 onTimeout/catch 中访问
     Product? targetProduct;
     BasePlan? targetBasePlan;
@@ -135,24 +168,29 @@ class GooglePlayBillingService {
       // 验证服务是否已初始化
       if (!_isInitialized) {
         debugPrint('❌ Google Play Billing 服务未初始化');
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: 'unknown',
+          basePlanId: basePlanId,
           message: 'Billing service not initialized',
-        );
+        ));
+        return false;
       }
 
       // 从SubscribePrivilegeManager获取商品信息
       final productData = await SubscribePrivilegeManager.instance.getProductData();
       if (productData == null) {
         debugPrint('❌ 无法获取商品数据');
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: 'unknown',
+          basePlanId: basePlanId,
           message: 'Can not get product data',
-        );
+        ));
+        return false;
       }
       
       // 根据basePlanId查找对应的产品和基础计划
-      
       for (final product in productData.products) {
         for (final basePlan in product.basePlans) {
           if (basePlan.googlePlayBasePlanId == basePlanId) {
@@ -165,11 +203,17 @@ class GooglePlayBillingService {
       }
       
       if (targetProduct == null || targetBasePlan == null) {
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: 'unknown',
+          basePlanId: basePlanId,
           message: 'Can not find product or base plan',
-        );
+        ));
+        return false;
       }
+
+      // 在此时 targetProduct 一定非空，提取产品ID
+      productId = targetProduct.googlePlayProductId;
 
       // 预检：验证 Base Plan 在 Google Play 中确实存在且包含可用的优惠
       final isConfigValid = await validateBasePlanConfiguration(basePlanId);
@@ -181,27 +225,36 @@ class GooglePlayBillingService {
             'google_play_product_id': targetProduct.googlePlayProductId,
           },
         );
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: productId,
+          basePlanId: basePlanId,
           message: 'Invalid base plan configuration',
-        );
+        ));
+        return false;
       }
       
       // 查询Google Play产品详情
       final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails({targetProduct.googlePlayProductId});
   
       if (response.error != null) {
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: productId,
+          basePlanId: basePlanId,
           message: 'Can not query product details',
-        );
+        ));
+        return false;
       }
       
       if (response.productDetails.isEmpty) {
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: productId,
+          basePlanId: basePlanId,
           message: 'Can not find product details',
-        );
+        ));
+        return false;
       }
       
       final ProductDetails productDetails = response.productDetails.first;
@@ -239,10 +292,13 @@ class GooglePlayBillingService {
             }
             
             if (targetOffer == null) {
-              return PurchaseResultData(
-                result: PurchaseResult.error,
+              _emitPurchaseEvent(PurchaseEvent(
+                type: PurchaseEventType.purchaseError,
+                productId: productId,
+                basePlanId: basePlanId,
                 message: 'Has no available offer',
-              );
+              ));
+              return false;
             }
 
             // 使用找到的优惠Token创建购买参数
@@ -255,10 +311,13 @@ class GooglePlayBillingService {
                   'offer_id': targetOffer.offerId,
                 },
               );
-              return PurchaseResultData(
-                result: PurchaseResult.error,
+              _emitPurchaseEvent(PurchaseEvent(
+                type: PurchaseEventType.purchaseError,
+                productId: productId,
+                basePlanId: basePlanId,
                 message: 'Invalid offer token',
-              );
+              ));
+              return false;
             }
 
             purchaseParam = GooglePlayPurchaseParam(
@@ -268,30 +327,28 @@ class GooglePlayBillingService {
               changeSubscriptionParam: null,
             );
             
-            
           } else {
-            return PurchaseResultData(
-              result: PurchaseResult.failed,
+            _emitPurchaseEvent(PurchaseEvent(
+              type: PurchaseEventType.purchaseError,
+              productId: productId,
+              basePlanId: basePlanId,
               message: 'Has no available offer',
-            );
+            ));
+            return false;
           }
         } else {
-          return PurchaseResultData(
-            result: PurchaseResult.failed,
+          _emitPurchaseEvent(PurchaseEvent(
+            type: PurchaseEventType.purchaseError,
+            productId: productId,
+            basePlanId: basePlanId,
             message: 'Product type is not subscription',
-          );
+          ));
+          return false;
         }
       } else {
         // 处理一次性购买
         purchaseParam = PurchaseParam(productDetails: productDetails);
       }
-      
-      // 在此时 targetProduct 一定非空（此前已 return 处理），提取产品ID
-      productId = targetProduct.googlePlayProductId;
-
-      // 创建Completer来等待购买结果
-      final completer = Completer<PurchaseResultData>();
-      _purchaseCompleters[productId] = completer;
       
       // 存储basePlanId，用于验证时传递
       _productBasePlanIds[productId] = basePlanId;
@@ -311,54 +368,67 @@ class GooglePlayBillingService {
             'base_plan_id': basePlanId,
           },
         );
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: productId,
+          basePlanId: basePlanId,
           message: 'Purchase unavailable on this device configuration',
-        );
+        ));
+        return false;
       }
+
+      // 发送购买开始事件
+      _emitPurchaseEvent(PurchaseEvent(
+        type: PurchaseEventType.purchaseStarted,
+        productId: productId,
+        basePlanId: basePlanId,
+        message: 'Purchase started',
+        metadata: {
+          'offer_token': (purchaseParam as GooglePlayPurchaseParam?)?.offerToken,
+        },
+      ));
       
       final success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
       
       if (!success) {
         debugPrint('❌ 购买流程启动失败');
-        _purchaseCompleters.remove(productId);
         _productBasePlanIds.remove(productId);
-        return PurchaseResultData(
-          result: PurchaseResult.error,
+        _emitPurchaseEvent(PurchaseEvent(
+          type: PurchaseEventType.purchaseError,
+          productId: productId,
+          basePlanId: basePlanId,
           message: 'Failed to launch billing flow',
-        );
+        ));
+        return false;
       }
       
       debugPrint('✅ 购买流程已启动，等待用户操作...');
+      return true;
       
-      // 设置超时处理，防止无限等待
-      return await completer.future.timeout(
-        const Duration(minutes: 5),
-        onTimeout: () {
-          debugPrint('⏰ 购买流程超时');
-          _purchaseCompleters.remove(productId);
-          _productBasePlanIds.remove(productId);
-          return PurchaseResultData(
-            result: PurchaseResult.error,
-            message: 'Purchase timeout',
-          );
-        },
-      );
     } catch (e) {
       debugPrint('❌ 购买流程异常: $e');
-      // 清理可能残留的 Completer
+      // 清理可能残留的 basePlanId
       if (productId != null) {
-        _purchaseCompleters.remove(productId);
         _productBasePlanIds.remove(productId);
       }
-      return PurchaseResultData(
-        result: PurchaseResult.error,
+      _emitPurchaseEvent(PurchaseEvent(
+        type: PurchaseEventType.purchaseError,
+        productId: productId ?? 'unknown',
+        basePlanId: basePlanId,
         message: 'Purchase failed: $e',
-      );
+      ));
+      return false;
+    }
+  }
+
+  // 发送购买事件的辅助方法
+  void _emitPurchaseEvent(PurchaseEvent event) {
+    if (!_purchaseEventController.isClosed) {
+      _purchaseEventController.add(event);
     }
   }
   
-  // 处理购买更新
+  // 处理购买更新 - 通过Stream发送事件
   void _handlePurchaseUpdates(List<PurchaseDetails> purchaseDetailsList) {
     debugPrint('📦 收到购买状态更新，共 ${purchaseDetailsList.length} 个项目');
     
@@ -374,26 +444,33 @@ class GooglePlayBillingService {
         debugPrint('[GooglePlayBillingService]  - 错误信息: ${purchaseDetails.error}');
       }
       
-      // 获取对应的Completer
-      final completer = _purchaseCompleters[purchaseDetails.productID];
+      // 获取存储的basePlanId
+      final basePlanId = _productBasePlanIds[purchaseDetails.productID] ?? '';
       
       switch (purchaseDetails.status) {
         case PurchaseStatus.pending:
+          // 记录调试信息
+          debugPrint('[GooglePlayBillingService]  - 购买状态: ${purchaseDetails.status}');
           _handlePendingPurchase(purchaseDetails);
-          if (completer != null && !completer.isCompleted) {
-            completer.complete(PurchaseResultData(
-              result: PurchaseResult.pending,
-              message: 'Purchase pending',
-              purchaseDetails: purchaseDetails,
-            ));
-          }
+          
+          // 发送pending事件
+          _emitPurchaseEvent(PurchaseEvent(
+            type: PurchaseEventType.purchasePending,
+            productId: purchaseDetails.productID,
+            basePlanId: basePlanId,
+            message: 'Purchase pending',
+            purchaseDetails: purchaseDetails,
+          ));
           break;
+          
         case PurchaseStatus.purchased:
+          debugPrint('[GooglePlayBillingService] ✅ 购买成功: ${purchaseDetails.productID}');
           // 异步处理购买成功，不在这里直接完成 completer
           _handlePurchaseWithVerification(purchaseDetails, 'Purchase success');
           break;
+          
         case PurchaseStatus.error:
-          debugPrint('❌ 购买失败: ${purchaseDetails.error}');
+          debugPrint('[GooglePlayBillingService] ❌ 购买失败: ${purchaseDetails.error}');
           
           // 记录设备特定的购买错误
           BillingErrorHandler().logDeviceSpecificError(
@@ -407,38 +484,55 @@ class GooglePlayBillingService {
           );
           
           _handleFailedPurchase(purchaseDetails);
-          if (completer != null && !completer.isCompleted) {
-            final errorMessage = BillingErrorHandler().getDeviceSpecificErrorAdvice(
-              purchaseDetails.error?.message ?? 'Unknown error'
-            );
-            completer.complete(PurchaseResultData(
-              result: PurchaseResult.failed,
-              message: errorMessage,
-              purchaseDetails: purchaseDetails,
-            ));
-          }
+          
+          // 发送error事件
+          final errorMessage = BillingErrorHandler().getDeviceSpecificErrorAdvice(
+            purchaseDetails.error?.message ?? 'Unknown error'
+          );
+          _emitPurchaseEvent(PurchaseEvent(
+            type: PurchaseEventType.purchaseError,
+            productId: purchaseDetails.productID,
+            basePlanId: basePlanId,
+            message: errorMessage,
+            purchaseDetails: purchaseDetails,
+            metadata: {
+              'error_code': purchaseDetails.error?.code,
+              'error_message': purchaseDetails.error?.message,
+            },
+          ));
           break;
+          
         case PurchaseStatus.canceled:
+          debugPrint('[GooglePlayBillingService] ❌ 购买已取消: ${purchaseDetails.productID}');
           _handleCanceledPurchase(purchaseDetails);
-          if (completer != null && !completer.isCompleted) {
-            completer.complete(PurchaseResultData(
-              result: PurchaseResult.canceled,
-              message: 'Purchase canceled',
-              purchaseDetails: purchaseDetails,
-            ));
-          }
+          
+          // 发送canceled事件
+          _emitPurchaseEvent(PurchaseEvent(
+            type: PurchaseEventType.purchaseCanceled,
+            productId: purchaseDetails.productID,
+            basePlanId: basePlanId,
+            message: 'Purchase canceled',
+            purchaseDetails: purchaseDetails,
+          ));
           break;
+          
         case PurchaseStatus.restored:
+          debugPrint('[GooglePlayBillingService] ✅ 购买已恢复: ${purchaseDetails.productID}');
           // 异步处理购买恢复，不在这里直接完成 completer
           _handleRestoredPurchase(purchaseDetails);
+          
+          // 发送restored事件（可以复用success类型或新增restored类型）
+          _emitPurchaseEvent(PurchaseEvent(
+            type: PurchaseEventType.purchaseSuccess,
+            productId: purchaseDetails.productID,
+            basePlanId: basePlanId,
+            message: 'Purchase restored',
+            purchaseDetails: purchaseDetails,
+            metadata: {
+              'is_restored': true,
+            },
+          ));
           break;
-      }
-      
-      // 清理Completer - 只在非异步处理的情况下清理
-      if (completer != null && 
-          purchaseDetails.status != PurchaseStatus.purchased && 
-          purchaseDetails.status != PurchaseStatus.restored) {
-        _purchaseCompleters.remove(purchaseDetails.productID);
       }
       
       // 完成购买处理 server调用，端就不调了
@@ -454,12 +548,9 @@ class GooglePlayBillingService {
     // 可以在这里显示加载指示器
   }
   
-  // 处理成功的购买或恢复的购买
+  // 处理成功的购买或恢复的购买 - 通过Stream发送事件
   Future<void> _handlePurchaseWithVerification(PurchaseDetails purchaseDetails, String actionType) async {
     debugPrint('$actionType: ${purchaseDetails.productID}');
-    
-    // 获取对应的Completer
-    final completer = _purchaseCompleters[purchaseDetails.productID];
     
     // 获取存储的basePlanId
     final basePlanId = _productBasePlanIds[purchaseDetails.productID] ?? '';
@@ -467,29 +558,30 @@ class GooglePlayBillingService {
     // 验证购买
     final verifyResult = await _verifyPurchase(purchaseDetails, basePlanId);
     
-    if (completer != null && !completer.isCompleted) {
-      if (verifyResult) {
+    if (verifyResult) {
+      SubscribePrivilegeManager.instance.updateSubscribePrivilege();
 
-        SubscribePrivilegeManager.instance.updateSubscribePrivilege();
-
-        // 验证成功，返回成功结果
-        completer.complete(PurchaseResultData(
-          result: PurchaseResult.success,
-          message: '$actionType and verified',
-          purchaseDetails: purchaseDetails,
-        ));
-      } else {
-        // 验证失败，返回错误结果
-        completer.complete(PurchaseResultData(
-          result: PurchaseResult.error,
-          message: '${actionType.toLowerCase()} verification failed',
-          purchaseDetails: purchaseDetails,
-        ));
-      }
-      // 清理Completer和basePlanId
-        _purchaseCompleters.remove(purchaseDetails.productID);
-        _productBasePlanIds.remove(purchaseDetails.productID);
+      // 验证成功，发送成功事件
+      _emitPurchaseEvent(PurchaseEvent(
+        type: PurchaseEventType.purchaseSuccess,
+        productId: purchaseDetails.productID,
+        basePlanId: basePlanId,
+        message: '$actionType and verified',
+        purchaseDetails: purchaseDetails,
+      ));
+    } else {
+      // 验证失败，发送失败事件
+      _emitPurchaseEvent(PurchaseEvent(
+        type: PurchaseEventType.purchaseFailed,
+        productId: purchaseDetails.productID,
+        basePlanId: basePlanId,
+        message: '${actionType.toLowerCase()} verification failed',
+        purchaseDetails: purchaseDetails,
+      ));
     }
+    
+    // 清理basePlanId
+    _productBasePlanIds.remove(purchaseDetails.productID);
   }
   
   // 处理失败的购买
@@ -681,7 +773,7 @@ class GooglePlayBillingService {
     _subscription?.cancel();
     _subscription = null;
     _isInitialized = false;
-    _purchaseCompleters.clear();
+    _purchaseEventController.close();
     _productBasePlanIds.clear();
     debugPrint('Google Play Billing服务已释放资源');
   }

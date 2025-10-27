@@ -250,8 +250,6 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
- 
-
   void _onHistoryListItemTap(AudioItem audio) async {
     // 记录个人页历史列表点击事件
     AnalyticsService().logCustomEvent(
@@ -261,7 +259,7 @@ class _ProfilePageState extends State<ProfilePage>
       },
     );
     AudioManager.instance.playAudio(audio);
-    NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
+    NavigationUtils.navigateToAudioPlayer(context);
   }
 
   void _onLikesListItemTap(AudioItem audio) async {
@@ -273,7 +271,7 @@ class _ProfilePageState extends State<ProfilePage>
       },
     );
     AudioManager.instance.playAudio(audio);
-    NavigationUtils.navigateToAudioPlayer(context, initialAudio: audio);
+    NavigationUtils.navigateToAudioPlayer(context);
   }
 
   @override
@@ -314,7 +312,7 @@ class _ProfilePageState extends State<ProfilePage>
                 isLoggedIn: isLoggedIn,
                 userName: userName,
                 onLoginTap: () {
-                  LoginPage.show(context);
+                  NavigationUtils.navigateToLogin(context);
                 },
               ),
             ),
