@@ -78,9 +78,9 @@ class _SubscribeOptionsState extends State<SubscribeOptions> with WidgetsBinding
     debugPrint('📦 收到购买事件: ${event.type} - ${event.productId}');
     
     // 只处理当前产品的事件
-    if (event.productId != widget.product?.googlePlayProductId) {
-      return;
-    }
+    // if (event.productId != widget.product?.googlePlayProductId) {
+    //   return;
+    // }
     
     switch (event.type) {
       case PurchaseEventType.purchaseStarted:
@@ -331,6 +331,12 @@ class _SubscribeOptionsState extends State<SubscribeOptions> with WidgetsBinding
   void _onSubscribe() async {
     debugPrint('SubscribeOptions _onSubscribe selectedPlan: ${widget.selectedPlan}');
 
+    try {
+      TrackingService.trackSubscribeClickPay(scene: widget.scene ?? 'unknown');
+    } catch (e) {
+      debugPrint('📍 [TRACKING] subscribe_click_pay error: $e');
+    }
+
     final bool isLogin = await AuthManager.instance.isSignedIn();
     if (!isLogin) {
       try {
@@ -364,11 +370,7 @@ class _SubscribeOptionsState extends State<SubscribeOptions> with WidgetsBinding
       return;
     }
 
-    try {
-      TrackingService.trackSubscribeClickPay(scene: widget.scene ?? 'unknown');
-    } catch (e) {
-      debugPrint('📍 [TRACKING] subscribe_click_pay error: $e');
-    }
+    
 
     // 启动Google Play Billing支付流程
     await _initiateGooglePlayBillingPurchase();

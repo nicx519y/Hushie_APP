@@ -45,6 +45,21 @@ class AudioDetailService {
     return item;
   }
 
+  /// 更新缓存中的音频详情（若存在）
+  static Future<void> updateAudioLikedCache(
+    String audioId,
+    { bool? isLiked, int? likesCount }
+  ) async {
+    final cached = _detailCache[audioId];
+    if (cached != null) {
+      // 更新缓存中的isLiked和likesCount
+      final updated = cached.copyWith(isLiked: isLiked, likesCount: likesCount);
+      // 命中缓存时，移除并重新插入，保持较新的插入顺序（近似 LRU）
+      _detailCache.remove(audioId);
+      _detailCache[audioId] = updated;
+    }
+  }
+
   /// 真实接口 - 获取音频详情
   static Future<AudioItem> _getRealAudioDetail(String audioId) async {
     try {

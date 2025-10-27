@@ -14,6 +14,9 @@ class BillingErrorHandler {
   bool _isOnePlusDevice = false;
   bool _isAndroid11OrHigher = false;
 
+  // 公开设备信息访问器
+  AndroidDeviceInfo? get deviceInfo => _deviceInfo;
+
   /// 初始化设备信息检测
   Future<void> initialize() async {
     if (!Platform.isAndroid) return;
@@ -43,7 +46,30 @@ class BillingErrorHandler {
 
   /// 检查是否为高风险设备配置
   bool get isHighRiskConfiguration {
-    return _isOnePlusDevice && _isAndroid11OrHigher;
+    // OnePlus设备 + Android 11+ 的已知问题
+    if (_isOnePlusDevice && _isAndroid11OrHigher) {
+      return true;
+    }
+    
+    // 其他可能有问题的设备配置
+    final manufacturer = _deviceInfo?.manufacturer.toLowerCase() ?? '';
+    final model = _deviceInfo?.model.toLowerCase() ?? '';
+    
+    // 添加其他已知有问题的设备
+    if (manufacturer.contains('oppo') && _isAndroid11OrHigher) {
+      return true;
+    }
+    
+    if (manufacturer.contains('realme') && _isAndroid11OrHigher) {
+      return true;
+    }
+    
+    // 特定型号的设备问题
+    if (model.contains('oneplus') || model.contains('op')) {
+      return _isAndroid11OrHigher;
+    }
+    
+    return false;
   }
 
   /// 获取设备特定的错误处理建议

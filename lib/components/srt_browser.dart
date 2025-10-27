@@ -249,10 +249,11 @@ class _SrtBrowserState extends State<SrtBrowser> with AutomaticKeepAliveClientMi
             ? _visibleParagraphs.length - 1
             : 0;
         int idx = _activeIndex;
-        if (idx < 0)
+        if (idx < 0) {
           idx = 0;
-        else if (idx > lastIndex)
+        } else if (idx > lastIndex) {
           idx = lastIndex;
+        }
         _scrollWhenReady(
           idx,
           const Duration(milliseconds: 500),
@@ -275,12 +276,16 @@ class _SrtBrowserState extends State<SrtBrowser> with AutomaticKeepAliveClientMi
     while (_itemPositionsListener.itemPositions.value.isEmpty) {
       await Future.delayed(const Duration(milliseconds: 16));
     }
-    await _itemScrollController.scrollTo(
-      index: clamped,
-      duration: duration,
-      curve: curve,
-      alignment: alignment,
-    );
+    
+    // 添加null检查，防止_itemScrollController为null时崩溃
+    if (_itemScrollController.isAttached) {
+      await _itemScrollController.scrollTo(
+        index: clamped,
+        duration: duration,
+        curve: curve,
+        alignment: alignment,
+      );
+    }
   }
 
   @override

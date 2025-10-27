@@ -31,22 +31,19 @@ class _AudioHistoryListState extends State<AudioHistoryList> {
 
   /// 初始化历史记录数据
   Future<void> _initializeHistory() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+    _isLoading = true;
     try {
       // 先获取当前缓存的历史记录数据
       final historyList = await AudioHistoryManager.instance.getAudioHistory();
-      setState(() {
-        _currentHistory = historyList;
-        _isLoading = false;
-      });
+      _currentHistory = historyList;
+      _isLoading = false;
     } catch (e) {
       debugPrint('🎵 [AUDIO_HISTORY_LIST] 初始化历史记录数据失败: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      _isLoading = false;
+    } finally {
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 

@@ -44,8 +44,8 @@ class SrtModel {
       // 跳过空行
       if (line.isEmpty) continue;
 
-      // 检查是否为时间格式 (HH:MM:SS)
-      if (RegExp(r'^\d{1,2}:\d{2}:\d{2}$').hasMatch(line)) {
+      // 检查是否为时间格式 (HH:MM:SS 或 HH:MM:SS,mmm)
+      if (RegExp(r'^\d{1,2}:\d{2}:\d{2}(,\d{3})?$').hasMatch(line)) {
         currentTime = line;
       } else if (currentTime != null) {
         // 解析内容行
@@ -95,7 +95,9 @@ class SrtModel {
   /// 将时间字符串转换为秒数，用于排序比较
   static int _parseTimeToSeconds(String timeStr) {
     try {
-      final parts = timeStr.split(':');
+      // 先移除可能存在的毫秒部分 (,mmm)
+      final timeWithoutMs = timeStr.split(',')[0];
+      final parts = timeWithoutMs.split(':');
       int h = 0, m = 0, s = 0;
       if (parts.length == 3) {
         h = int.tryParse(parts[0]) ?? 0;

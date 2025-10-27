@@ -44,7 +44,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
 
   late AudioManager _audioManager;
   AudioItem? _currentAudio;
-  bool _isLiked = false;
+  // bool _isLiked = false;
   bool _isAudioLoading = false; // 是否正在加载metadata
   bool _isDetailLoading = false; // 是否正在加载音频详情
 
@@ -665,10 +665,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
             if (_lastAudioState?.currentAudio?.id !=
                 audioState.currentAudio?.id) {
               _currentAudio = audioState.currentAudio;
-              _isLiked = _currentAudio?.isLiked ?? false;
+              // _isLiked = _currentAudio?.isLiked ?? false;
               // 初始化本地状态
-              _localIsLiked = _isLiked;
-              _localLikesCount = _currentAudio?.likesCount ?? 0;
+              // _localIsLiked = _isLiked;
+              // _localLikesCount = _currentAudio?.likesCount ?? 0;
               _isLikeButtonVisible = false; // 音频变化时隐藏点赞按钮
               _isUserScrolling = false; // 音频更换时重置手动滚动状态
               _srtController.resetToAutoScroll(); // 同步重置字幕控制器为自动滚动
@@ -844,7 +844,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     try {
       // 调用API
       await AudioLikesManager.instance.setLike(audio, newIsLiked);
-
+      
+      // 请求成功，更新缓存中的点赞状态
+      await AudioDetailService.updateAudioLikedCache(
+        audio.id,
+        isLiked: newIsLiked,
+        likesCount: newLikesCount,
+      );
+      
       // 请求成功，不需要再更改本地状态，保持当前状态
     } catch (e) {
       // 网络异常，回滚本地状态

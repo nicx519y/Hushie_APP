@@ -361,20 +361,70 @@ class GooglePlayBillingService {
 
       // 设备特定防御：拦截在高风险设备上的购买流程，避免 PendingIntent NPE 崩溃
       if (BillingErrorHandler().isHighRiskConfiguration) {
+        debugPrint('⚠️ 检测到高风险设备配置，使用替代购买方案');
         BillingErrorHandler().logDeviceSpecificError(
-          'Blocked purchase on high-risk device configuration',
+          'High-risk device detected, using alternative purchase flow',
           {
             'product_id': productId,
             'base_plan_id': basePlanId,
+            'manufacturer': BillingErrorHandler().deviceInfo?.manufacturer,
+             'model': BillingErrorHandler().deviceInfo?.model,
           },
         );
-        _emitPurchaseEvent(PurchaseEvent(
-          type: PurchaseEventType.purchaseError,
-          productId: productId,
-          basePlanId: basePlanId,
-          message: 'Purchase unavailable on this device configuration',
-        ));
-        return false;
+        
+        // 对于高风险设备，我们仍然尝试购买，但增加额外的错误处理
+        try {
+          // 添加延迟，给系统更多时间准备
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          // 发送购买开始事件
+          _emitPurchaseEvent(PurchaseEvent(
+            type: PurchaseEventType.purchaseStarted,
+            productId: productId,
+            basePlanId: basePlanId,
+            message: 'Purchase started (high-risk device)',
+            metadata: {
+              'offer_token': (purchaseParam as GooglePlayPurchaseParam?)?.offerToken,
+              'is_high_risk_device': true,
+            },
+          ));
+          
+          final success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+          
+          if (!success) {
+            debugPrint('❌ 高风险设备购买流程启动失败');
+            _productBasePlanIds.remove(productId);
+            _emitPurchaseEvent(PurchaseEvent(
+              type: PurchaseEventType.purchaseError,
+              productId: productId,
+              basePlanId: basePlanId,
+              message: 'Failed to launch billing flow on high-risk device',
+            ));
+            return false;
+          }
+          
+          debugPrint('✅ 高风险设备购买流程已启动，等待用户操作...');
+          return true;
+          
+        } catch (e) {
+          debugPrint('❌ 高风险设备购买流程异常: $e');
+          BillingErrorHandler().logDeviceSpecificError(
+            'High-risk device purchase failed: $e',
+            {
+              'product_id': productId,
+              'base_plan_id': basePlanId,
+              'error': e.toString(),
+            },
+          );
+          
+          _emitPurchaseEvent(PurchaseEvent(
+            type: PurchaseEventType.purchaseError,
+            productId: productId,
+            basePlanId: basePlanId,
+            message: 'Purchase unavailable on this device configuration',
+          ));
+          return false;
+        }
       }
 
       // 发送购买开始事件
