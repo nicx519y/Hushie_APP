@@ -6,15 +6,19 @@ class ApiConfig {
   static const String testHost = 'https://testenv.hushie.ai'; //test env
   static const String baseHost = 'https://api.hushie.ai';
   // 动态当前域名（默认生产环境）
-  static bool defaultUseTestEnv = true;     // 线下包指向测试环境 时默认使用测试环境，打线上包的时候需要改成false
+  static const bool defaultUseTestEnv = true;     // 线下包指向测试环境 时默认使用测试环境，打线上包的时候需要改成false
   static String _currentHost = baseHost;
   static const String _envKey = 'api_env_is_test';
+  
   static bool _useTestEnv = false;
 
   static String get baseUrl => '$_currentHost/api/v1';
   static String get healthCheckUrl => '$_currentHost/health';
 
   static const Duration defaultTimeout = Duration(seconds: 10);
+
+  // 默认填充音频 来自于首页 free
+  static const String defaultFillAudioFrom = 'free';
 
   // 分页配置
   static const int defaultPageSize = 10;
@@ -30,7 +34,7 @@ class ApiConfig {
   static const String clientPlatform = 'flutter';
 
   // 应用版本配置（可动态修改）
-  static String _appVersion = '1.0.4';
+  static String _appVersion = '1.1.0';
 
   // 是否使用预埋数据（可动态修改并持久化）
   static bool _useEmbeddedData = false;

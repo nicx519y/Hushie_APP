@@ -513,13 +513,18 @@ class AudioManager {
     try {
       final listService = HomePageListService();
       await listService.initialize();
-      List<AudioItem> items = listService.getTabData('for_you');
+      List<AudioItem> items = listService.getTabData(ApiConfig.defaultFillAudioFrom);
+
+      debugPrint('[AudioManager] _getFirstAudioFromHomePage: items.length: ${items.length}');
+
       if (items.isEmpty) {
         try {
-          await listService.preloadTabData('for_you');
+          final newItems = await listService.initTabAudioData(ApiConfig.defaultFillAudioFrom);
+          
+          debugPrint('[AudioManager] _getFirstAudioFromHomePage: items.length after init: ${newItems.length}');
 
-          if (items.isNotEmpty) {
-            return items.first;
+          if (newItems.isNotEmpty) {
+            return newItems.first;
           }
         } catch (_) {
           debugPrint('从首页for_you获取数据失败，回退到API');
