@@ -113,16 +113,24 @@ class AudioManager {
   Future<void> init() async {
     debugPrint('AudioManager.init() called');
 
-    // 先初始化音频历史管理器（确保数据库可用）
-    await AudioHistoryManager.instance.initialize();
-    debugPrint('AudioManager: AudioHistoryManager 初始化完成');
+    Future.wait([
+      AudioHistoryManager.instance.initialize(),
+      AudioLikesManager.instance.initialize(),
+    ]);
 
-    await AudioLikesManager.instance.initialize();
+    debugPrint('AudioManager: AudioHistoryManager 初始化完成');
     debugPrint('AudioManager: AudioLikesManager 初始化完成');
 
-    // 初始化AudioPlaylist
-    await AudioPlaylist.instance.initialize();
-    debugPrint('AudioManager: AudioPlaylist 初始化完成');
+    // 先初始化音频历史管理器（确保数据库可用）
+    // await AudioHistoryManager.instance.initialize();
+    // debugPrint('AudioManager: AudioHistoryManager 初始化完成');
+
+    // await AudioLikesManager.instance.initialize();
+    // debugPrint('AudioManager: AudioLikesManager 初始化完成');
+
+    // // 初始化AudioPlaylist
+    // await AudioPlaylist.instance.initialize();
+    // debugPrint('AudioManager: AudioPlaylist 初始化完成');
 
     // 监听认证状态变化事件
     _setupAuthStatusListener();

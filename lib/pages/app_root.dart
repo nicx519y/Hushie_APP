@@ -97,8 +97,6 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
 
   Future<void> _initializeServices() async {
     try {
-      await AudioManager.instance.preloadLastPlayedAudio(); // 从本地存储中加载上次播放的音频
-      debugPrint('🔄 [APP_ROOT] 预加载上次播放音频完成');
 
       await NetworkHealthyManager.instance.initialize();
       debugPrint('🔄 [APP_ROOT] NetworkHealthyManager 初始化完成');
@@ -109,9 +107,6 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
       await SubscribePrivilegeManager.instance.initialize(); // 初始化订阅权益服务
       debugPrint('🔄 [APP_ROOT] SubscribePrivilegeManager 初始化完成');
       
-      await AudioManager.instance.init(); // 初始化音频服务
-      debugPrint('🔄 [APP_ROOT] AudioManager 初始化完成');
-
       debugPrint('🔄 [APP_ROOT] _initializeServices 服务初始化完成');
     } catch (e) {
       debugPrint('Failed to initialize services: $e');

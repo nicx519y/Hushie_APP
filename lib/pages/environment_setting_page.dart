@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 import '../utils/toast_helper.dart';
+import '../services/device_info_service.dart';
 
 class EnvironmentSettingPage extends StatefulWidget {
   const EnvironmentSettingPage({super.key});
@@ -12,6 +13,30 @@ class EnvironmentSettingPage extends StatefulWidget {
 class _EnvironmentSettingPageState extends State<EnvironmentSettingPage> {
   bool _useTestEnv = ApiConfig.isTestEnv;
   bool _isSaving = false;
+  String? _deviceId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeviceId();
+  }
+
+  Future<void> _loadDeviceId() async {
+    try {
+      final id = await DeviceInfoService.getDeviceId();
+      if (mounted) {
+        setState(() {
+          _deviceId = id;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _deviceId = 'unknown_device';
+        });
+      }
+    }
+  }
 
   Future<void> _applyEnv(bool useTest) async {
     if (_isSaving) return;
@@ -100,6 +125,15 @@ class _EnvironmentSettingPageState extends State<EnvironmentSettingPage> {
                   const SizedBox(height: 4),
                   Text(
                     'Host: $currentHost',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Device ID: ${_deviceId ?? 'Loading...'}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,

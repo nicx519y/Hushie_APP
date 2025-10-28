@@ -6,7 +6,7 @@ class ApiConfig {
   static const String testHost = 'https://testenv.hushie.ai'; //test env
   static const String baseHost = 'https://api.hushie.ai';
   // 动态当前域名（默认生产环境）
-  static const bool defaultUseTestEnv = true;     // 线下包指向测试环境 时默认使用测试环境，打线上包的时候需要改成false
+  static const bool defaultUseTestEnv = false;     // 线下包指向测试环境 时默认使用测试环境，打线上包的时候需要改成false
   static String _currentHost = baseHost;
   static const String _envKey = 'api_env_is_test';
 
@@ -110,8 +110,8 @@ class ApiConfig {
   static const int maxTimestampDrift = 300; // 5分钟时间戳漂移容忍度（秒）
 
   // WebView页面配置 - 网络优先，本地回退
-  static const String WebviewAboutUsUrl = 'https://af.hushie.ai/html/about.html'; // 网络URL
-  static const String WebviewAboutUsFallback = 'assets/html/about.html'; // 本地回退
+  static const String WebviewAboutUsUrl = 'https://af.hushie.ai/html/about_with_out_version.html'; // 网络URL
+  static const String WebviewAboutUsFallback = 'assets/html/about_with_out_version.html'; // 本地回退
   
   static const String AccountDeletionAgreement = 'https://af.hushie.ai/html/account_deletion_agreement.html'; // 网络URL
   static const String AccountDeletionAgreementFallback = 'assets/html/account_deletion_agreement.html'; // 本地回退

@@ -220,6 +220,26 @@ class HomePageListService {
       _cachedTabs = tabs;
       await _cacheTabsData(tabs);
       debugPrint('🏠 [HOME_SERVICE] 获取并缓存了 ${tabs.length} 个 Tabs');
+
+      // 同步写入每个 Tab 的 items（若非空）到列表缓存与内存缓存，
+      // 以便首次切换 Tab 不发请求即可有首屏数据。
+      for (final tab in tabs) {
+        final List<AudioItem> items = tab.items;
+        if (items.isNotEmpty) {
+          // 轻量化：限制写入的条目数，避免过大的首屏缓存
+          final List<AudioItem> trimmed =
+              items.length > _maxItemsPerTab ? items.sublist(0, _maxItemsPerTab) : items;
+
+          // 写入内存缓存
+          _tabDataCache[tab.id] = trimmed;
+
+          // 写入本地缓存
+          await _cacheTabListData(tab.id, trimmed);
+
+          debugPrint(
+              '🏠 [HOME_SERVICE] 预填充 Tab ${tab.id} 的 items 至缓存，数量: ${trimmed.length}');
+        }
+      }
     } catch (e) {
       debugPrint('🏠 [HOME_SERVICE] 获取 Tabs 失败: $e');
       rethrow;

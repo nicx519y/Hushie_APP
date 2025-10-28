@@ -4,7 +4,9 @@ import '../components/bottom_navigation_bar.dart';
 import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../services/app_operations_service.dart';
-import '../router/navigation_utils.dart';
+import '../services/audio_manager.dart';
+
+
 
 // 全局路由观察者
 final RouteObserver<ModalRoute<void>> globalRouteObserver =
@@ -29,11 +31,21 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
   DateTime? _lastPressedAt;
+  
 
   @override
   void initState() {
     super.initState();
+    _initializeApp();
     _currentIndex = widget.initialIndex;
+  }
+
+  Future<void> _initializeApp() async {
+    await AudioManager.instance.init(); // 初始化音频服务
+    debugPrint('🔄 [APP_ROOT] AudioManager 初始化完成');
+
+    await AudioManager.instance.preloadLastPlayedAudio(); // 从本地存储中加载上次播放的音频
+    debugPrint('🔄 [APP_ROOT] 预加载上次播放音频完成');
   }
 
   // 处理底部导航栏点击
