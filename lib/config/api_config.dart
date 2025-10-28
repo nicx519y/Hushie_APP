@@ -9,7 +9,7 @@ class ApiConfig {
   static const bool defaultUseTestEnv = true;     // 线下包指向测试环境 时默认使用测试环境，打线上包的时候需要改成false
   static String _currentHost = baseHost;
   static const String _envKey = 'api_env_is_test';
-  
+
   static bool _useTestEnv = false;
 
   static String get baseUrl => '$_currentHost/api/v1';
@@ -18,7 +18,7 @@ class ApiConfig {
   static const Duration defaultTimeout = Duration(seconds: 10);
 
   // 默认填充音频 来自于首页 free
-  static const String defaultFillAudioFrom = 'free';
+  static const String defaultFillAudioFrom = 'for_you';
 
   // 分页配置
   static const int defaultPageSize = 10;
