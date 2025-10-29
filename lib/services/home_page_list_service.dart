@@ -156,18 +156,15 @@ class HomePageListService {
       final newData = await _fetchTabAudioData(tabId, lastCid: lastCid);
       
       if (newData.isNotEmpty) {
-        // 合并数据并去重
-        final existingIds = currentData.map((e) => e.id).toSet();
-        final uniqueNewData = newData.where((item) => !existingIds.contains(item.id)).toList();
-        
-        final combinedData = [...currentData, ...uniqueNewData];
+        // 合并数据（不做去重，按请求返回直接追加）
+        final combinedData = [...currentData, ...newData];
         _tabDataCache[tabId] = combinedData;
         
         // 本地存储只保留最新数据
         await _cacheTabListData(tabId, newData);
         
-        debugPrint('🏠 [HOME_SERVICE] 加载了 ${uniqueNewData.length} 条新数据，总计 ${combinedData.length} 条');
-        return uniqueNewData;
+        debugPrint('🏠 [HOME_SERVICE] 加载了 ${newData.length} 条新数据，总计 ${combinedData.length} 条');
+        return newData;
       }
       
       return [];

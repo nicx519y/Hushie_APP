@@ -161,7 +161,8 @@ class _PagedAudioGridState extends State<PagedAudioGrid>
       }
 
       if (newItems.isEmpty) {
-        // _pagingController.appendLastPage([]);
+        // 明确标记为最后一页，避免控制器一直处于“加载中”状态
+        _pagingController.appendPage([], null);
         return;
       }
 
