@@ -315,7 +315,7 @@ class HomePageListService {
   /// 确保服务已初始化
   void _ensureInitialized() {
     if (!_isInitialized) {
-      throw StateError('HomePageListService 尚未初始化，请先调用 initialize() 方法');
+      throw StateError('HomePageListService failure.');
     }
   }
 

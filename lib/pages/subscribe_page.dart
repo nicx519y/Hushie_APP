@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hushie_app/components/wide_image_showcase.dart';
-import '../components/subscribe_options.dart';
+import '../components/subscribe_options_dark.dart';
 import '../models/product_model.dart';
 import '../services/subscribe_privilege_manager.dart';
 import '../pages/app_root.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../utils/custom_icons.dart';
 
 /// 订阅页面
 /// 展示订阅选项，用户可以选择订阅计划
@@ -96,27 +98,47 @@ class _SubscribePageState extends State<SubscribePage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          padding: EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Color(0xFF502D19),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Image.asset(
-            'assets/images/crown_mini.png', //皇冠
-            fit: BoxFit.contain,
+        SvgPicture.asset('assets/icons/flower.svg', width: 46, height: 83,),
+        const SizedBox(width: 8),
+        Text(
+          'Members\nEnjoy Full Access',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 26,
+            height: 1.4,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFFFFFFFF),
           ),
         ),
         const SizedBox(width: 8),
+        Transform.scale(
+          scaleX: -1,
+          child: SvgPicture.asset('assets/icons/flower.svg', width: 46, height: 83,),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureItem(String text) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: Color(0xFFF05621),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(CustomIcons.check, color: Color(0xFFFFFFFF), size: 10),
+        ),
+        const SizedBox(width: 8),
         Text(
-          'Unlock Full Access',
-          style: TextStyle(
-            fontSize: 20,
+          text,
+          style: const TextStyle(
+            fontSize: 14,
             height: 1,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF502D19),
+            fontWeight: FontWeight.w500,
+            color: Color(0xFFFFFFFF),
           ),
         ),
       ],
@@ -126,12 +148,12 @@ class _SubscribePageState extends State<SubscribePage> {
   String _bannerAssetByPreference(String? pref) {
     switch (pref) {
       case 'M':
-        return 'assets/images/banner_M.jpg';
+        return 'assets/images/banner_M.webp';
       case 'F&M':
-        return 'assets/images/banner_F&M.jpg';
+        return 'assets/images/banner_F&M.webp';
       case 'F':
       default:
-        return 'assets/images/banner_F.jpg';
+        return 'assets/images/banner_F.webp';
     }
   }
 
@@ -140,7 +162,7 @@ class _SubscribePageState extends State<SubscribePage> {
     final AssetImage bannerImage = AssetImage(_bannerAssetByPreference(widget.bannerPreference));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFF000103),
       body: SafeArea(
         top: false,
         child: _isLoading
@@ -162,8 +184,24 @@ class _SubscribePageState extends State<SubscribePage> {
                           children: [
                             _buildUnlockFullAccessTitle(),
                             const SizedBox(height: 30),
+                            Center(
+                              child: IntrinsicWidth(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    _buildFeatureItem('Unlimited Creations'),
+                                    const SizedBox(height: 11),
+                                    _buildFeatureItem('Real-time Al Captions'),
+                                    const SizedBox(height: 11),
+                                    _buildFeatureItem('Customized Suggestions'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 30),
                             _product != null
-                                ? SubscribeOptions(
+                                ? SubscribeOptionsDark(
                                     product: _product,
                                     selectedPlan: _selectedPlan,
                                     scene: widget.scene,

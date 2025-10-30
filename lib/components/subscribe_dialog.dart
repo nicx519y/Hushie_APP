@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'slide_up_overlay.dart';
 import 'subscribe_options.dart';
+import 'subscribe_options_logic.dart';
 import '../utils/custom_icons.dart';
 import '../models/product_model.dart';
 import '../services/dialog_state_manager.dart';

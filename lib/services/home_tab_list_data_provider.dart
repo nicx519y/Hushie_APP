@@ -157,7 +157,7 @@ class HomeTabListDataProvider {
   /// 确保服务已初始化
   void _ensureInitialized() {
     if (!_isInitialized) {
-      throw StateError('HomeTabListDataProvider 尚未初始化，请先调用 initialize() 方法');
+      throw StateError('HomeTabListDataProvider failure.');
     }
   }
 
