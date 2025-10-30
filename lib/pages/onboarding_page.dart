@@ -25,8 +25,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _isSubmitting = false; // 提交状态
   OnboardingGuideData? _guideData;
 
-  // 记录已打点的步骤，避免重复上报
-  final Set<int> _trackedSteps = {};
+  // 记录已打点的步骤（已不再用于“进入步骤”打点）
+  // 保留字段以兼容，但不再使用。
+  // final Set<int> _trackedSteps = {};
 
   // 用户选择的偏好 - 改为多选
   final List<String> _selectedScenes = [];
@@ -43,9 +44,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _loadGuideData();
   }
 
-  // 当前步骤打点：type=onboarding, extra.step=step1/step2/step3
-  void _trackCurrentStepIfNeeded() {
-    if (_trackedSteps.contains(_currentStep)) return;
+  // 下一步打点：在离开当前步骤时上报，并携带当步的选项
+  void _trackCurrentStepNext() {
     String stepLabel;
     switch (_currentStep) {
       case 0:
@@ -60,8 +60,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
       default:
         stepLabel = 'unknown';
     }
-    _trackedSteps.add(_currentStep);
-    TrackingService.trackOnboarding(action: stepLabel);
+    final selections = _getCurrentSelections();
+    TrackingService.trackOnboarding(action: stepLabel, selectedOptions: selections);
   }
 
   Future<void> _enterMain() async {
@@ -75,6 +75,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
       );
     } catch (e) {
       debugPrint('🏠 [MAIN_APP] 跳转主页失败: $e');
+    }
+  }
+
+  Future<void> _enterSubscribe() async {
+    if (!mounted) return;
+    String pref = _computeBannerPreference(); //banner 偏好
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) =>
+              SubscribePage(bannerPreference: pref, scene: 'onboarding'),
+          settings: const RouteSettings(name: '/subscribe'),
+        ),
+      );
     }
   }
 
@@ -100,8 +114,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         _isLoading = false;
       });
 
-      // 数据加载完成，进入当前步骤（通常为step1）时打点
-      _trackCurrentStepIfNeeded();
+      // 不再在进入步骤时打点，改为点击“下一步”时打点
     } catch (e) {
       debugPrint('加载引导数据失败: $e');
       if (!mounted) return;
@@ -112,12 +125,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   /// 进入下一步
   void _nextStep() {
+    // 点击“下一步”时打点当前步骤，并携带当前选择
+    _trackCurrentStepNext();
     if (_currentStep < 2) {
       setState(() {
         _currentStep++;
       });
-      // 进入下一步后打点
-      _trackCurrentStepIfNeeded();
     } else {
       _submitPreferences();
     }
@@ -149,38 +162,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
       await OnboardingService.setPreferences(request);
 
-      // 标记新手引导为已完成
+      // 标记新手引导为已完成 本地存储标记为已完成
       await OnboardingManager().markOnboardingCompleted();
-
-      // 跳转到订阅页面
-      String pref = _computeBannerPreference();
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) =>
-                SubscribePage(bannerPreference: pref, scene: 'onboarding'),
-            settings: const RouteSettings(name: '/subscribe'),
-          ),
-        );
-      }
     } catch (e) {
       debugPrint('提交偏好失败: $e');
-      // 即使失败也跳转到订阅页面
-      String pref = _computeBannerPreference();
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) =>
-                SubscribePage(bannerPreference: pref, scene: 'onboarding'),
-            settings: const RouteSettings(name: '/subscribe'),
-          ),
-        );
-      }
     } finally {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
         });
+
+        // 跳转到订阅页面
+        if(_guideData?.vippageenabled == true) {
+          await _enterSubscribe();
+        } else {
+          await _enterMain();
+        }
       }
     }
   }
@@ -564,7 +561,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   /// 构建底部导航
   Widget _buildBottomNavigation() {
-
     debugPrint('BottomNavPadding: ${MediaQuery.of(context).padding.bottom}');
 
     return Padding(

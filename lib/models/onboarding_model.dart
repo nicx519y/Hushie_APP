@@ -34,11 +34,13 @@ class TagOption {
 
 /// 新手引导数据模型
 class OnboardingGuideData {
+  final bool vippageenabled;
   final List<TagOption> tagGender;
   final List<TagOption> tagTone;
   final List<TagOption> tagScene;
 
   OnboardingGuideData({
+    required this.vippageenabled,
     required this.tagGender,
     required this.tagTone,
     required this.tagScene,
@@ -46,6 +48,7 @@ class OnboardingGuideData {
 
   factory OnboardingGuideData.fromMap(Map<String, dynamic> map) {
     return OnboardingGuideData(
+      vippageenabled: map['vippageenabled'] ?? false,
       tagGender: (map['tags_gender'] as List<dynamic>?)
               ?.map((item) => TagOption.fromMap(item as Map<String, dynamic>))
               .toList() ??
@@ -63,6 +66,7 @@ class OnboardingGuideData {
 
   Map<String, dynamic> toMap() {
     return {
+      'vippageenabled': vippageenabled,
       'tags_gender': tagGender.map((item) => item.toMap()).toList(),
       'tags_tone': tagTone.map((item) => item.toMap()).toList(),
       'tags_scene': tagScene.map((item) => item.toMap()).toList(),
@@ -71,7 +75,7 @@ class OnboardingGuideData {
 
   @override
   String toString() =>
-      'OnboardingGuideData(tagGender: $tagGender, tagTone: $tagTone, tagScene: $tagScene)';
+      'OnboardingGuideData(vippageenabled: $vippageenabled, tagGender: $tagGender, tagTone: $tagTone, tagScene: $tagScene)';
 }
 
 /// 用户偏好设置请求模型

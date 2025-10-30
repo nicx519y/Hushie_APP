@@ -18,51 +18,12 @@ class OnboardingService {
     debugPrint('🎯 [ONBOARDING] Mock模式: ${enabled ? '开启' : '关闭'}');
   }
 
-  /// 获取Mock数据
-  static OnboardingGuideData _getMockGuideData() {
-    return OnboardingGuideData(
-      tagGender: [
-        TagOption(
-          value: 'M4F',
-          label: 'M4F     ♂→ ♀',
-        ),
-        TagOption(
-          value: 'F4M',
-          label: 'F4M     ♀→ ♂',
-        ),
-        TagOption(value: 'F4F', label: 'F4F     ♀→ ♀'),
-        TagOption(value: 'M4M', label: 'M4M     ♂→ ♂'),
-      ],
-      tagTone: [
-        TagOption(value: 'Gentle', label: 'Gentle'),
-        TagOption(value: 'Sexy', label: 'Sexy'),
-        TagOption(value: 'Sweet', label: 'Sweet'),
-        TagOption(value: 'Intellectual', label: 'Intellectual'),
-      ],
-      tagScene: [
-        TagOption(value: 'Bedroom', label: '🛏️ Bedroom'),
-        TagOption(value: 'Office', label: '💼 Office'),
-        TagOption(value: 'Cafe', label: '☕ Cafe'),
-        TagOption(value: 'Outdoor', label: '🌳 Outdoor'),
-        TagOption(value: 'Library', label: '📚 Library'),
-        TagOption(value: 'Gym', label: '🏋️ Gym'),
-      ],
-    );
-  }
-
   /// 获取新手引导数据
   /// 
   /// 返回包含性别、语调、场景等标签选项的引导数据
   /// 认证: 可选认证
   /// 必需头部: X-Device-ID (由HttpClientService自动添加)
   static Future<OnboardingGuideData> getGuideData() async {
-    // Mock模式：返回模拟数据
-    if (_useMockMode) {
-      debugPrint('🎯 [ONBOARDING] 使用Mock数据');
-      // 模拟网络延迟
-      await Future.delayed(const Duration(milliseconds: 500));
-      return _getMockGuideData();
-    }
 
     // 真实API调用
     try {

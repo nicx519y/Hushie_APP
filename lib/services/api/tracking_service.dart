@@ -201,10 +201,17 @@ class TrackingService {
 
   static Future<void> trackOnboarding({
     required String action,
+    List<String>? selectedOptions,
   }) async {
+    final extra = <String, dynamic>{
+      'action': action,
+    };
+    if (selectedOptions != null) {
+      extra['selected_options'] = selectedOptions;
+    }
     await track(
       actionType: TrackingEvents.onboarding,
-      extraData: {'action': action},
+      extraData: extra,
     );
   }
 }
