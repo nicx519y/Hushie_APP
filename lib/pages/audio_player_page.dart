@@ -780,7 +780,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
 
       if (currentAudio != null && !_canPlay()) {
         // 检查是否可以播放 如果不能播放 则显示订阅对话框
-        showSubscribeDialog(context, scene: 'player');
+        showSubscribeDialog(context, scene: 'player_play_btn');
         return;
       }
 
@@ -948,7 +948,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
 
   // 解锁全功能提示点击事件
   void _onUnlockFullAccessTap() async {
-    showSubscribeDialog(context);
+    showSubscribeDialog(context, scene: "player_onunlock_btn");
   }
 
   @override
