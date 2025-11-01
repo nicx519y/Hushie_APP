@@ -69,6 +69,15 @@ void main() async {
     debugPrint('❌ [INIT] 启动前初始化失败: $e');
   }
 
+  // 初始化 API 配置（非阻塞）
+  try {
+    debugPrint('🚀 [INIT] 开始初始化API配置');
+    await ApiConfig.initialize();
+    debugPrint('🚀 [INIT] API配置初始化完成');
+  } catch (e) {
+    debugPrint('❌ [INIT] API配置初始化失败: $e');
+  }
+
   // 立即启动应用，服务初始化在启动页中处理
   debugPrint('🚀 [MAIN] 开始运行应用');
   runApp(const MyApp());
@@ -197,15 +206,6 @@ Future<void> _initializeCoreServices() async {
     debugPrint('🎵 [AUDIO] MediaKit 初始化完成并设置缓冲');
   } catch (e) {
     debugPrint('🎵 [AUDIO] MediaKit 初始化失败: $e');
-  }
-
-  // 初始化 API 配置（非阻塞）
-  try {
-    debugPrint('🚀 [INIT] 开始初始化API配置');
-    await ApiConfig.initialize(debugMode: true);
-    debugPrint('🚀 [INIT] API配置初始化完成');
-  } catch (e) {
-    debugPrint('❌ [INIT] API配置初始化失败: $e');
   }
 
   // 初始化 Firebase 及相关服务（并发执行，避免串行等待）

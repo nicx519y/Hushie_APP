@@ -221,17 +221,17 @@ class AuthManager {
 
       if (googleAuthResult.errNo != 0 || googleAuthResult.data == null) {
         debugPrint('Google登录失败: googleAuthResult.errNo: ${googleAuthResult.errNo}');
-        
-        // 记录Google登录失败事件
-        AnalyticsService().logCustomEvent(
-          eventName: 'auth_google_login_failed',
+        // 登录失败（Google Sign-In 阶段）事件上报
+        AnalyticsService().logAuthEvent(
+          event: 'login_failed',
           parameters: {
-            'failure_reason': 'google_auth_failed',
-            'error_code': 'GOOGLE_AUTH_ERROR',
+            'stage': 'google_sign_in',
+            'login_method': 'google',
+            'error_code': googleAuthResult.errNo,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
           },
         );
-        
+
         _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return googleAuthResult;
       }
@@ -245,18 +245,17 @@ class AuthManager {
 
       if (tokenResult.errNo != 0 || tokenResult.data == null) {
         debugPrint('Google登录失败: tokenResult.errNo: ${tokenResult.errNo}');
-        
-        // 使用 Analytics 记录 Token 获取失败
+        // 登录失败（令牌交换阶段）事件上报
         AnalyticsService().logAuthEvent(
           event: 'login_failed',
           parameters: {
-            'reason': 'token_exchange_failed',
+            'stage': 'token_exchange',
+            'login_method': 'google',
             'error_code': tokenResult.errNo,
-            'user_email': googleAuth.email,
             'timestamp': DateTime.now().millisecondsSinceEpoch,
           },
         );
-        
+
         _notifyAuthStatusChange(AuthStatus.unauthenticated);
         return ApiResponse.error(errNo: tokenResult.errNo);
       }
@@ -279,6 +278,16 @@ class AuthManager {
       // 通知登录状态变化
       _notifyAuthStatusChange(AuthStatus.authenticated, user: googleAuth);
 
+      // 登录成功事件上报
+      AnalyticsService().logAuthEvent(
+        event: 'login_success',
+        parameters: {
+          'user_name': googleAuth.email,
+          'login_method': 'google',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+
       // 关联Crashlytics用户标识与登录状态
       try {
         await CrashlyticsService().setUserId(googleAuth.userId);
@@ -292,18 +301,18 @@ class AuthManager {
       return googleAuthResult;
     } catch (e) {
       debugPrint('Google登录流程失败: $e');
-      
-      // 使用 Analytics 记录登录流程异常
+      // 登录失败（异常捕获阶段）事件上报
       AnalyticsService().logAuthEvent(
         event: 'login_failed',
         parameters: {
-          'reason': 'login_process_exception',
+          'stage': 'exception',
+          'login_method': 'google',
           'error_message': e.toString(),
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
         error: e,
       );
-      
+
       // 通知登录失败
       _notifyAuthStatusChange(AuthStatus.unauthenticated);
 
@@ -527,16 +536,7 @@ class AuthManager {
       
       // 记录因异常导致的登录态丢失
       final userName = _currentUser?.email ?? _currentUser?.displayName ?? 'unknown';
-      AnalyticsService().logAuthEvent(
-        event: 'login_lost',
-        parameters: {
-          'user_name': userName,
-          'loss_reason': 'exception_in_is_signed_in',
-          'error_message': e.toString(),
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-        },
-        error: e,
-      );
+      // 移除：因异常导致登录态丢失的自定义认证事件上报（auth_login_lost）
       
       // 发生异常时，为了安全起见，退出登录态
       await clearAllAuthData();
@@ -675,15 +675,7 @@ class AuthManager {
             'logout_reason': 'refresh_token_invalid',
           });
 
-          AnalyticsService().logAuthEvent(
-            event: 'login_lost',
-            parameters: {
-              'user_name': userName,
-              'loss_reason': 'refresh_token_invalid',
-              'server_error_code': result.errNo,
-              'timestamp': DateTime.now().millisecondsSinceEpoch,
-            },
-          );
+          // 移除：RefreshToken无效导致登录态丢失的自定义认证事件上报（auth_login_lost）
           
           await _clearTokenFromSecureStorage();
           _currentToken = null;

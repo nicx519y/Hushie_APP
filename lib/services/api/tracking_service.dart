@@ -141,6 +141,7 @@ class TrackingService {
       'error_message': errorMessage,
     };
     extra.removeWhere((key, value) => value == null);
+    // 统一使用通用事件名
     await track(actionType: TrackingEvents.subscribeResult, extraData: extra);
   }
   // 主页进入后台（改为：应用进入后台）

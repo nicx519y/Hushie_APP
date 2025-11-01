@@ -154,6 +154,16 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
             basePlanId: event.basePlanId,
             scene: widget.scene ?? 'unknown',
           );
+          // 自定义事件：订阅流程开始
+          AnalyticsService().logCustomEvent(
+            eventName: 'subscribe_flow_start',
+            parameters: {
+              'product_id': event.productId,
+              if (event.basePlanId != null) 'base_plan_id': event.basePlanId!,
+              if (widget.scene != null) 'scene': widget.scene!,
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            },
+          );
         } catch (e) {
           debugPrint('📍 [TRACKING] subscribe_flow_start error: $e');
         }
@@ -261,6 +271,20 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
           currency: currency,
           price: '$value',
         );
+        // 自定义事件：订阅成功
+        AnalyticsService().logCustomEvent(
+          eventName: 'subscribe_result_success',
+          parameters: {
+            'status': 'success',
+            'product_id': productId,
+            if (event.basePlanId != null) 'base_plan_id': event.basePlanId!,
+            if (offerId != null) 'offer_id': offerId,
+            if (purchaseToken != null && purchaseToken.isNotEmpty) 'purchase_token': purchaseToken,
+            'currency': currency,
+            'price': value,
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          },
+        );
       } catch (e) {
         debugPrint('📍 [TRACKING] subscribe_result success error: $e');
       }
@@ -290,6 +314,18 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
         offerId: selectedPlanAvailableOffer?.offerId,
         errorMessage: event.message,
       );
+      // 自定义事件：订阅失败
+      AnalyticsService().logCustomEvent(
+        eventName: 'subscribe_result_failed',
+        parameters: {
+          'status': 'failed',
+          'product_id': event.productId,
+          if (event.basePlanId != null) 'base_plan_id': event.basePlanId!,
+          if (selectedPlanAvailableOffer?.offerId != null) 'offer_id': selectedPlanAvailableOffer!.offerId,
+          if (event.message != null) 'error_message': event.message!,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
     } catch (e) {
       debugPrint('📍 [TRACKING] subscribe_result failed error: $e');
     }
@@ -312,6 +348,17 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
         productId: event.productId,
         basePlanId: event.basePlanId,
         offerId: selectedPlanAvailableOffer?.offerId,
+      );
+      // 自定义事件：订阅取消
+      AnalyticsService().logCustomEvent(
+        eventName: 'subscribe_result_canceled',
+        parameters: {
+          'status': 'canceled',
+          'product_id': event.productId,
+          if (event.basePlanId != null) 'base_plan_id': event.basePlanId!,
+          if (selectedPlanAvailableOffer?.offerId != null) 'offer_id': selectedPlanAvailableOffer!.offerId,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
       );
     } catch (e) {
       debugPrint('📍 [TRACKING] subscribe_result canceled error: $e');
@@ -336,6 +383,18 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
         basePlanId: event.basePlanId,
         offerId: selectedPlanAvailableOffer?.offerId,
         errorMessage: event.message,
+      );
+      // 自定义事件：订阅错误（按失败归类）
+      AnalyticsService().logCustomEvent(
+        eventName: 'subscribe_result_failed',
+        parameters: {
+          'status': 'failed',
+          'product_id': event.productId,
+          if (event.basePlanId != null) 'base_plan_id': event.basePlanId!,
+          if (selectedPlanAvailableOffer?.offerId != null) 'offer_id': selectedPlanAvailableOffer!.offerId,
+          if (event.message != null) 'error_message': event.message!,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
       );
     } catch (e) {
       debugPrint('📍 [TRACKING] subscribe_result error error: $e');
@@ -420,6 +479,18 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
             basePlanId: basePlanId,
             offerId: selectedPlanAvailableOffer?.offerId,
             errorMessage: e.toString(),
+          );
+          // 自定义事件：订阅异常（按失败归类）
+          AnalyticsService().logCustomEvent(
+            eventName: 'subscribe_result_failed',
+            parameters: {
+              'status': 'failed',
+              'product_id': widget.product?.googlePlayProductId ?? 'unknown_product',
+              if (basePlanId.isNotEmpty) 'base_plan_id': basePlanId,
+              if (selectedPlanAvailableOffer?.offerId != null) 'offer_id': selectedPlanAvailableOffer!.offerId,
+              'error_message': e.toString(),
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            },
           );
         } catch (e) {
           debugPrint('📍 [TRACKING] subscribe_result exception error: $e');

@@ -5,6 +5,7 @@ import '../utils/toast_helper.dart';
 import '../utils/toast_messages.dart';
 import '../services/app_operations_service.dart';
 import '../services/audio_manager.dart';
+import '../services/analytics_service.dart';
 
 
 
@@ -16,12 +17,14 @@ class MainLayout extends StatefulWidget {
   final List<Widget> pages;
   final List<String> pageTitles;
   final int initialIndex;
+  final String? onboardingEnterSource; // 'submit' | 'returning_user' | null
 
   const MainLayout({
     super.key,
     required this.pages,
     required this.pageTitles,
     this.initialIndex = 0,
+    this.onboardingEnterSource,
   });
 
   @override
@@ -38,6 +41,37 @@ class _MainLayoutState extends State<MainLayout> {
     super.initState();
     _initializeApp();
     _currentIndex = widget.initialIndex;
+    _reportOnboardingEnterFromParam();
+  }
+
+  Future<void> _reportOnboardingEnterFromParam() async {
+    try {
+      final source = widget.onboardingEnterSource;
+      if (source == null || source.isEmpty) {
+        return;
+      }
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (source == 'submit') {
+        await AnalyticsService().logCustomEvent(
+          eventName: 'onboarding_submit_enter_home',
+          parameters: {
+            'timestamp': now,
+            'source': 'submit',
+          },
+        );
+      } else if (source == 'returning_user') {
+        await AnalyticsService().logCustomEvent(
+          eventName: 'onboarding_returning_enter_home',
+          parameters: {
+            'timestamp': now,
+            'source': 'returning_user',
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('📊 [ANALYTICS] 报告引导进入主页事件失败: $e');
+    }
   }
 
   Future<void> _initializeApp() async {

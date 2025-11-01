@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class ApiConfig {
   // API 基础配置
@@ -34,7 +35,7 @@ class ApiConfig {
   static const String clientPlatform = 'flutter';
 
   // 应用版本配置（可动态修改）
-  static String _appVersion = '1.1.0';
+  static String _appVersion = '1.0.0';
 
   // 是否使用预埋数据（可动态修改并持久化）
   static bool _useEmbeddedData = false;
@@ -43,6 +44,17 @@ class ApiConfig {
   /// 初始化应用版本（从存储中加载）
   static Future<void> _initializeAppVersion() async {
     try {
+      // 先从运行时读取真实应用版本（来源于 pubspec.yaml）
+      try {
+        final info = await PackageInfo.fromPlatform();
+        if (info.version.isNotEmpty) {
+          _appVersion = info.version;
+        }
+      } catch (e) {
+        debugPrint('读取 PackageInfo 版本失败，使用默认或存储版本: $e');
+      }
+
+      // 如果存在手动设置的版本，允许覆盖（便于调试或灰度）
       final prefs = await SharedPreferences.getInstance();
       final storedVersion = prefs.getString('app_version');
       if (storedVersion != null && storedVersion.isNotEmpty) {
@@ -138,7 +150,7 @@ class ApiConfig {
   }
 
   /// 初始化 API 配置
-  static Future<void> initialize({bool? debugMode = false}) async {
+  static Future<void> initialize() async {
     await _initializeAppVersion();
     await _initializeUseEmbeddedData();
     await _initializeEnvironment();
@@ -196,6 +208,21 @@ class ApiConfig {
       await prefs.setString('app_version', version);
     } catch (e) {
       debugPrint('保存应用版本到存储失败: $e');
+    }
+  }
+
+  /// 重置为包信息版本（移除覆盖并应用 PackageInfo 版本）
+  static Future<void> resetAppVersionToPackageInfo() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final runtimeVersion = info.version;
+      if (runtimeVersion.isNotEmpty) {
+        _appVersion = runtimeVersion;
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('app_version');
+    } catch (e) {
+      debugPrint('重置版本到包信息失败: $e');
     }
   }
 

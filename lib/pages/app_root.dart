@@ -148,7 +148,8 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
 
 // 独立的MainApp组件，从main.dart中提取
 class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+  final String? onboardingEnterSource; // 传递引导进入主页来源（可为空）
+  const MainApp({super.key, this.onboardingEnterSource});
 
   // 静态页面列表，避免每次构建时重新创建
   static const List<Widget> _pages = [HomePage(), ProfilePage()];
@@ -157,10 +158,11 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     debugPrint('🏠 [MAIN_APP] MainApp构建开始');
-    const result = MainLayout(
+    final result = MainLayout(
       pages: _pages,
       pageTitles: _pageTitles,
       initialIndex: 0,
+      onboardingEnterSource: onboardingEnterSource,
     );
     debugPrint('🏠 [MAIN_APP] MainApp构建完成');
     return result;

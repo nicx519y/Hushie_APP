@@ -12,6 +12,7 @@ import 'api/tracking_service.dart';
 import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文件
 import 'subscribe_privilege_manager.dart';
+import 'analytics_service.dart';
 
 // 音频状态数据类
 class AudioPlayerState {
@@ -87,6 +88,11 @@ class AudioPlayerService extends BaseAudioHandler {
   bool _loadReported = false;
   Trace? _loadTrace;
 
+  // Analytics: 用户真实播放（仅在每次打开App的会话中上报一次）
+  bool _realPlayReported = false;
+  Duration? _playStartPosition;
+  String? _playStartAudioId;
+
   // 会员权限状态
   bool _hasPremium = false;
   StreamSubscription<PrivilegeChangeEvent>? _privilegeSubscription;
@@ -139,20 +145,59 @@ class AudioPlayerService extends BaseAudioHandler {
     _audioPlayer.playingStream.listen((playing) {
       _updateAudioState(isPlaying: playing);
       _broadcastState();
+
+      // 当开始播放时，记录当前的起始进度（用于计算真实播放阈值）
+      if (playing) {
+        try {
+          _playStartPosition = _audioPlayer.position;
+          _playStartAudioId = currentAudio?.id;
+        } catch (_) {
+          // 忽略异常，保持默认值
+        }
+      }
     });
 
     // 监听播放位置变化 - 添加防抖动以减少更新频率
     _audioPlayer.positionStream.listen((position) {
       
       if(currentAudio != null) {
+        // 使用局部变量以通过 Dart 的空安全检查
+        final audio = currentAudio!;
         
         // 检查权限并暂停播放
-        if(!_checkAudioPermission(currentAudio) && isPlaying) {
+        if(!_checkAudioPermission(audio) && isPlaying) {
           pause();
         }
 
         _updateAudioState(position: position);
         _broadcastState(); // 调用，减少广播频率
+
+        // 真实播放事件：当前进度 - 开始播放的进度 >= 2s，且每次打开App只上报一次
+        try {
+          if (!_realPlayReported && isPlaying && _playStartPosition != null) {
+            final startMs = _playStartPosition!.inMilliseconds;
+            final nowMs = position.inMilliseconds;
+            final deltaMs = nowMs - startMs;
+            if (deltaMs >= 2000) {
+              AnalyticsService().logCustomEvent(
+                eventName: 'audio_real_play',
+                parameters: {
+                  'audio_id': audio.id,
+                  'audio_title': audio.title,
+                  'start_position_ms': startMs,
+                  'position_ms': nowMs,
+                  'delta_ms': deltaMs,
+                  'timestamp': DateTime.now().millisecondsSinceEpoch,
+                  'source': 'audio_service',
+                },
+              );
+              _realPlayReported = true;
+              debugPrint('📊 [ANALYTICS] audio_real_play 上报 (audio_id=${audio.id}, delta=${deltaMs}ms)');
+            }
+          }
+        } catch (e) {
+          debugPrint('📊 [ANALYTICS] audio_real_play 上报失败: $e');
+        }
       }
 
     });

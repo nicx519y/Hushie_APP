@@ -24,6 +24,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _isLoading = false; // 加载状态
   bool _isSubmitting = false; // 提交状态
   OnboardingGuideData? _guideData;
+  // 进入首页的来源标记：submit / returning_user / unknown
+  String _enterMainSource = 'unknown';
 
   // 记录已打点的步骤（已不再用于“进入步骤”打点）
   // 保留字段以兼容，但不再使用。
@@ -69,7 +71,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     try {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const MainApp(),
+          builder: (context) => MainApp(onboardingEnterSource: _enterMainSource),
           settings: const RouteSettings(name: '/main'),
         ),
       );
@@ -84,8 +86,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) =>
-              SubscribePage(bannerPreference: pref, scene: 'onboarding'),
+          builder: (context) => SubscribePage(
+            bannerPreference: pref,
+            scene: 'onboarding',
+            onboardingEnterSource: 'submit',
+          ),
           settings: const RouteSettings(name: '/subscribe'),
         ),
       );
@@ -166,20 +171,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
       await OnboardingManager().markOnboardingCompleted();
     } catch (e) {
       debugPrint('提交偏好失败: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+          });
 
-        // 跳转到订阅页面
-        if(_guideData?.vippageenabled == true) {
-          await _enterSubscribe();
-        } else {
-          await _enterMain();
+          // 跳转到订阅页面
+          if(_guideData?.vippageenabled == true) {
+            await _enterSubscribe();
+          } else {
+            _enterMainSource = 'submit';
+            await _enterMain();
+          }
         }
       }
-    }
   }
 
   Widget _buildStepTitle() {
@@ -579,6 +585,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               // 跳转打点：type=onboarding, action=returning_user
               TrackingService.trackOnboarding(action: 'returning_user');
               await OnboardingManager().markOnboardingCompleted();
+              _enterMainSource = 'returning_user';
               _enterMain();
             },
             child: const Text(

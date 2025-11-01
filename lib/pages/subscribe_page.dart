@@ -12,7 +12,8 @@ import '../utils/custom_icons.dart';
 class SubscribePage extends StatefulWidget {
   final String? bannerPreference; // 'M' | 'F' | 'F&M'
   final String? scene; // 来源场景，用于打点
-  const SubscribePage({super.key, this.bannerPreference, this.scene});
+  final String? onboardingEnterSource; // 引导进入主页来源透传
+  const SubscribePage({super.key, this.bannerPreference, this.scene, this.onboardingEnterSource});
 
   @override
   State<SubscribePage> createState() => _SubscribePageState();
@@ -73,7 +74,7 @@ class _SubscribePageState extends State<SubscribePage> {
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const MainApp(),
+          builder: (context) => MainApp(onboardingEnterSource: widget.onboardingEnterSource),
           settings: const RouteSettings(name: '/main'),
         ),
       );
