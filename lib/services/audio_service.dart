@@ -189,7 +189,7 @@ class AudioPlayerService extends BaseAudioHandler {
         if(!_checkAudioPermission(audio) && isPlaying) {
           if(!_checkAudioPreviewPermission(audio, atPosition: position)) {
             pause();
-            seek((_audioPlayer.duration ?? Duration.zero) * ApiConfig.previewAudioRatio);
+            // seek((_audioPlayer.duration ?? Duration.zero) * ApiConfig.previewAudioRatio);
             debugPrint('🚫 [AUDIO] 无播放权限：需会员或免费音频。');
 
             // 派发预览边界事件
@@ -655,13 +655,13 @@ class AudioPlayerService extends BaseAudioHandler {
   Future<void> seek(Duration position) async {
 
     late Duration pos = position;
-    final Duration duration = _audioPlayer.duration ?? Duration.zero;
+    // final Duration duration = _audioPlayer.duration ?? Duration.zero;
 
-    if(!_checkAudioPermission(currentAudio!) && !_checkAudioPreviewPermission(currentAudio!, atPosition: pos)){
-      if(pos.inMilliseconds > ApiConfig.previewAudioRatio * duration.inMilliseconds){
-        pos = Duration(milliseconds: (ApiConfig.previewAudioRatio * duration.inMilliseconds).toInt());
-      }
-    }
+    // if(!_checkAudioPermission(currentAudio!) && !_checkAudioPreviewPermission(currentAudio!, atPosition: pos)){
+    //   if(pos.inMilliseconds > ApiConfig.previewAudioRatio * duration.inMilliseconds){
+    //     pos = Duration(milliseconds: (ApiConfig.previewAudioRatio * duration.inMilliseconds).toInt());
+    //   }
+    // }
 
     try {
       await _audioPlayer.seek(pos);

@@ -4,21 +4,17 @@ import 'package:just_audio/just_audio.dart';
 import '../services/audio_manager.dart';
 import '../services/audio_service.dart';
 import '../config/api_config.dart';
-import '../services/subscribe_privilege_manager.dart';
 
 
 class AudioProgressBar extends StatefulWidget {
   final double? width;
   // 新增：关键点参数，使用 Duration 表示时间点
   final List<Duration> keyPoints;
-  // 新增：预览边界触发回调（当拖动超过允许范围被限制时触发）
-  final VoidCallback? onPreviewBoundary;
 
   const AudioProgressBar({
     super.key,
     this.width,
     this.keyPoints = const [],
-    this.onPreviewBoundary,
   });
 
   @override
@@ -37,8 +33,7 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
   Duration _renderDuration = Duration.zero;
 
   // 是否启用预览拖拽限制（依据权限与配置）
-  bool _restrictedPreview = false;
-  bool _previewBoundaryTriggeredInDrag = false; // 单次拖拽期间只触发一次
+  // 已移除预览拖拽限制与边界回调逻辑
 
   // 真实的音频时长（用于显示）
   Duration _realDuration = Duration.zero;
@@ -111,20 +106,6 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
             // 非预览模式下直接使用真实duration
             if (_renderDuration != audioState.duration) {
               _renderDuration = audioState.duration ?? Duration.zero;
-              needsUpdate = true;
-            }
-
-            // 依据权限与配置启用预览拖拽限制（不依赖 renderPreviewStart/end）
-            final audio = audioState.currentAudio;
-            final hasPremium = SubscribePrivilegeManager.instance
-                    .getCachedPrivilege()
-                    ?.hasPremium ??
-                false;
-            final isFree = audio?.isFree ?? false;
-            final newRestricted = ApiConfig.previewAudioEnabled &&
-                !(hasPremium || isFree);
-            if (_restrictedPreview != newRestricted) {
-              _restrictedPreview = newRestricted;
               needsUpdate = true;
             }
 
@@ -258,14 +239,13 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                   // 使用包含关键点的自定义轨道
                   trackShape: CustomTrackShape(
                     keyPointPositions: _disabled ? [] : keyPointPositions,
-                    previewDotPositions: (_restrictedPreview &&
-                            _renderDuration.inMilliseconds > 0)
+                    previewDotPositions: (_renderDuration.inMilliseconds > 0)
                         ? [
                             0.0,
                             ApiConfig.previewAudioRatio.clamp(0.0, 1.0),
                           ]
                         : const [],
-                    previewDotColor: Colors.white,
+                    previewDotColor: Color(0xFFFFCB35),
                     previewDotRadius: 3.5,
                   ),
                 ),
@@ -274,54 +254,23 @@ class _AudioProgressBarState extends State<AudioProgressBar> {
                   onChanged: _disabled
                       ? null
                       : (value) {
-                          // 计算允许的最大拖拽比例（预览限制，直接使用配置比率）
-                          double allowedRatio = _restrictedPreview
-                              ? ApiConfig.previewAudioRatio.clamp(0.0, 1.0)
-                              : 1.0;
-                          final attemptedValue = value;
-                          final clampedValue = value.clamp(0.0, allowedRatio);
                           setState(() {
                             _isDragging = true;
-                            _dragValue = clampedValue;
-                            // 若尝试超出并处于预览限制，触发一次回调
-                            if (_restrictedPreview &&
-                                attemptedValue > allowedRatio &&
-                                !_previewBoundaryTriggeredInDrag) {
-                              _previewBoundaryTriggeredInDrag = true;
-                              try {
-                                widget.onPreviewBoundary?.call();
-                              } catch (_) {}
-                            }
+                            _dragValue = value.clamp(0.0, 1.0);
                           });
                         },
                   onChangeEnd: _disabled
                       ? null
                       : (value) async {
-                          // 计算允许的最大拖拽比例（预览限制，直接使用配置比率）
-                          double allowedRatio = _restrictedPreview
-                              ? ApiConfig.previewAudioRatio.clamp(0.0, 1.0)
-                              : 1.0;
-                          final attemptedValue = value;
-                          final clampedValue = value.clamp(0.0, allowedRatio);
                           final renderPosition = Duration(
-                            milliseconds: (clampedValue *
+                            milliseconds: (value.clamp(0.0, 1.0) *
                                     _renderDuration.inMilliseconds)
                                 .round(),
                           );
                           setState(() {
                             _isDragging = false;
                             _renderPosition = renderPosition;
-                            _dragValue = clampedValue;
-                            // 若未在拖拽中触发过并且尝试超出，结束时触发一次
-                            if (_restrictedPreview &&
-                                attemptedValue > allowedRatio &&
-                                !_previewBoundaryTriggeredInDrag) {
-                              try {
-                                widget.onPreviewBoundary?.call();
-                              } catch (_) {}
-                            }
-                            // 重置单次拖拽触发标记
-                            _previewBoundaryTriggeredInDrag = false;
+                            _dragValue = value.clamp(0.0, 1.0);
                           });
                           await _onSeek(renderPosition);
                         },

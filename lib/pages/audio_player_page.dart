@@ -459,12 +459,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     return RepaintBoundary(
       child: AudioProgressBar(
         keyPoints: keyPoints,
-        onPreviewBoundary: () {
-          // 预览边界拖拽被限制时触发订阅弹窗
-          try {
-            showSubscribeDialog(context, scene: "progressBarDrag");
-          } catch (_) {}
-        },
+       
       ),
     );
   }
