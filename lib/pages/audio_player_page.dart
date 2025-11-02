@@ -12,6 +12,7 @@ import '../services/api/audio_detail_service.dart';
 import '../components/audio_progress_bar.dart';
 import '../utils/custom_icons.dart';
 import '../components/audio_history_dialog.dart';
+import '../services/audio_history_manager.dart';
 import '../components/fallback_image.dart';
 import '../utils/number_formatter.dart';
 import '../router/navigation_utils.dart';
@@ -92,6 +93,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
             _listenToAudioState();
           });
         });
+
+    // 监听：超出预览边界/无权限事件 -> 弹订阅对话框
+    _subscriptions.add(
+      AudioHistoryManager.instance.previewBoundaryEvents.listen((event) {
+        if (!mounted) return;
+        try {
+          showSubscribeDialog(context, scene: "positionChange");
+        } catch (e) {
+          debugPrint('弹出订阅对话框失败: $e');
+        }
+      }),
+    );
   }
 
   @override
@@ -138,7 +151,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
                                     controller: _srtController,
                                     onScrollStateChanged: _onScrollStateChanged,
                                     onParagraphTap: _onParagraphTap,
-                                    canViewAllText: _hasPremium || (_currentAudio?.isFree ?? false), // 直接计算避免方法调用
+                                    canViewAllText: /*_hasPremium || (_currentAudio?.isFree ?? false)*/ true, // 直接计算避免方法调用
                                     initProgress: _audioManager.position,
                                   ),
                                 ),
@@ -443,7 +456,17 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
         })
         .toList();
 
-    return RepaintBoundary(child: AudioProgressBar(keyPoints: keyPoints));
+    return RepaintBoundary(
+      child: AudioProgressBar(
+        keyPoints: keyPoints,
+        onPreviewBoundary: () {
+          // 预览边界拖拽被限制时触发订阅弹窗
+          try {
+            showSubscribeDialog(context, scene: "progressBarDrag");
+          } catch (_) {}
+        },
+      ),
+    );
   }
 
   // 构建播放控制按钮
@@ -511,7 +534,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
       ),
       onPressed: _playAndPauseBtnPress,
-      icon: (_isAudioLoading && _canPlay())
+      icon: (_isAudioLoading)
           ? const SizedBox(
               width: 24,
               height: 24,
@@ -778,11 +801,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
       final currentAudio = _audioManager.currentAudio;
       final currentAudioId = (_currentAudio?.id ?? 'unknown');
 
-      if (currentAudio != null && !_canPlay()) {
-        // 检查是否可以播放 如果不能播放 则显示订阅对话框
-        showSubscribeDialog(context, scene: 'player_play_btn');
-        return;
-      }
+      // if (currentAudio != null && !_canPlay()) {
+      //   // 检查是否可以播放 如果不能播放 则显示订阅对话框
+      //   showSubscribeDialog(context, scene: 'player_play_btn');
+      //   return;
+      // }
 
       if (currentAudio == null || currentAudio.id != currentAudioId) {
         // 如果没有当前音频信息，无法播放

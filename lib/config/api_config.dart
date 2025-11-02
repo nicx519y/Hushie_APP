@@ -41,6 +41,15 @@ class ApiConfig {
   static bool _useEmbeddedData = false;
   static const String _useEmbeddedDataKey = 'use_embedded_data';
 
+  static const defaultPreviewAudioEnabled = true;
+  static const defaultPreviewAudioRatio = 0.3; // 30%
+
+  // 预览音频动态配置（可通过接口获取并持久化）
+  static bool _previewAudioEnabled = defaultPreviewAudioEnabled;
+  static double _previewAudioRatio = defaultPreviewAudioRatio;
+  static const String _previewAudioEnabledKey = 'preview_audio_enabled';
+  static const String _previewAudioRatioKey = 'preview_audio_ratio';
+
   /// 初始化应用版本（从存储中加载）
   static Future<void> _initializeAppVersion() async {
     try {
@@ -154,6 +163,7 @@ class ApiConfig {
     await _initializeAppVersion();
     await _initializeUseEmbeddedData();
     await _initializeEnvironment();
+    await _initializePreviewAudioConfig();
   }
 
   /// 获取完整的 API URL
@@ -175,6 +185,64 @@ class ApiConfig {
       'X-App-ID': appId,
       'X-Client-Platform': clientPlatform,
     };
+  }
+
+  /// 初始化预览音频配置（从存储中加载）
+  static Future<void> _initializePreviewAudioConfig() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storedEnabled = prefs.getBool(_previewAudioEnabledKey);
+      if (storedEnabled != null) {
+        _previewAudioEnabled = storedEnabled;
+      } else {
+        _previewAudioEnabled = defaultPreviewAudioEnabled;
+      }
+
+      // 以 double 存储，读取时做好类型兼容
+      final storedRatio = prefs.getDouble(_previewAudioRatioKey);
+      if (storedRatio != null) {
+        _previewAudioRatio = _clampRatio(storedRatio);
+      } else {
+        _previewAudioRatio = defaultPreviewAudioRatio;
+      }
+    } catch (e) {
+      debugPrint('初始化预览音频配置失败: $e');
+      _previewAudioEnabled = defaultPreviewAudioEnabled;
+      _previewAudioRatio = defaultPreviewAudioRatio;
+    }
+  }
+
+  /// 预览音频开关（带缓存）
+  static bool get previewAudioEnabled => _previewAudioEnabled;
+
+  /// 预览音频比例（0.0~1.0，带缓存并限制范围）
+  static double get previewAudioRatio => _clampRatio(_previewAudioRatio);
+
+  /// 更新并持久化预览音频配置（允许部分更新）
+  static Future<void> setPreviewAudioConfig({bool? enabled, double? ratio}) async {
+    // 更新内存值
+    if (enabled != null) {
+      _previewAudioEnabled = enabled;
+    }
+    if (ratio != null) {
+      _previewAudioRatio = _clampRatio(ratio);
+    }
+
+    // 持久化存储
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_previewAudioEnabledKey, _previewAudioEnabled);
+      await prefs.setDouble(_previewAudioRatioKey, _previewAudioRatio);
+    } catch (e) {
+      debugPrint('保存预览音频配置失败: $e');
+    }
+  }
+
+  static double _clampRatio(double value) {
+    if (value.isNaN || !value.isFinite) return defaultPreviewAudioRatio;
+    if (value < 0.0) return 0.0;
+    if (value > 1.0) return 1.0;
+    return value;
   }
 
   /// 当前环境信息

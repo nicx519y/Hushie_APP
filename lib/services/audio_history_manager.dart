@@ -62,6 +62,10 @@ class AudioHistoryManager {
   /// 获取历史记录事件流
   Stream<List<AudioItem>> get historyStream => _historyStreamController.stream;
 
+  /// 透传：预览边界/权限限制事件流
+  Stream<PreviewBoundaryEvent> get previewBoundaryEvents =>
+      AudioPlayerService.previewBoundaryEvents;
+
   /// 初始化历史管理器 - 从服务端拉取历史列表并缓存到本地内存
   Future<void> initialize() async {
     if (_isInitialized) return;

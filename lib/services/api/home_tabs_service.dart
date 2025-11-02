@@ -39,7 +39,40 @@ class HomeTabsService {
         throw Exception('API failed: errNo=${apiResponse.errNo}');
       }
 
-      final List<dynamic> tabsData = apiResponse.data!['tabs'] ?? [];
+      final Map<String, dynamic> data = apiResponse.data!;
+      final List<dynamic> tabsData = data['tabs'] ?? [];
+
+      // 读取并缓存预览音频配置（并列字段）
+      bool? enabled;
+      double? ratio;
+      try {
+        final dynamic enabledRaw = data['preview_audio_enabled'];
+        if (enabledRaw is bool) {
+          enabled = enabledRaw;
+        } else if (enabledRaw is num) {
+          enabled = enabledRaw != 0;
+        } else if (enabledRaw is String) {
+          final v = enabledRaw.trim().toLowerCase();
+          if (v == 'true' || v == '1') enabled = true;
+          if (v == 'false' || v == '0') enabled = false;
+        }
+
+        final dynamic ratioRaw = data['preview_audio_ratio'];
+        if (ratioRaw is double) {
+          ratio = ratioRaw;
+        } else if (ratioRaw is int) {
+          ratio = ratioRaw.toDouble();
+        } else if (ratioRaw is String) {
+          ratio = double.tryParse(ratioRaw);
+        }
+      } catch (e) {
+        debugPrint('解析预览音频配置失败: $e');
+      }
+
+      await ApiConfig.setPreviewAudioConfig(
+        enabled: enabled ?? ApiConfig.defaultPreviewAudioEnabled,
+        ratio: ratio ?? ApiConfig.defaultPreviewAudioRatio,
+      );
       final List<TabItemModel> tabs = tabsData
           .map((tab) => TabItemModel.fromMap(tab as Map<String, dynamic>))
           .toList();

@@ -14,6 +14,21 @@ import 'package:flutter/services.dart' show rootBundle; // 读取预埋资产文
 import 'subscribe_privilege_manager.dart';
 import 'analytics_service.dart';
 
+// 事件：超出预览边界或无权限播放
+class PreviewBoundaryEvent {
+  final String? audioId;
+  final Duration position;
+  final Duration previewEnd;
+  final String reason; // e.g., 'no_permission' / 'preview_exceeded'
+
+  const PreviewBoundaryEvent({
+    required this.audioId,
+    required this.position,
+    required this.previewEnd,
+    this.reason = 'no_permission',
+  });
+}
+
 // 音频状态数据类
 class AudioPlayerState {
   final AudioItem? currentAudio;
@@ -69,6 +84,12 @@ class AudioPlayerState {
 
 class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _audioPlayer = AudioPlayer();
+
+  // 全局事件流：预览边界/权限限制触发
+  static final StreamController<PreviewBoundaryEvent> _previewBoundaryController =
+      StreamController<PreviewBoundaryEvent>.broadcast();
+  static Stream<PreviewBoundaryEvent> get previewBoundaryEvents =>
+      _previewBoundaryController.stream;
 
   // 配置：是否使用预埋音频（assets/audios/）
   static bool get _useEmbeddedAudios => ApiConfig.useEmbeddedData;
@@ -164,9 +185,30 @@ class AudioPlayerService extends BaseAudioHandler {
         // 使用局部变量以通过 Dart 的空安全检查
         final audio = currentAudio!;
         
-        // 检查权限并暂停播放
+        // 检查权限并暂停播放（基于当前最新进度）
         if(!_checkAudioPermission(audio) && isPlaying) {
-          pause();
+          if(!_checkAudioPreviewPermission(audio, atPosition: position)) {
+            pause();
+            seek((_audioPlayer.duration ?? Duration.zero) * ApiConfig.previewAudioRatio);
+            debugPrint('🚫 [AUDIO] 无播放权限：需会员或免费音频。');
+
+            // 派发预览边界事件
+            try {
+              final total = _audioPlayer.duration ?? Duration.zero;
+              final previewEnd = Duration(
+                milliseconds: (total.inMilliseconds * ApiConfig.previewAudioRatio).toInt(),
+              );
+              _previewBoundaryController.add(
+                PreviewBoundaryEvent(
+                  audioId: audio.id,
+                  position: position,
+                  previewEnd: previewEnd,
+                  reason: 'preview_exceeded',
+                ),
+              );
+            } catch (_) {}
+            return;
+          }
         }
 
         _updateAudioState(position: position);
@@ -462,8 +504,24 @@ class AudioPlayerService extends BaseAudioHandler {
         debugPrint('相同音频，跳过重新加载: ${audio.title} (ID: ${audio.id})');
       }
       
-      if(!_checkAudioPermission(audio)){
+      if(!_checkAudioPermission(audio) && !_checkAudioPreviewPermission(audio, atPosition: initialPosition)){
         debugPrint('🚫 [AUDIO] 无播放权限：需会员或免费音频。audio_id=${audio.id}');
+
+        // 派发预览边界事件
+        try {
+          final total = _audioPlayer.duration ?? (audio.duration ?? Duration.zero);
+          final previewEnd = Duration(
+            milliseconds: (total.inMilliseconds * ApiConfig.previewAudioRatio).toInt(),
+          );
+          _previewBoundaryController.add(
+            PreviewBoundaryEvent(
+              audioId: audio.id,
+              position: initialPosition ?? Duration.zero,
+              previewEnd: previewEnd,
+              reason: 'no_permission',
+            ),
+          );
+        } catch (_) {}
         return;
       }
       await _audioPlayer.play();
@@ -542,8 +600,24 @@ class AudioPlayerService extends BaseAudioHandler {
       // 若存在当前音频，仍需权限检查
       final audio = currentAudio;
       if (audio != null) {
-        if (!_checkAudioPermission(audio)) {
+        if (!_checkAudioPermission(audio) && !_checkAudioPreviewPermission(audio, atPosition: _audioPlayer.position)) {
           debugPrint('🚫 [AUDIO] 无播放权限：需会员或免费音频。');
+
+          // 派发预览边界事件
+          try {
+            final total = _audioPlayer.duration ?? (audio.duration ?? Duration.zero);
+            final previewEnd = Duration(
+              milliseconds: (total.inMilliseconds * ApiConfig.previewAudioRatio).toInt(),
+            );
+            _previewBoundaryController.add(
+              PreviewBoundaryEvent(
+                audioId: audio.id,
+                position: _audioPlayer.position,
+                previewEnd: previewEnd,
+                reason: 'no_permission',
+              ),
+            );
+          } catch (_) {}
           return;
         }
       }
@@ -579,8 +653,18 @@ class AudioPlayerService extends BaseAudioHandler {
   // 跳转到指定位置
   @override
   Future<void> seek(Duration position) async {
+
+    late Duration pos = position;
+    final Duration duration = _audioPlayer.duration ?? Duration.zero;
+
+    if(!_checkAudioPermission(currentAudio!) && !_checkAudioPreviewPermission(currentAudio!, atPosition: pos)){
+      if(pos.inMilliseconds > ApiConfig.previewAudioRatio * duration.inMilliseconds){
+        pos = Duration(milliseconds: (ApiConfig.previewAudioRatio * duration.inMilliseconds).toInt());
+      }
+    }
+
     try {
-      await _audioPlayer.seek(position);
+      await _audioPlayer.seek(pos);
     } catch (e) {
       debugPrint('跳转播放位置时出错: $e');
     }
@@ -820,6 +904,17 @@ class AudioPlayerService extends BaseAudioHandler {
   bool _checkAudioPermission(AudioItem? audio) {
     if(audio == null) return false;
     return (audio.isFree || _hasPremium);  
+  }
+
+  bool _checkAudioPreviewPermission(AudioItem? audio, {Duration? atPosition}) {
+    if(audio == null) return false;
+    final position = atPosition ?? _audioPlayer.position;
+    final duration = _audioPlayer.duration;
+    if (duration != null) {
+      final previewEndMs = (duration.inMilliseconds * ApiConfig.previewAudioRatio).floor();
+      return position.inMilliseconds <= previewEndMs;
+    }
+    return false;
   }
 }
 
