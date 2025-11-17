@@ -99,18 +99,19 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
       debugPrint('📍 [TRACKING] subscribe_click_pay error: $e');
     }
 
-    final bool isLogin = await AuthManager.instance.isSignedIn();
-    if (!isLogin) {
-      try {
-        TrackingService.trackSubscribeClickLogin(scene: widget.scene ?? 'unknown');
-      } catch (e) {
-        debugPrint('📍 [TRACKING] subscribe_click_login error: $e');
-      }
-      if (mounted) {
-        NavigationUtils.navigateToLogin(context);
-      }
-      return;
-    }
+    // 改成非登录状态下也能订阅 2025.11.17
+    // final bool isLogin = await AuthManager.instance.isSignedIn();
+    // if (!isLogin) {
+    //   try {
+    //     TrackingService.trackSubscribeClickLogin(scene: widget.scene ?? 'unknown');
+    //   } catch (e) {
+    //     debugPrint('📍 [TRACKING] subscribe_click_login error: $e');
+    //   }
+    //   if (mounted) {
+    //     NavigationUtils.navigateToLogin(context);
+    //   }
+    //   return;
+    // }
 
     // 已经在订阅中，不能重复订阅
     if (isSelectedPlanSubscribing) {

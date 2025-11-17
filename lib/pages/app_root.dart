@@ -10,6 +10,8 @@ import '../services/auth_manager.dart';
 import '../services/network_healthy_manager.dart';
 import '../services/onboarding_manager.dart';
 import '../services/api/tracking_service.dart';
+import '../services/api/subscription_migration_service.dart';
+import '../components/login_dailog.dart';
 
 /// 应用根组件 - 包含 MainApp 和 Splash 浮层
 class AppRoot extends StatefulWidget {
@@ -26,6 +28,8 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
   // 冷启动与前台恢复打点控制
   bool _startupAppOpenSent = false;
   bool _shouldSendOnResume = false;
+  bool _isCheckingPending = false;
+  DateTime? _lastPendingCheck;
 
   @override
   void initState() {
@@ -40,6 +44,9 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
 
     // 异步初始化服务和检查新手引导状态
     _initializeApp();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingMigrationIfNeeded();
+    });
   }
 
   @override
@@ -59,6 +66,7 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
         _startupAppOpenSent = true;
         _shouldSendOnResume = false;
       }
+      _checkPendingMigrationIfNeeded();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // 应用进入后台或非活动态：标记下次恢复打点，并上报后台事件
       _shouldSendOnResume = true;
@@ -93,6 +101,26 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
 
     await _initializeServices();
 
+  }
+
+  Future<void> _checkPendingMigrationIfNeeded() async {
+    if (_isCheckingPending) return;
+    final now = DateTime.now();
+    if (_lastPendingCheck != null && now.difference(_lastPendingCheck!) < const Duration(minutes: 1)) return;
+    _isCheckingPending = true;
+    try {
+      final isLogin = await AuthManager.instance.isSignedIn();
+      if (isLogin) return;
+      final res = await SubscriptionMigrationService.checkPendingMigration();
+      if (res.errNo == 0 && res.data != null && res.data!.hasPendingOrders) {
+        if (mounted) {
+          await LoginDialog.show(context);
+        }
+      }
+    } catch (_) {} finally {
+      _isCheckingPending = false;
+      _lastPendingCheck = DateTime.now();
+    }
   }
 
   Future<void> _initializeServices() async {

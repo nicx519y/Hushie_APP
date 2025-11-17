@@ -8,6 +8,8 @@ import '../models/product_model.dart';
 import '../services/dialog_state_manager.dart';
 import '../services/subscribe_privilege_manager.dart';
 import '../services/api/tracking_service.dart';
+import '../services/auth_manager.dart';
+import 'login_dailog.dart';
 
 class SubscribeDialog extends StatefulWidget {
   final VoidCallback? onSubscribe;
@@ -171,9 +173,17 @@ class _SubscribeDialogState extends State<SubscribeDialog> {
                     _selectedPlan = planIndex;
                   });
                 },
-                onSubscribeSuccess: () {
+                onSubscribeSuccess: () async {
                   _closeDialog();
-                  openSubscribeSuccessNotification(context);
+                  
+                  try {
+                    final isLogin = await AuthManager.instance.isSignedIn();
+                    if (!isLogin) {
+                      await LoginDialog.show(context);
+                    } else {
+                      openSubscribeSuccessNotification(context);
+                    }
+                  } catch (_) {}
                 },
                 scene: widget.scene,
               ),

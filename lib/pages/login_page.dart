@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:async';
-import '../services/auth_manager.dart';
-import '../router/navigation_utils.dart';
 // import '../router/slide_up_page_route.dart';
-import '../utils/toast_helper.dart';
-import '../utils/toast_messages.dart';
 import '../utils/webview_navigator.dart';
-import '../services/analytics_service.dart';
 // import '../components/overlay_sheet.dart';
-import '../services/dialog_state_manager.dart';
+import '../components/login_common.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, this.onClose});
@@ -295,81 +290,32 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
 
 
   void _handleGoogleLogin() async {
-    try {
-      // 显示加载状态
-      setState(() {
-        _isLoading = true;
-      });
-
-      // 调用AuthService进行Google登录
-      final result = await AuthManager.instance.signInWithGoogle();
-
-      if (result.errNo == 0 && result.data != null) {
-        // 登录成功
-        ToastHelper.showSuccess(ToastMessages.loginSuccess);
-
-        // 记录登录事件
-        AnalyticsService().logLogin(loginMethod: 'google');
-
-        // 延迟一下让用户看到成功消息，然后关闭登录页面
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        // 关闭登录页面，返回上一页
+    await LoginCommon.handleGoogleLogin(
+      context,
+      onClose: widget.onClose,
+      setLoading: (v) {
         if (mounted) {
-          // 使用新的关闭方法
-          if (widget.onClose != null) {
-            widget.onClose!();
-          } else {
-            Navigator.of(context).pop();
-          }
-        }
-      } else {
-        if ([-1, 1, 2, 3].contains(result.errNo)) {
-          // 登录失败 - 添加调试日志
-          final errorMessage = _getErrorMessage(result.errNo);
-          debugPrint(
-            '🔐 [LOGIN] 准备显示错误toast: errNo=${result.errNo}, message=$errorMessage',
-          );
-          debugPrint(
-            '🔐 [LOGIN] 当前路由状态: isCurrent=${ModalRoute.of(context)?.isCurrent}',
-          );
-
-          // 延迟显示toast，确保用户已回到应用
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              debugPrint('🔐 [LOGIN] 延迟后显示toast: $errorMessage');
-              ToastHelper.showError(errorMessage);
-            }
+          setState(() {
+            _isLoading = v;
           });
         }
-      }
-    } catch (e) {
-      // 处理异常
-      debugPrint('Google登录异常: $e');
-      ToastHelper.showError(ToastMessages.loginFailed);
-    } finally {
-      // 隐藏加载状态
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+      },
+    );
   }
 
   /// 根据错误码获取错误消息
-  String _getErrorMessage(int errNo) {
-    switch (errNo) {
-      case -1:
-        return 'Login failed, retry please.';
-      case 1:
-        return 'User cancelled login or timeout.';
-      case 2:
-        return 'Network connection failed.';
-      case 3:
-        return 'Google service unavailable.';
-      default:
-        return 'Login failed, error code: $errNo';
-    }
-  }
+  // String _getErrorMessage(int errNo) {
+  //   switch (errNo) {
+  //     case -1:
+  //       return 'Login failed, retry please.';
+  //     case 1:
+  //       return 'User cancelled login or timeout.';
+  //     case 2:
+  //       return 'Network connection failed.';
+  //     case 3:
+  //       return 'Google service unavailable.';
+  //     default:
+  //       return 'Login failed, error code: $errNo';
+  //   }
+  // }
 }

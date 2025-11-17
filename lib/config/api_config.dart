@@ -357,6 +357,7 @@ class ApiEndpoints {
 
   // 订阅相关接口
   static const String subscribeCreate = '/subscriptions';
+  static const String subscriptionsPendingMigration = '/subscriptions/pending-migration';
 
   // 追踪打点接口
   static const String tracking = '/tracking';

@@ -9,6 +9,7 @@ import '../services/audio_manager.dart';
 import '../services/home_tab_list_data_provider.dart';
 import '../services/analytics_service.dart';
 import '../services/api/tracking_service.dart';
+// import '../components/login_dailog.dart';
 
 import '../router/navigation_utils.dart';
 
@@ -41,6 +42,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     debugPrint('🏠 [HOME_PAGE] 开始初始化列表服务');
     _initListService();
     debugPrint('🏠 [HOME_PAGE] HomePage initState完成');
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (mounted) {
+    //     LoginDialog.show(context);
+    //   }
+    // });
   }
 
   @override

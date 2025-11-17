@@ -34,7 +34,6 @@ class PrivilegeChangeEvent {
 /// 功能特性：
 /// - 监听认证状态变化，自动获取/清理权限数据
 /// - 内存缓存用户权限和商品列表
-/// - 定时刷新数据（每2小时）
 /// - 提供统一的数据访问接口
 class SubscribePrivilegeManager {
   static final SubscribePrivilegeManager _instance = SubscribePrivilegeManager._internal();
@@ -56,8 +55,8 @@ class SubscribePrivilegeManager {
   final StreamController<PrivilegeChangeEvent> _privilegeChangeController = 
       StreamController<PrivilegeChangeEvent>.broadcast();
 
-  // 数据刷新间隔（5分钟）
-  static const Duration _refreshInterval = Duration(minutes: 5);
+  // 数据刷新间隔（1分钟）
+  static const Duration _refreshInterval = Duration(minutes: 1);
 
   // 服务状态
   bool _isInitialized = false;

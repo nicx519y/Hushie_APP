@@ -7,6 +7,7 @@ import 'api/subscribe_service.dart';
 import 'subscribe_privilege_manager.dart';
 import 'billing_error_handler.dart';
 import '../models/product_model.dart';
+import 'device_info_service.dart';
 
 // 购买结果枚举
 enum PurchaseResult {
@@ -260,6 +261,7 @@ class GooglePlayBillingService {
       final ProductDetails productDetails = response.productDetails.first;
       
       late PurchaseParam purchaseParam;
+      final deviceId = await DeviceInfoService.getDeviceId();
       
       // 处理订阅产品
       if (productDetails is GooglePlayProductDetails) {
@@ -319,11 +321,13 @@ class GooglePlayBillingService {
               ));
               return false;
             }
+            
+            debugPrint('GooglePlayBillingService: 支付植入deviceId: $deviceId');
 
             purchaseParam = GooglePlayPurchaseParam(
               productDetails: productDetails,
               offerToken: targetOffer.offerIdToken,
-              applicationUserName: null,
+              applicationUserName: deviceId,
               changeSubscriptionParam: null,
             );
             
@@ -347,7 +351,10 @@ class GooglePlayBillingService {
         }
       } else {
         // 处理一次性购买
-        purchaseParam = PurchaseParam(productDetails: productDetails);
+        purchaseParam = PurchaseParam(
+          productDetails: productDetails,
+          applicationUserName: deviceId,
+        );
       }
       
       // 存储basePlanId，用于验证时传递

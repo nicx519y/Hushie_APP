@@ -46,7 +46,8 @@ class ConfirmDialog extends StatefulWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.transparent,
+      barrierColor: Colors.black.withAlpha(128),
+      useRootNavigator: true,
       builder: (BuildContext context) {
         return ConfirmDialog(
           title: title,
@@ -82,7 +83,8 @@ class ConfirmDialog extends StatefulWidget {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.transparent,
+      barrierColor: Colors.black.withAlpha(128),
+      useRootNavigator: true,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
@@ -142,7 +144,7 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withValues(alpha: 0.5), // 50% 透明黑色蒙层
+      color: Colors.transparent,
       child: Center(
         child: Container(
           width: 240,

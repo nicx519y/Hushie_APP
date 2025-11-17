@@ -6,6 +6,8 @@ import '../services/subscribe_privilege_manager.dart';
 import '../pages/app_root.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/custom_icons.dart';
+import '../services/auth_manager.dart';
+import '../components/login_dailog.dart';
 
 /// 订阅页面
 /// 展示订阅选项，用户可以选择订阅计划
@@ -65,8 +67,18 @@ class _SubscribePageState extends State<SubscribePage> {
 
   /// 订阅成功回调
   void _onSubscribeSuccess() {
-    // 跳转到主应用
-    _closePage();
+    () async {
+
+      _closePage();
+
+      try {
+        final isLogin = await AuthManager.instance.isSignedIn();
+        if (!isLogin) {
+          await LoginDialog.show(context);
+        }
+      } catch (_) {}
+      
+    }();
   }
 
   /// 关闭页面
