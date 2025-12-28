@@ -129,6 +129,9 @@ class TrackingService {
     String? currency,
     String? price,
     String? errorMessage,
+    String? errorType,
+    String? billingErrorCode,
+    String? billingErrorMessage,
   }) async {
     final extra = {
       'status': status,
@@ -139,6 +142,9 @@ class TrackingService {
       'currency': currency,
       'price': price,
       'error_message': errorMessage,
+      'error_type': errorType,
+      'billing_error_code': billingErrorCode,
+      'billing_error_message': billingErrorMessage,
     };
     extra.removeWhere((key, value) => value == null);
     // 统一使用通用事件名

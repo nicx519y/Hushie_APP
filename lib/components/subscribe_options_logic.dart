@@ -314,6 +314,7 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
         basePlanId: event.basePlanId,
         offerId: selectedPlanAvailableOffer?.offerId,
         errorMessage: event.message,
+        errorType: 'verification_failed',
       );
       // 自定义事件：订阅失败
       AnalyticsService().logCustomEvent(
@@ -384,6 +385,15 @@ mixin SubscribeOptionsLogic<T extends SubscribeOptionsBase> on State<T>, Widgets
         basePlanId: event.basePlanId,
         offerId: selectedPlanAvailableOffer?.offerId,
         errorMessage: event.message,
+        errorType: (event.metadata != null && event.metadata!['error_type'] != null)
+            ? '${event.metadata!['error_type']}'
+            : 'purchase_error',
+        billingErrorCode: (event.metadata != null && event.metadata!['error_code'] != null)
+            ? '${event.metadata!['error_code']}'
+            : null,
+        billingErrorMessage: (event.metadata != null && event.metadata!['error_message'] != null)
+            ? '${event.metadata!['error_message']}'
+            : null,
       );
       // 自定义事件：订阅错误（按失败归类）
       AnalyticsService().logCustomEvent(

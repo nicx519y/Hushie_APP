@@ -88,6 +88,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     SubscribePrivilegeManager.instance
         .hasValidPremium(forceRefresh: false)
         .then((value) {
+          if (!mounted) return;
           setState(() {
             _hasPremium = value;
             _listenToAudioState();

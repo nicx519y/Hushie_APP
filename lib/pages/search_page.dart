@@ -89,6 +89,7 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _loadSearchHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
       final history = prefs.getStringList('search_history') ?? [];
       setState(() {
         _searchHistory = history;
@@ -114,6 +115,7 @@ class _SearchPageState extends State<SearchPage> {
       }
 
       await prefs.setStringList('search_history', history);
+      if (!mounted) return;
       setState(() {
         _searchHistory = history;
       });
@@ -127,6 +129,7 @@ class _SearchPageState extends State<SearchPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('search_history');
+      if (!mounted) return;
       setState(() {
         _searchHistory = [];
       });
@@ -137,6 +140,7 @@ class _SearchPageState extends State<SearchPage> {
 
   // 执行搜索
   Future<void> _performSearch(String keyword, {bool isLoadMore = false}) async {
+    if (!mounted) return;
     if (keyword.trim().isEmpty) return;
 
     // 如果不是加载更多，检查查询是否已过期
@@ -165,6 +169,8 @@ class _SearchPageState extends State<SearchPage> {
         cid: isLoadMore ? _lastCid : null,
         count: 30,
       );
+
+      if (!mounted) return;
 
       // 再次检查查询是否已过期（防止异步请求返回时查询已改变）
       if (!isLoadMore && keyword != _currentSearchQuery) {
@@ -220,13 +226,15 @@ class _SearchPageState extends State<SearchPage> {
       }
 
       debugPrint('Search failed: $e');
-      setState(() {
-        if (isLoadMore) {
-          _isLoadingMore = false;
-        } else {
-          _isSearching = false;
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (isLoadMore) {
+            _isLoadingMore = false;
+          } else {
+            _isSearching = false;
+          }
+        });
+      }
     }
   }
 

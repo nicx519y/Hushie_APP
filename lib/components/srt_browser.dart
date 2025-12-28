@@ -142,15 +142,20 @@ class _SrtBrowserState extends State<SrtBrowser> with AutomaticKeepAliveClientMi
   void _setActiveIndex(int index, [bool animate = true]) {
     if (index < 0 || index >= _visibleParagraphs.length) return;
     if (index == _activeIndex) return;
-    setState(() => _activeIndex = index);
+    if (mounted) {
+      setState(() => _activeIndex = index);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _isAutoScrolling = true;
       _scrollWhenReady(
         index,
         animate ? const Duration(seconds: 1) : const Duration(milliseconds: 1),
         Curves.easeInOut,
         0.10,
-      ).whenComplete(() => _isAutoScrolling = false);
+      ).whenComplete(() {
+        if (mounted) _isAutoScrolling = false;
+      });
     });
   }
 
@@ -270,21 +275,28 @@ class _SrtBrowserState extends State<SrtBrowser> with AutomaticKeepAliveClientMi
     Curve curve,
     double alignment,
   ) async {
+    if (!mounted) return;
     if (_visibleParagraphs.isEmpty) return;
     final int lastIndex = _visibleParagraphs.length - 1;
     final int clamped = index < 0 ? 0 : (index > lastIndex ? lastIndex : index);
-    while (_itemPositionsListener.itemPositions.value.isEmpty) {
+    while (mounted && _itemPositionsListener.itemPositions.value.isEmpty) {
       await Future.delayed(const Duration(milliseconds: 16));
     }
     
+    if (!mounted) return;
+
     // 添加null检查，防止_itemScrollController为null时崩溃
     if (_itemScrollController.isAttached) {
-      await _itemScrollController.scrollTo(
-        index: clamped,
-        duration: duration,
-        curve: curve,
-        alignment: alignment,
-      );
+      try {
+        await _itemScrollController.scrollTo(
+          index: clamped,
+          duration: duration,
+          curve: curve,
+          alignment: alignment,
+        );
+      } catch (e) {
+        debugPrint('[SrtBrowser] scrollTo failed: $e');
+      }
     }
   }
 

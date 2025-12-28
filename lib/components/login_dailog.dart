@@ -34,7 +34,9 @@ class _LoginDialogState extends State<LoginDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Material(
+      color: Colors.transparent,
+      child: Center(
       child: Container(
         width: 315,
         padding: const EdgeInsets.only(top: 78, bottom: 67, left: 20, right: 20),
@@ -92,11 +94,12 @@ class _LoginDialogState extends State<LoginDialog> {
                           : () {
                               LoginCommon.handleGoogleLogin(
                                 context,
-                                onClose: () => Navigator.of(context).pop(),
+                                onClose: () => Navigator.of(context, rootNavigator: true).pop(),
                                 setLoading: (v) => setState(() => _isLoading = v),
                               );
                             },
                       borderRadius: BorderRadius.circular(26),
+                     
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -130,6 +133,6 @@ class _LoginDialogState extends State<LoginDialog> {
           ],
         ),
       ),
-    );
+    ));
   }
 }

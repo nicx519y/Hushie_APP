@@ -174,6 +174,7 @@ class GooglePlayBillingService {
           productId: 'unknown',
           basePlanId: basePlanId,
           message: 'Billing service not initialized',
+          metadata: {'error_type': 'init_error'},
         ));
         return false;
       }
@@ -187,6 +188,7 @@ class GooglePlayBillingService {
           productId: 'unknown',
           basePlanId: basePlanId,
           message: 'Can not get product data',
+          metadata: {'error_type': 'product_data_unavailable'},
         ));
         return false;
       }
@@ -209,6 +211,7 @@ class GooglePlayBillingService {
           productId: 'unknown',
           basePlanId: basePlanId,
           message: 'Can not find product or base plan',
+          metadata: {'error_type': 'base_plan_not_found'},
         ));
         return false;
       }
@@ -231,6 +234,7 @@ class GooglePlayBillingService {
           productId: productId,
           basePlanId: basePlanId,
           message: 'Invalid base plan configuration',
+          metadata: {'error_type': 'invalid_base_plan'},
         ));
         return false;
       }
@@ -244,6 +248,7 @@ class GooglePlayBillingService {
           productId: productId,
           basePlanId: basePlanId,
           message: 'Can not query product details',
+          metadata: {'error_type': 'query_failed'},
         ));
         return false;
       }
@@ -254,6 +259,7 @@ class GooglePlayBillingService {
           productId: productId,
           basePlanId: basePlanId,
           message: 'Can not find product details',
+          metadata: {'error_type': 'product_details_not_found'},
         ));
         return false;
       }
@@ -299,6 +305,7 @@ class GooglePlayBillingService {
                 productId: productId,
                 basePlanId: basePlanId,
                 message: 'Has no available offer',
+                metadata: {'error_type': 'no_available_offer'},
               ));
               return false;
             }
@@ -318,6 +325,7 @@ class GooglePlayBillingService {
                 productId: productId,
                 basePlanId: basePlanId,
                 message: 'Invalid offer token',
+                metadata: {'error_type': 'invalid_offer_token'},
               ));
               return false;
             }
@@ -337,6 +345,7 @@ class GooglePlayBillingService {
               productId: productId,
               basePlanId: basePlanId,
               message: 'Has no available offer',
+              metadata: {'error_type': 'no_available_offer'},
             ));
             return false;
           }
@@ -346,6 +355,7 @@ class GooglePlayBillingService {
             productId: productId,
             basePlanId: basePlanId,
             message: 'Product type is not subscription',
+            metadata: {'error_type': 'invalid_product_type'},
           ));
           return false;
         }
@@ -406,6 +416,7 @@ class GooglePlayBillingService {
               productId: productId,
               basePlanId: basePlanId,
               message: 'Failed to launch billing flow on high-risk device',
+              metadata: {'error_type': 'launch_failed'},
             ));
             return false;
           }
@@ -429,6 +440,7 @@ class GooglePlayBillingService {
             productId: productId,
             basePlanId: basePlanId,
             message: 'Purchase unavailable on this device configuration',
+            metadata: {'error_type': 'device_incompatibility'},
           ));
           return false;
         }
@@ -455,6 +467,7 @@ class GooglePlayBillingService {
           productId: productId,
           basePlanId: basePlanId,
           message: 'Failed to launch billing flow',
+          metadata: {'error_type': 'launch_failed'},
         ));
         return false;
       }
@@ -473,6 +486,7 @@ class GooglePlayBillingService {
         productId: productId ?? 'unknown',
         basePlanId: basePlanId,
         message: 'Purchase failed: $e',
+        metadata: {'error_type': 'exception'},
       ));
       return false;
     }
@@ -555,6 +569,7 @@ class GooglePlayBillingService {
             metadata: {
               'error_code': purchaseDetails.error?.code,
               'error_message': purchaseDetails.error?.message,
+              'error_type': 'gms_error',
             },
           ));
           break;

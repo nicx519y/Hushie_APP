@@ -66,7 +66,7 @@ class _AppRootState extends State<AppRoot> with WidgetsBindingObserver {
         _startupAppOpenSent = true;
         _shouldSendOnResume = false;
       }
-      _checkPendingMigrationIfNeeded();
+      // _checkPendingMigrationIfNeeded();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // 应用进入后台或非活动态：标记下次恢复打点，并上报后台事件
       _shouldSendOnResume = true;
