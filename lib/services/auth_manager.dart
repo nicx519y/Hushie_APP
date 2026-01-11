@@ -238,6 +238,11 @@ class AuthManager {
 
       final googleAuth = googleAuthResult.data!;
 
+      // 记录Google授权成功事件
+      TrackingService.trackGoogleAuthResult(
+        status: 'success',
+      );
+
       // 第二步：用Google认证信息换取业务服务器Token
       final tokenResult = await GoogleAuthService.getAccessToken(
         googleToken: googleAuth.authCode,
@@ -301,6 +306,13 @@ class AuthManager {
       return googleAuthResult;
     } catch (e) {
       debugPrint('Google登录流程失败: $e');
+      
+      // 记录Google授权失败事件（异常）
+      TrackingService.trackGoogleAuthResult(
+        status: 'failed',
+        errorMessage: e.toString(),
+      );
+
       // 登录失败（异常捕获阶段）事件上报
       AnalyticsService().logAuthEvent(
         event: 'login_failed',

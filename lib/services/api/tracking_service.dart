@@ -221,6 +221,23 @@ class TrackingService {
       extraData: extra,
     );
   }
+
+  static Future<void> trackGoogleAuthResult({
+    required String status, // success, failed
+    int? errorCode,
+    String? errorMessage,
+  }) async {
+    final extra = <String, dynamic>{
+      'status': status,
+    };
+    if (errorCode != null) extra['error_code'] = errorCode;
+    if (errorMessage != null) extra['error_message'] = errorMessage;
+
+    await track(
+      actionType: TrackingEvents.googleAuthResult,
+      extraData: extra,
+    );
+  }
 }
 
 /// Tracking 事件常量
@@ -234,4 +251,5 @@ class TrackingEvents {
   static const String subscribeFlowStart = 'subscribe_flow_start';
   static const String subscribeResult = 'subscribe_result';
   static const String onboarding = 'onboarding';
+  static const String googleAuthResult = 'google_auth_result';
 }
